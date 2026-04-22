@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "887054237997",
+    "firebase_url": "https://tejashaquaapp-default-rtdb.firebaseio.com",
+    "project_id": "tejashaquaapp",
+    "storage_bucket": "tejashaquaapp.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:887054237997:android:4ee6edcb0a8167708053a4",
+        "android_client_info": {
+          "package_name": "com.tejashaqua.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "887054237997-32psqhdv25g9u9fgoi589v48pb6si3bu.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.tejashaqua.app",
+            "certificate_hash": "516bf444a4b087f6684d971c8c14576bc97a21c8"
+          }
+        },
+        {
+          "client_id": "887054237997-u3b5a1cob56udbtmnkpcilm2o5880ofb.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC1H1cs7ieShx2j_s66MsOJO6YOi5S_TjQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "887054237997-u3b5a1cob56udbtmnkpcilm2o5880ofb.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
