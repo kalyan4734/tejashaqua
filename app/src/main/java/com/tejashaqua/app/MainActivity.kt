@@ -33,7 +33,7 @@ class MainActivity : ComponentActivity() {
 
                 var currentScreen by remember { mutableStateOf("splash") }
                 var mobileNumber by remember { mutableStateOf("") }
-                var userName by remember { mutableStateOf("") }
+                var userName by remember { mutableStateOf("User") } // Default dummy name
                 var selectedCategory by remember { mutableStateOf(ListingCategory.FISH) }
                 var isEditMode by remember { mutableStateOf(false) }
                 
@@ -61,10 +61,11 @@ class MainActivity : ComponentActivity() {
                             currentScreen = "otp"
                         }
                         is AuthState.Success -> {
+                            userName = (authState as AuthState.Success).userName
                             currentScreen = "dashboard"
                         }
                         is AuthState.RequireName -> {
-                            currentScreen = "dashboard" // Dashboard will show the name sheet
+                            currentScreen = "dashboard" // Show dashboard, which triggers name sheet
                         }
                         is AuthState.Error -> {
                             Toast.makeText(context, (authState as AuthState.Error).message, Toast.LENGTH_SHORT).show()
@@ -92,6 +93,7 @@ class MainActivity : ComponentActivity() {
                         "dashboard" -> DashboardScreen(
                             locationName = currentLocationName,
                             subLocation = currentSubLocation,
+                            userName = userName,
                             onSeeAllRatesClick = { currentScreen = "aqua_rates" },
                             onAddClick = { 
                                 isEditMode = false
@@ -106,6 +108,9 @@ class MainActivity : ComponentActivity() {
                             showNameSheetInitial = authState is AuthState.RequireName,
                             onNameSave = { name ->
                                 authViewModel.saveUserName(name)
+                            },
+                            onNameSkip = {
+                                authViewModel.skipOnboarding()
                             }
                         )
                         "select_location" -> SelectLocationScreen(
