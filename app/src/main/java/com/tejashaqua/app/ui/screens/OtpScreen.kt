@@ -9,8 +9,16 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.autofill.AutofillNode
+import androidx.compose.ui.autofill.AutofillType
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalAutofill
+import androidx.compose.ui.platform.LocalAutofillTree
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -22,6 +30,7 @@ import com.tejashaqua.app.ui.theme.AquaBlue
 import com.tejashaqua.app.ui.theme.GrayText
 import kotlinx.coroutines.delay
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun OtpScreen(
     mobileNumber: String,
@@ -30,6 +39,14 @@ fun OtpScreen(
 ) {
     var otpValue by remember { mutableStateOf("") }
     var timerSeconds by remember { mutableStateOf(24) }
+
+    // Autofill setup
+    val autofill = LocalAutofill.current
+    val autofillNode = AutofillNode(
+        autofillTypes = listOf(AutofillType.SmsOtpCode),
+        onFill = { otpValue = it }
+    )
+    LocalAutofillTree.current += autofillNode
 
     LaunchedEffect(key1 = timerSeconds) {
         if (timerSeconds > 0) {
@@ -47,7 +64,6 @@ fun OtpScreen(
     ) {
         Spacer(modifier = Modifier.height(40.dp))
 
-        // Logo
         Image(
             painter = painterResource(id = R.drawable.app_logo),
             contentDescription = "App Logo",
@@ -56,7 +72,6 @@ fun OtpScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Title
         Text(
             text = "Enter OTP",
             fontSize = 28.sp,
@@ -73,7 +88,6 @@ fun OtpScreen(
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Label
         Text(
             text = "Enter 6-digit code",
             fontSize = 16.sp,
@@ -83,7 +97,7 @@ fun OtpScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // OTP Input
+        // OTP Input with Auto-fill support
         BasicTextField(
             value = otpValue,
             onValueChange = {
@@ -91,6 +105,15 @@ fun OtpScreen(
                     otpValue = it
                 }
             },
+            modifier = Modifier
+                .fillMaxWidth()
+                .onGloballyPositioned { autofillNode.boundingBox = it.boundsInWindow() }
+                .onFocusChanged { focusState ->
+                    autofill?.apply {
+                        if (focusState.isFocused) requestAutofillForNode(autofillNode)
+                        else cancelAutofillForNode(autofillNode)
+                    }
+                },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
             decorationBox = {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -112,13 +135,7 @@ fun OtpScreen(
                                 ),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = char,
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = Color.Black,
-                                textAlign = TextAlign.Center
-                            )
+                            Text(char, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
                         }
                     }
                 }
@@ -127,26 +144,25 @@ fun OtpScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Resend Text
-        Text(
-            text = if (timerSeconds > 0) "Resend OTP in $timerSeconds Sec" else "Resend OTP",
-            fontSize = 14.sp,
-            color = if (timerSeconds > 0) GrayText else AquaBlue,
-            fontWeight = if (timerSeconds > 0) FontWeight.Normal else FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 32.dp)
-        )
+        TextButton(
+            onClick = { if (timerSeconds == 0) onResendClick() },
+            contentPadding = PaddingValues(0.dp)
+        ) {
+            Text(
+                text = if (timerSeconds > 0) "Resend OTP in $timerSeconds Sec" else "Resend OTP",
+                fontSize = 14.sp,
+                color = if (timerSeconds > 0) GrayText else AquaBlue,
+                fontWeight = if (timerSeconds > 0) FontWeight.Normal else FontWeight.Bold
+            )
+        }
 
-        // Verify Button
+        Spacer(modifier = Modifier.height(32.dp))
+
         Button(
             onClick = { if (otpValue.length == 6) onVerifyClick(otpValue) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp),
+            modifier = Modifier.fillMaxWidth().height(56.dp),
             shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = AquaBlue,
-                disabledContainerColor = AquaBlue.copy(alpha = 0.5f)
-            ),
+            colors = ButtonDefaults.buttonColors(containerColor = AquaBlue),
             enabled = otpValue.length == 6
         ) {
             Text(text = "Verify & Continue", fontSize = 18.sp, fontWeight = FontWeight.Bold)

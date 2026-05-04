@@ -33,9 +33,10 @@ class MainActivity : ComponentActivity() {
 
                 var currentScreen by remember { mutableStateOf("splash") }
                 var mobileNumber by remember { mutableStateOf("") }
-                var userName by remember { mutableStateOf("User") } // Default dummy name
+                var userName by remember { mutableStateOf("User") }
                 var selectedCategory by remember { mutableStateOf(ListingCategory.FISH) }
                 var isEditMode by remember { mutableStateOf(false) }
+                var selectedListingId by remember { mutableStateOf<String?>(null) }
                 
                 var currentLocationName by remember { mutableStateOf("Fetching location...") }
                 var currentSubLocation by remember { mutableStateOf("") }
@@ -61,11 +62,17 @@ class MainActivity : ComponentActivity() {
                             currentScreen = "otp"
                         }
                         is AuthState.Success -> {
-                            userName = (authState as AuthState.Success).userName
-                            currentScreen = "dashboard"
+                            val success = authState as AuthState.Success
+                            userName = success.userName
+                            mobileNumber = success.phoneNumber
+                            if (currentScreen == "otp" || currentScreen == "splash") {
+                                currentScreen = "dashboard"
+                            }
                         }
                         is AuthState.RequireName -> {
-                            currentScreen = "dashboard" // Show dashboard, which triggers name sheet
+                            val require = authState as AuthState.RequireName
+                            mobileNumber = require.phoneNumber
+                            currentScreen = "dashboard"
                         }
                         is AuthState.Error -> {
                             Toast.makeText(context, (authState as AuthState.Error).message, Toast.LENGTH_SHORT).show()
@@ -76,7 +83,13 @@ class MainActivity : ComponentActivity() {
 
                 Box(modifier = Modifier.fillMaxSize()) {
                     when (currentScreen) {
-                        "splash" -> SplashScreen(onTimeout = { currentScreen = "login" })
+                        "splash" -> SplashScreen(onTimeout = { 
+                            if (authState is AuthState.Success) {
+                                currentScreen = "dashboard"
+                            } else {
+                                currentScreen = "login"
+                            }
+                        })
                         "login" -> LoginScreen(onSendOtp = { number ->
                             mobileNumber = number
                             authViewModel.sendOtp(number, this@MainActivity)
@@ -97,6 +110,7 @@ class MainActivity : ComponentActivity() {
                             onSeeAllRatesClick = { currentScreen = "aqua_rates" },
                             onAddClick = { 
                                 isEditMode = false
+                                selectedListingId = null
                                 currentScreen = "select_category" 
                             },
                             onProfileClick = { currentScreen = "profile" },
@@ -129,14 +143,18 @@ class MainActivity : ComponentActivity() {
                             onCategorySelect = { category ->
                                 selectedCategory = category
                                 isEditMode = false
+                                selectedListingId = null
                                 currentScreen = "edit_listing"
                             }
                         )
                         "edit_listing" -> EditListingScreen(
                             category = selectedCategory,
                             isEditMode = isEditMode,
+                            listingId = selectedListingId,
+                            userName = userName,
+                            initialLocation = if (currentSubLocation.isNotEmpty()) "$currentLocationName, $currentSubLocation" else currentLocationName,
                             onBackClick = { 
-                                if (isEditMode) currentScreen = "dashboard" else currentScreen = "select_category" 
+                                if (isEditMode) currentScreen = "my_listings" else currentScreen = "select_category" 
                             },
                             onPostClick = { currentScreen = "dashboard" },
                             onDeleteClick = { currentScreen = "dashboard" }
@@ -145,9 +163,33 @@ class MainActivity : ComponentActivity() {
                             userName = userName,
                             mobileNumber = mobileNumber,
                             onBackClick = { currentScreen = "dashboard" },
+                            onEditClick = { currentScreen = "edit_profile" },
+                            onMyListingsClick = { currentScreen = "my_listings" },
                             onLogoutClick = { 
-                                authViewModel.resetState()
+                                authViewModel.logout()
                                 currentScreen = "login" 
+                            }
+                        )
+                        "edit_profile" -> EditProfileScreen(
+                            currentName = userName,
+                            currentPhone = mobileNumber,
+                            onBackClick = { currentScreen = "profile" },
+                            onProfileUpdated = { newName ->
+                                userName = newName
+                            }
+                        )
+                        "my_listings" -> MyListingsScreen(
+                            onBackClick = { currentScreen = "profile" },
+                            onEditClick = { listingId, categoryStr ->
+                                selectedListingId = listingId
+                                isEditMode = true
+                                // Map string category back to enum
+                                selectedCategory = try {
+                                    ListingCategory.valueOf(categoryStr)
+                                } catch (e: Exception) {
+                                    ListingCategory.FISH
+                                }
+                                currentScreen = "edit_listing"
                             }
                         )
                     }

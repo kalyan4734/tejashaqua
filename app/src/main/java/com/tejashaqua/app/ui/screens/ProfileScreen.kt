@@ -1,5 +1,6 @@
 package com.tejashaqua.app.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -13,11 +14,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import com.tejashaqua.app.ui.theme.AquaBlue
 import com.tejashaqua.app.ui.theme.GrayText
 
@@ -27,9 +33,41 @@ fun ProfileScreen(
     userName: String,
     mobileNumber: String,
     onBackClick: () -> Unit,
+    onEditClick: () -> Unit,
+    onMyListingsClick: () -> Unit,
     onLogoutClick: () -> Unit
 ) {
     var showLogoutDialog by remember { mutableStateOf(false) }
+    var listingCount by remember { mutableIntStateOf(0) }
+    var profilePicUrl by remember { mutableStateOf<String?>(null) }
+    
+    val auth = FirebaseAuth.getInstance()
+    val db = FirebaseFirestore.getInstance()
+    val currentUserId = auth.currentUser?.uid
+
+    // Handle system back press
+    BackHandler {
+        onBackClick()
+    }
+
+    LaunchedEffect(currentUserId) {
+        if (currentUserId != null) {
+            db.collection("listings")
+                .whereEqualTo("userId", currentUserId)
+                .addSnapshotListener { snapshot, error ->
+                    if (snapshot != null) {
+                        listingCount = snapshot.size()
+                    }
+                }
+            
+            db.collection("users").document(currentUserId)
+                .addSnapshotListener { snapshot, error ->
+                    if (snapshot != null && snapshot.exists()) {
+                        profilePicUrl = snapshot.getString("profilePic")
+                    }
+                }
+        }
+    }
 
     if (showLogoutDialog) {
         AlertDialog(
@@ -75,7 +113,7 @@ fun ProfileScreen(
         ) {
             // Header Profile Info
             item {
-                ProfileHeader(userName, mobileNumber)
+                ProfileHeader(userName, mobileNumber, profilePicUrl, onEditClick)
             }
 
             // Stats Cards
@@ -86,9 +124,9 @@ fun ProfileScreen(
                         .padding(horizontal = 16.dp, vertical = 20.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    StatCard("4", "My Listings", Modifier.weight(1f))
-                    StatCard("12", "Saved Items", Modifier.weight(1f))
-                    StatCard("3", "Chats", Modifier.weight(1f))
+                    StatCard(listingCount.toString(), "My Listings", Modifier.weight(1f).clickable { onMyListingsClick() })
+                    StatCard("0", "Saved Items", Modifier.weight(1f))
+                    StatCard("0", "Chats", Modifier.weight(1f))
                 }
             }
 
@@ -103,9 +141,9 @@ fun ProfileScreen(
                     color = MaterialTheme.colorScheme.surface
                 ) {
                     Column {
-                        ProfileMenuItem(Icons.Default.CheckCircle, "My Listings", Color(0xFF4CAF50))
+                        ProfileMenuItem(Icons.Default.CheckCircle, "My Listings", Color(0xFF4CAF50), onClick = onMyListingsClick)
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-                        ProfileMenuItem(Icons.Default.Favorite, "Saved Items", Color(0xFFF44336))
+                        ProfileMenuItem(Icons.Default.Favorite, "Saved Items", Color(0xFFF44336), onClick = {})
                     }
                 }
             }
@@ -122,13 +160,13 @@ fun ProfileScreen(
                     color = MaterialTheme.colorScheme.surface
                 ) {
                     Column {
-                        ProfileMenuItem(Icons.Default.Description, "Privacy Policy", Color(0xFF009688))
+                        ProfileMenuItem(Icons.Default.Description, "Privacy Policy", Color(0xFF009688), onClick = {})
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-                        ProfileMenuItem(Icons.Default.Assignment, "Terms & Conditions", Color(0xFF9C27B0))
+                        ProfileMenuItem(Icons.Default.Assignment, "Terms & Conditions", Color(0xFF9C27B0), onClick = {})
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-                        ProfileMenuItem(Icons.Default.Info, "About App", Color(0xFF03A9F4))
+                        ProfileMenuItem(Icons.Default.Info, "About App", Color(0xFF03A9F4), onClick = {})
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-                        ProfileMenuItem(Icons.Default.Star, "Rate the App", Color(0xFFFBC02D))
+                        ProfileMenuItem(Icons.Default.Star, "Rate the App", Color(0xFFFBC02D), onClick = {})
                     }
                 }
             }
@@ -163,7 +201,7 @@ fun ProfileScreen(
 }
 
 @Composable
-fun ProfileHeader(userName: String, mobileNumber: String) {
+fun ProfileHeader(userName: String, mobileNumber: String, profilePicUrl: String?, onEditClick: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -177,28 +215,37 @@ fun ProfileHeader(userName: String, mobileNumber: String) {
                     .background(Color(0xFFE0F7FA).copy(alpha = 0.9f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = if (userName.isNotEmpty()) userName.take(2).uppercase() else "SM",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF0097A7)
-                )
+                if (profilePicUrl != null) {
+                    AsyncImage(
+                        model = profilePicUrl,
+                        contentDescription = "Profile Picture",
+                        modifier = Modifier.fillMaxSize().clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Text(
+                        text = if (userName.isNotEmpty()) userName.take(1).uppercase() else "U",
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF0097A7)
+                    )
+                }
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = if (userName.isNotEmpty()) userName else "Username_5875",
+                    text = if (userName.isNotEmpty()) userName else "User",
                     color = Color.White,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = if (mobileNumber.isNotEmpty()) "+91 $mobileNumber" else "+91 9876543210",
+                    text = if (mobileNumber.isNotEmpty()) "+91 $mobileNumber" else "+91 0000000000",
                     color = Color.White.copy(alpha = 0.8f),
                     fontSize = 14.sp
                 )
             }
-            IconButton(onClick = { }) {
+            IconButton(onClick = onEditClick) {
                 Icon(Icons.Default.EditNote, contentDescription = "Edit Profile", tint = Color.White, modifier = Modifier.size(32.dp))
             }
         }
@@ -225,11 +272,11 @@ fun StatCard(value: String, label: String, modifier: Modifier) {
 }
 
 @Composable
-fun ProfileMenuItem(icon: ImageVector, label: String, iconTint: Color) {
+fun ProfileMenuItem(icon: ImageVector, label: String, iconTint: Color, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { }
+            .clickable { onClick() }
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

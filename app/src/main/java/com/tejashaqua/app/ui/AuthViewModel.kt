@@ -12,8 +12,8 @@ sealed class AuthState {
     object Idle : AuthState()
     object Loading : AuthState()
     data class OtpSent(val verificationId: String) : AuthState()
-    data class Success(val userName: String) : AuthState()
-    object RequireName : AuthState()
+    data class Success(val userName: String, val phoneNumber: String) : AuthState()
+    data class RequireName(val phoneNumber: String) : AuthState()
     data class Error(val message: String) : AuthState()
 }
 
@@ -87,25 +87,28 @@ class AuthViewModel : ViewModel() {
         val userId = auth.currentUser?.uid ?: return
         db.collection("users").document(userId).get()
             .addOnSuccessListener { document ->
+                val fbPhone = auth.currentUser?.phoneNumber?.removePrefix("+91") ?: ""
+                
                 if (document.exists()) {
                     val name = document.getString("name")
+                    val dbPhone = document.getString("phone") ?: fbPhone
                     val onboardingComplete = document.getBoolean("onboardingComplete") ?: false
                     
                     if (name != null && onboardingComplete) {
-                        _authState.value = AuthState.Success(name)
+                        _authState.value = AuthState.Success(name, dbPhone)
                     } else {
-                        _authState.value = AuthState.RequireName
+                        _authState.value = AuthState.RequireName(dbPhone)
                     }
                 } else {
                     val dummyName = "User_${userId.takeLast(4)}"
                     val user = hashMapOf(
                         "uid" to userId,
                         "name" to dummyName,
-                        "phone" to (auth.currentUser?.phoneNumber ?: ""),
+                        "phone" to fbPhone,
                         "onboardingComplete" to false
                     )
                     db.collection("users").document(userId).set(user)
-                    _authState.value = AuthState.RequireName
+                    _authState.value = AuthState.RequireName(fbPhone)
                 }
             }
             .addOnFailureListener { e ->
@@ -122,10 +125,29 @@ class AuthViewModel : ViewModel() {
 
         db.collection("users").document(userId).update(updates)
             .addOnSuccessListener {
-                _authState.value = AuthState.Success(name)
+                val phoneNumber = auth.currentUser?.phoneNumber?.removePrefix("+91") ?: ""
+                _authState.value = AuthState.Success(name, phoneNumber)
             }
             .addOnFailureListener { e ->
                 _authState.value = AuthState.Error(e.localizedMessage ?: "Failed to save user info")
+            }
+    }
+
+    fun updateProfile(name: String, profilePicBase64: String?, onSuccess: () -> Unit) {
+        val userId = auth.currentUser?.uid ?: return
+        val updates = mutableMapOf<String, Any>("name" to name)
+        if (profilePicBase64 != null) {
+            updates["profilePic"] = profilePicBase64
+        }
+
+        db.collection("users").document(userId).update(updates)
+            .addOnSuccessListener {
+                val phoneNumber = auth.currentUser?.phoneNumber?.removePrefix("+91") ?: ""
+                _authState.value = AuthState.Success(name, phoneNumber)
+                onSuccess()
+            }
+            .addOnFailureListener { e ->
+                _authState.value = AuthState.Error(e.localizedMessage ?: "Failed to update profile")
             }
     }
 
@@ -135,7 +157,8 @@ class AuthViewModel : ViewModel() {
             .addOnSuccessListener {
                 db.collection("users").document(userId).get().addOnSuccessListener { doc ->
                     val currentName = doc.getString("name") ?: "User"
-                    _authState.value = AuthState.Success(currentName)
+                    val phoneNumber = doc.getString("phone") ?: auth.currentUser?.phoneNumber?.removePrefix("+91") ?: ""
+                    _authState.value = AuthState.Success(currentName, phoneNumber)
                 }
             }
     }

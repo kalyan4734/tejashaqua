@@ -56,6 +56,10 @@ dependencies {
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
+    implementation(libs.firebase.storage)
+
+    // Image Loading
+    implementation(libs.coil.compose)
 
     // Google Places and Networking
     implementation(libs.google.places)

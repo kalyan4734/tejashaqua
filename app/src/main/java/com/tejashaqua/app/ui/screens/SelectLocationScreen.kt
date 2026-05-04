@@ -16,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -36,6 +37,7 @@ fun SelectLocationScreen(
     var selectedLocation by remember { mutableStateOf<Pair<String, String>?>(null) }
     
     val searchResults by locationViewModel.searchResults.collectAsState()
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     Scaffold(
         topBar = {
@@ -79,6 +81,7 @@ fun SelectLocationScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .navigationBarsPadding() // Avoid overlap with system navigation bar/gestures
                     .padding(16.dp)
             ) {
                 Button(
@@ -146,6 +149,7 @@ fun SelectLocationScreen(
                             isSelected = isSelected,
                             onClick = {
                                 selectedLocation = primaryText to secondaryText
+                                keyboardController?.hide() // Hide keyboard when a location is selected
                             }
                         )
                     }
