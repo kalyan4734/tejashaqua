@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.sp
 import com.tejashaqua.app.ui.theme.AquaBlue
 import com.tejashaqua.app.ui.theme.GrayText
 import com.tejashaqua.app.R
+import com.tejashaqua.app.data.model.ListingCategory
 
 data class CategoryItem(
     val title: String,

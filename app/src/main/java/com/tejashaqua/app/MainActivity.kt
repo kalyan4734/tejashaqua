@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.tejashaqua.app.data.model.ListingCategory
 import com.tejashaqua.app.ui.AuthState
 import com.tejashaqua.app.ui.AuthViewModel
 import com.tejashaqua.app.ui.screens.*

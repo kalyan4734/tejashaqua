@@ -1,5 +1,7 @@
 package com.tejashaqua.app.ui.screens
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Base64
@@ -33,15 +35,13 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.tejashaqua.app.data.model.ListingCategory
 import com.tejashaqua.app.ui.theme.AquaBlue
 import com.tejashaqua.app.ui.theme.GrayText
 import java.io.ByteArrayOutputStream
-
-enum class ListingCategory {
-    FISH, PRAWNS, EQUIPMENTS, VEHICLES, FEED, BOREWELL, TANKS
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -109,7 +109,6 @@ fun EditListingScreen(
                         contactNumber = doc.getString("contactNumber") ?: ""
                         price = doc.get("price")?.toString() ?: ""
                         
-                        // Category specific
                         when (category) {
                             ListingCategory.FISH -> {
                                 fishType = doc.getString("fishType") ?: ""
@@ -151,7 +150,6 @@ fun EditListingScreen(
                             }
                         }
 
-                        // Load images
                         val images = doc.get("images") as? List<String>
                         if (images != null) {
                             selectedPhotoBitmaps = images.mapNotNull { base64 ->
@@ -181,6 +179,16 @@ fun EditListingScreen(
         }
     }
 
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            cameraLauncher.launch()
+        } else {
+            Toast.makeText(context, "Camera permission is required to take photos", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     val screenTitle = if (isEditMode) "Edit Listing" else category.name.lowercase().replaceFirstChar { it.uppercase() }
 
     fun bitmapToBase64(bitmap: Bitmap): String {
@@ -199,22 +207,17 @@ fun EditListingScreen(
             ListingCategory.BOREWELL -> selectedServiceType.isNotBlank() && boreWellType.isNotBlank() && title.isNotBlank()
             ListingCategory.TANKS -> title.isNotBlank() && tankAcres.isNotBlank() && estPricePerAcre.isNotBlank() && tankLocation.isNotBlank()
         }
-        
         val commonValidation = contactNumber.isNotBlank() && contactNumber.length == 10
-        
         return baseValidation && commonValidation
     }
 
     fun saveToFirestore() {
         showErrors = true
-        
         if (!validateFields()) {
             Toast.makeText(context, "Please check all required fields", Toast.LENGTH_SHORT).show()
             return
         }
-
         isLoading = true
-        
         val data = mutableMapOf<String, Any>(
             "category" to category.name,
             "title" to title,
@@ -224,12 +227,10 @@ fun EditListingScreen(
             "posterName" to userName,
             "images" to selectedPhotoBitmaps.map { bitmapToBase64(it) }
         )
-
         if (!isEditMode) {
             data["timestamp"] = System.currentTimeMillis()
             data["userId"] = (auth.currentUser?.uid ?: "anonymous")
         }
-
         when (category) {
             ListingCategory.FISH -> {
                 data["fishType"] = fishType; data["sizeType"] = sizeType; data["sizeValue"] = sizeValue
@@ -245,13 +246,8 @@ fun EditListingScreen(
             ListingCategory.BOREWELL -> { data["serviceType"] = selectedServiceType; data["boreWellType"] = boreWellType }
             ListingCategory.TANKS -> { data["tankAcres"] = tankAcres; data["estPricePerAcre"] = estPricePerAcre; data["tankLocation"] = tankLocation }
         }
-
-        val task = if (isEditMode && listingId != null) {
-            db.collection("listings").document(listingId).update(data)
-        } else {
-            db.collection("listings").add(data)
-        }
-
+        val task = if (isEditMode && listingId != null) db.collection("listings").document(listingId).update(data)
+        else db.collection("listings").add(data)
         task.addOnSuccessListener {
             isLoading = false
             Toast.makeText(context, if (isEditMode) "Listing updated successfully!" else "Listing posted successfully!", Toast.LENGTH_SHORT).show()
@@ -298,7 +294,19 @@ fun EditListingScreen(
                 }
             }
             item { ListingTextField(label = "Description", value = description, onValueChange = { description = it }, minLines = 3, required = false, showError = showErrors) }
-            item { PhotoSection(photoBitmaps = selectedPhotoBitmaps, onAddPhoto = { cameraLauncher.launch() }, onRemovePhoto = { index -> selectedPhotoBitmaps = selectedPhotoBitmaps.toMutableList().apply { removeAt(index) } }) }
+            item { 
+                PhotoSection(
+                    photoBitmaps = selectedPhotoBitmaps, 
+                    onAddPhoto = { 
+                        if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+                            cameraLauncher.launch()
+                        } else {
+                            permissionLauncher.launch(Manifest.permission.CAMERA)
+                        }
+                    }, 
+                    onRemovePhoto = { index -> selectedPhotoBitmaps = selectedPhotoBitmaps.toMutableList().apply { removeAt(index) } }
+                ) 
+            }
             item { LocationSection(location) }
             item { ListingTextField(label = "Contact Number", value = contactNumber, onValueChange = { if(it.length <= 10) contactNumber = it }, keyboardType = KeyboardType.Phone, required = true, showError = showErrors) }
             item { Spacer(modifier = Modifier.height(20.dp)) }
@@ -307,95 +315,39 @@ fun EditListingScreen(
 }
 
 @Composable
-fun ListingTextField(
-    label: String, 
-    value: String, 
-    onValueChange: (String) -> Unit, 
-    minLines: Int = 1, 
-    required: Boolean = true,
-    keyboardType: KeyboardType = KeyboardType.Text,
-    showError: Boolean = false
-) {
+fun ListingTextField(label: String, value: String, onValueChange: (String) -> Unit, minLines: Int = 1, required: Boolean = true, keyboardType: KeyboardType = KeyboardType.Text, showError: Boolean = false) {
     val hasError = showError && required && value.isBlank()
     val isPhoneError = showError && label == "Contact Number" && value.length < 10
-
     Column {
         Text(text = buildAnnotatedString {
             append(label)
-            if (required) {
-                withStyle(style = SpanStyle(color = Color.Red)) { append(" *") }
-            }
+            if (required) { withStyle(style = SpanStyle(color = Color.Red)) { append(" *") } }
         }, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
         Spacer(modifier = Modifier.height(8.dp))
-        OutlinedTextField(
-            value = value, 
-            onValueChange = onValueChange, 
-            modifier = Modifier.fillMaxWidth(), 
-            shape = RoundedCornerShape(12.dp), 
-            minLines = minLines,
-            isError = hasError || isPhoneError,
-            keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-            colors = OutlinedTextFieldDefaults.colors(
-                unfocusedBorderColor = MaterialTheme.colorScheme.outline, 
-                focusedBorderColor = AquaBlue, 
-                unfocusedContainerColor = MaterialTheme.colorScheme.surface, 
-                focusedContainerColor = MaterialTheme.colorScheme.surface,
-                errorBorderColor = Color.Red
-            )
-        )
-        if (hasError) {
-            Text(text = "$label is required", color = Color.Red, fontSize = 11.sp, modifier = Modifier.padding(start = 4.dp, top = 2.dp))
-        } else if (isPhoneError) {
-            Text(text = "Enter valid 10-digit number", color = Color.Red, fontSize = 11.sp, modifier = Modifier.padding(start = 4.dp, top = 2.dp))
-        }
+        OutlinedTextField(value = value, onValueChange = onValueChange, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), minLines = minLines, isError = hasError || isPhoneError, keyboardOptions = KeyboardOptions(keyboardType = keyboardType), colors = OutlinedTextFieldDefaults.colors(unfocusedBorderColor = MaterialTheme.colorScheme.outline, focusedBorderColor = AquaBlue, unfocusedContainerColor = MaterialTheme.colorScheme.surface, focusedContainerColor = MaterialTheme.colorScheme.surface, errorBorderColor = Color.Red))
+        if (hasError) Text(text = "$label is required", color = Color.Red, fontSize = 11.sp, modifier = Modifier.padding(start = 4.dp, top = 2.dp))
+        else if (isPhoneError) Text(text = "Enter valid 10-digit number", color = Color.Red, fontSize = 11.sp, modifier = Modifier.padding(start = 4.dp, top = 2.dp))
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ListingDropdown(
-    label: String, 
-    value: String, 
-    options: List<String>, 
-    onSelectionChange: (String) -> Unit, 
-    required: Boolean = true,
-    showError: Boolean = false
-) {
+fun ListingDropdown(label: String, value: String, options: List<String>, onSelectionChange: (String) -> Unit, required: Boolean = true, showError: Boolean = false) {
     var expanded by remember { mutableStateOf(false) }
     val hasError = showError && required && value.isBlank()
-
     Column {
         Text(text = buildAnnotatedString {
             append(label)
-            if (required) {
-                withStyle(style = SpanStyle(color = Color.Red)) { append(" *") }
-            }
+            if (required) { withStyle(style = SpanStyle(color = Color.Red)) { append(" *") } }
         }, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
         Spacer(modifier = Modifier.height(8.dp))
         ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
-            OutlinedTextField(
-                value = value, 
-                onValueChange = {}, 
-                readOnly = true, 
-                modifier = Modifier.fillMaxWidth().menuAnchor(), 
-                shape = RoundedCornerShape(12.dp), 
-                isError = hasError,
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }, 
-                colors = OutlinedTextFieldDefaults.colors(
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outline, 
-                    focusedBorderColor = AquaBlue, 
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surface, 
-                    focusedContainerColor = MaterialTheme.colorScheme.surface,
-                    errorBorderColor = Color.Red
-                )
-            )
+            OutlinedTextField(value = value, onValueChange = {}, readOnly = true, modifier = Modifier.fillMaxWidth().menuAnchor(), shape = RoundedCornerShape(12.dp), isError = hasError, trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }, colors = OutlinedTextFieldDefaults.colors(unfocusedBorderColor = MaterialTheme.colorScheme.outline, focusedBorderColor = AquaBlue, unfocusedContainerColor = MaterialTheme.colorScheme.surface, focusedContainerColor = MaterialTheme.colorScheme.surface, errorBorderColor = Color.Red))
             ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                 options.forEach { option -> DropdownMenuItem(text = { Text(option) }, onClick = { onSelectionChange(option); expanded = false }) }
             }
         }
-        if (hasError) {
-            Text(text = "$label is required", color = Color.Red, fontSize = 11.sp, modifier = Modifier.padding(start = 4.dp, top = 2.dp))
-        }
+        if (hasError) Text(text = "$label is required", color = Color.Red, fontSize = 11.sp, modifier = Modifier.padding(start = 4.dp, top = 2.dp))
     }
 }
 

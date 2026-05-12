@@ -8,8 +8,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -20,8 +23,10 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -53,6 +58,7 @@ fun DashboardScreen(
 ) {
     var selectedItem by remember { mutableIntStateOf(0) }
     var productSearchText by remember { mutableStateOf("") }
+    var selectedCategoryFilter by remember { mutableStateOf("All") }
 
     val fetchedName by locationViewModel.currentLocationName.collectAsState()
     val fetchedSub by locationViewModel.currentSubLocation.collectAsState()
@@ -177,7 +183,13 @@ fun DashboardScreen(
                     ) 
                 }
                 item { AquaRatesSection(onSeeAllRatesClick) }
-                item { MarketplaceSection(searchText = productSearchText) }
+                item {
+                    CategoryFilterRow(
+                        selected = selectedCategoryFilter,
+                        onSelect = { selectedCategoryFilter = it }
+                    )
+                }
+                item { MarketplaceSection(searchText = productSearchText, categoryFilter = selectedCategoryFilter) }
                 item { FooterSection() }
             }
 
@@ -239,10 +251,32 @@ fun DashboardScreen(
 }
 
 @Composable
+fun CategoryFilterRow(selected: String, onSelect: (String) -> Unit) {
+    val categories = listOf("All", "FISH", "PRAWNS", "EQUIPMENTS", "VEHICLES", "FEED", "BOREWELL", "TANKS")
+    LazyRow(
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        items(categories) { category ->
+            FilterChip(
+                selected = selected == category,
+                onClick = { onSelect(category) },
+                label = { Text(category) },
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = AquaBlue,
+                    selectedLabelColor = Color.White
+                )
+            )
+        }
+    }
+}
+
+@Composable
 fun SearchHeader(
     productSearchText: String,
     onProductSearchChange: (String) -> Unit
 ) {
+    val focusManager = LocalFocusManager.current
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -251,14 +285,17 @@ fun SearchHeader(
     ) {
         TextField(
             value = productSearchText,
-            onValueChange = onProductSearchChange,
+            onValueChange = { onProductSearchChange(it) },
             modifier = Modifier.fillMaxWidth().height(50.dp),
-            placeholder = { Text("Search for fish, prawns and jobs...", fontSize = 14.sp) },
+            placeholder = { Text("Search title, location or item...", fontSize = 14.sp) },
             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = GrayText) },
             trailingIcon = {
                 if (productSearchText.isNotEmpty()) {
-                    IconButton(onClick = { onProductSearchChange("") }) {
-                        Icon(Icons.Default.Close, contentDescription = "Clear search", tint = GrayText)
+                    IconButton(onClick = { 
+                        onProductSearchChange("") 
+                        focusManager.clearFocus()
+                    }) {
+                        Icon(Icons.Default.Close, contentDescription = "Clear", tint = GrayText)
                     }
                 }
             },
@@ -270,19 +307,20 @@ fun SearchHeader(
                 unfocusedIndicatorColor = Color.Transparent,
             ),
             shape = RoundedCornerShape(25.dp),
-            singleLine = true
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() })
         )
     }
 }
 
 @Composable
-fun MarketplaceSection(searchText: String) {
+fun MarketplaceSection(searchText: String, categoryFilter: String) {
     val db = FirebaseFirestore.getInstance()
     var listings by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
 
     LaunchedEffect(Unit) {
-        // Fetching all listings from different users
         db.collection("listings")
             .orderBy("timestamp", Query.Direction.DESCENDING)
             .limit(50)
@@ -294,18 +332,20 @@ fun MarketplaceSection(searchText: String) {
             }
     }
 
-    val filteredListings = remember(listings, searchText) {
-        if (searchText.isBlank()) {
-            listings
-        } else {
-            val query = searchText.lowercase().trim()
-            listings.filter { data ->
-                val title = (data["title"] as? String)?.lowercase() ?: ""
-                val location = (data["location"] as? String)?.lowercase() ?: ""
-                val category = (data["category"] as? String)?.lowercase() ?: ""
-                
-                title.contains(query) || location.contains(query) || category.contains(query)
-            }
+    val filteredListings = remember(listings, searchText, categoryFilter) {
+        listings.filter { data ->
+            val title = (data["title"] as? String)?.lowercase() ?: ""
+            val location = (data["location"] as? String)?.lowercase() ?: ""
+            val category = (data["category"] as? String) ?: ""
+            
+            val matchesSearch = searchText.isBlank() || 
+                title.contains(searchText.lowercase()) || 
+                location.contains(searchText.lowercase()) ||
+                category.lowercase().contains(searchText.lowercase())
+            
+            val matchesCategory = categoryFilter == "All" || category.uppercase() == categoryFilter
+            
+            matchesSearch && matchesCategory
         }
     }
 
@@ -313,7 +353,7 @@ fun MarketplaceSection(searchText: String) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("Fresh in Marketplace", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = DarkBlueText)
             Spacer(modifier = Modifier.weight(1f))
-            Text("See All →", color = AquaBlue, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Text("${filteredListings.size} items", color = GrayText, fontSize = 12.sp)
         }
         Spacer(modifier = Modifier.height(12.dp))
         
@@ -322,8 +362,8 @@ fun MarketplaceSection(searchText: String) {
                 CircularProgressIndicator(color = AquaBlue)
             }
         } else if (filteredListings.isEmpty()) {
-            Box(modifier = Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
-                val message = if (searchText.isEmpty()) "No listings available" else "No results found for \"$searchText\""
+            Box(modifier = Modifier.fillMaxWidth().height(150.dp), contentAlignment = Alignment.Center) {
+                val message = if (searchText.isEmpty() && categoryFilter == "All") "No listings available" else "No items match your search"
                 Text(message, color = GrayText)
             }
         } else {
@@ -356,23 +396,13 @@ fun MarketplaceSection(searchText: String) {
 }
 
 @Composable
-fun MarketItem(
-    title: String,
-    price: String,
-    category: String,
-    location: String,
-    posterName: String,
-    imageBase64: String?,
-    modifier: Modifier = Modifier
-) {
+fun MarketItem(title: String, price: String, category: String, location: String, posterName: String, imageBase64: String?, modifier: Modifier = Modifier) {
     val bitmap = remember(imageBase64) {
-        if (imageBase64 != null) {
+        if (!imageBase64.isNullOrBlank()) {
             try {
                 val decodedString = Base64.decode(imageBase64, Base64.DEFAULT)
                 BitmapFactory.decodeByteArray(decodedString, 0, decodedString.size)
-            } catch (e: Exception) {
-                null
-            }
+            } catch (e: Exception) { null }
         } else null
     }
 
@@ -385,45 +415,28 @@ fun MarketItem(
         Column {
             Box(modifier = Modifier.height(110.dp).fillMaxWidth().background(Color(0xFFF5F5F5))) {
                 if (bitmap != null) {
-                    Image(
-                        bitmap = bitmap.asImageBitmap(),
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
+                    Image(bitmap = bitmap.asImageBitmap(), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                 } else {
-                    Image(
-                        painter = painterResource(id = R.drawable.app_logo),
-                        contentDescription = null,
-                        modifier = Modifier.size(60.dp).align(Alignment.Center),
-                        alpha = 0.3f
-                    )
+                    Image(painter = painterResource(id = R.drawable.app_logo), contentDescription = null, modifier = Modifier.size(60.dp).align(Alignment.Center), alpha = 0.3f)
                 }
                 Surface(modifier = Modifier.padding(8.dp).align(Alignment.TopStart), color = Color.White, shape = RoundedCornerShape(4.dp)) {
                     Text("⭐ New", modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp), fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                 }
-                IconButton(onClick = {}, modifier = Modifier.align(Alignment.TopEnd)) { 
-                    Icon(Icons.Default.FavoriteBorder, null, tint = Color.Black) 
-                }
             }
             Column(modifier = Modifier.padding(8.dp)) {
-                Surface(color = Color(0xFFE8EAF6), shape = RoundedCornerShape(4.dp)) { 
-                    Text(category, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), fontSize = 10.sp, color = AquaBlue, fontWeight = FontWeight.Bold) 
-                }
+                Surface(color = Color(0xFFE8EAF6), shape = RoundedCornerShape(4.dp)) { Text(category, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), fontSize = 10.sp, color = AquaBlue, fontWeight = FontWeight.Bold) }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(title, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(price, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp, color = Color.Black)
-                
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.LocationOn, null, tint = GrayText, modifier = Modifier.size(10.dp))
                     Text(location, color = GrayText, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
-                
                 Spacer(modifier = Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Person, null, tint = AquaBlue, modifier = Modifier.size(12.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = "Posted by: $posterName", fontSize = 10.sp, fontWeight = FontWeight.Medium, color = Color.DarkGray, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(text = "By: $posterName", fontSize = 10.sp, color = Color.DarkGray, maxLines = 1)
                 }
             }
         }
@@ -433,18 +446,14 @@ fun MarketItem(
 @Composable
 fun FooterSection() {
     Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
-        val footerColor = if(androidx.compose.foundation.isSystemInDarkTheme()) Color.DarkGray else Color(0xFFD1D9E6)
-        Text("India's most trusted #1 aqua marketplace app.", fontSize = 32.sp, fontWeight = FontWeight.Bold, color = footerColor, lineHeight = 38.sp)
+        Text("India's most trusted #1 aqua marketplace app.", fontSize = 32.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD1D9E6), lineHeight = 38.sp)
         Spacer(modifier = Modifier.height(24.dp))
     }
 }
 
 @Composable
 fun AquaRatesSection(onSeeAllClick: () -> Unit) {
-    val currentDate = remember {
-        SimpleDateFormat("MMMM dd, yyyy", Locale.getDefault()).format(Date())
-    }
-
+    val currentDate = SimpleDateFormat("MMMM dd, yyyy", Locale.getDefault()).format(Date())
     Column(modifier = Modifier.padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column {
@@ -465,11 +474,10 @@ fun AquaRatesSection(onSeeAllClick: () -> Unit) {
             }
         }
         Spacer(modifier = Modifier.height(12.dp))
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(end = 16.dp)) {
-            item { RateCard("Prawns", "₹280-1000", "View All Prices", Color(0xFFE3F2FD), Icons.Default.Opacity) }
-            item { RateCard("Rohu", "₹160/kg", "+₹5 (3%)", Color(0xFFFFF3E0), Icons.Default.Info) }
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            item { RateCard("Prawns", "₹280-1000", "View Prices", Color(0xFFE3F2FD), Icons.Default.Opacity) }
+            item { RateCard("Rohu", "₹160/kg", "+₹5", Color(0xFFFFF3E0), Icons.Default.Info) }
             item { RateCard("Tilapia", "₹120/kg", "No Change", Color(0xFFF3E5F5), Icons.Default.TrendingFlat) }
-            item { RateCard("Katla", "₹180/kg", "+₹10 (5.9%)", Color(0xFFE0F2F1), Icons.Default.Info) }
         }
         Spacer(modifier = Modifier.height(12.dp))
         Button(onClick = onSeeAllClick, modifier = Modifier.fillMaxWidth().height(48.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE3F2FD), contentColor = AquaBlue), shape = RoundedCornerShape(12.dp)) {
@@ -480,19 +488,12 @@ fun AquaRatesSection(onSeeAllClick: () -> Unit) {
 
 @Composable
 fun RateCard(name: String, price: String, status: String, bgColor: Color, icon: androidx.compose.ui.graphics.vector.ImageVector) {
-    Surface(
-        modifier = Modifier.width(110.dp),
-        shape = RoundedCornerShape(12.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEEEEEE)),
-        color = Color.White
-    ) {
+    Surface(modifier = Modifier.width(110.dp), shape = RoundedCornerShape(12.dp), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEEEEEE)), color = Color.White) {
         Column(modifier = Modifier.padding(12.dp)) {
-            Box(modifier = Modifier.size(40.dp).background(bgColor, CircleShape), contentAlignment = Alignment.Center) {
-                Icon(icon, contentDescription = null, tint = AquaBlue, modifier = Modifier.size(20.dp))
-            }
+            Box(modifier = Modifier.size(40.dp).background(bgColor, CircleShape), contentAlignment = Alignment.Center) { Icon(icon, null, tint = AquaBlue, modifier = Modifier.size(20.dp)) }
             Spacer(modifier = Modifier.height(12.dp))
             Text(name, fontSize = 12.sp, color = GrayText)
-            Text(price, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color.Black)
+            Text(price, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             Text(status, fontSize = 10.sp, color = if (status.contains("+")) Color.Red else AquaBlue)
         }
     }
