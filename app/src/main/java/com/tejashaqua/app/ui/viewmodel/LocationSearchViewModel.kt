@@ -4,9 +4,12 @@ import android.app.Application
 import android.location.Geocoder
 import androidx.lifecycle.AndroidViewModel
 import com.google.android.gms.location.LocationServices
+import com.google.android.gms.maps.model.LatLng
 import com.google.android.libraries.places.api.Places
 import com.google.android.libraries.places.api.model.AutocompletePrediction
 import com.google.android.libraries.places.api.model.AutocompleteSessionToken
+import com.google.android.libraries.places.api.model.Place
+import com.google.android.libraries.places.api.net.FetchPlaceRequest
 import com.google.android.libraries.places.api.net.FindAutocompletePredictionsRequest
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -76,6 +79,21 @@ class LocationSearchViewModel(application: Application) : AndroidViewModel(appli
             .addOnFailureListener { exception ->
                 _error.value = exception.message
                 _searchResults.value = emptyList()
+            }
+    }
+
+    fun getPlaceLatLng(placeId: String, onSuccess: (LatLng) -> Unit) {
+        if (placesClient == null) return
+
+        val placeFields = listOf(Place.Field.LAT_LNG)
+        val request = FetchPlaceRequest.newInstance(placeId, placeFields)
+
+        placesClient.fetchPlace(request)
+            .addOnSuccessListener { response ->
+                response.place.latLng?.let { onSuccess(it) }
+            }
+            .addOnFailureListener { exception ->
+                _error.value = exception.message
             }
     }
 }

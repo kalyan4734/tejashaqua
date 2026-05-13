@@ -3,11 +3,13 @@ package com.tejashaqua.app.ui.screens
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Base64
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.launch
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -29,6 +31,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import com.tejashaqua.app.ui.AuthViewModel
 import com.tejashaqua.app.ui.theme.AquaBlue
 import java.io.ByteArrayOutputStream
@@ -43,21 +47,31 @@ fun EditProfileScreen(
     authViewModel: AuthViewModel = viewModel()
 ) {
     var name by remember { mutableStateOf(currentName) }
-    var selectedBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    var profileBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    var existingPicBase64 by remember { mutableStateOf<String?>(null) }
+    var isLoading by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val db = FirebaseFirestore.getInstance()
+    val auth = FirebaseAuth.getInstance()
+
+    // Load existing profile picture
+    LaunchedEffect(Unit) {
+        val userId = auth.currentUser?.uid
+        if (userId != null) {
+            db.collection("users").document(userId).get().addOnSuccessListener { doc ->
+                if (doc.exists()) {
+                    existingPicBase64 = doc.getString("profilePic")
+                }
+            }
+        }
+    }
 
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicturePreview()
     ) { bitmap ->
         if (bitmap != null) {
-            selectedBitmap = bitmap
+            profileBitmap = bitmap
         }
-    }
-
-    fun bitmapToBase64(bitmap: Bitmap): String {
-        val outputStream = ByteArrayOutputStream()
-        bitmap.compress(Bitmap.CompressFormat.JPEG, 70, outputStream)
-        return Base64.encodeToString(outputStream.toByteArray(), Base64.DEFAULT)
     }
 
     Scaffold(
@@ -86,27 +100,42 @@ fun EditProfileScreen(
                     .size(120.dp)
                     .clickable { cameraLauncher.launch() }
             ) {
-                if (selectedBitmap != null) {
+                val currentBitmap = profileBitmap
+                val existingBase64 = existingPicBase64
+
+                if (currentBitmap != null) {
                     Image(
-                        bitmap = selectedBitmap!!.asImageBitmap(),
+                        bitmap = currentBitmap.asImageBitmap(),
                         contentDescription = "Profile Picture",
                         modifier = Modifier
                             .fillMaxSize()
-                            .clip(CircleShape),
+                            .clip(CircleShape)
+                            .border(2.dp, AquaBlue, CircleShape),
                         contentScale = ContentScale.Crop
                     )
-                } else {
-                    Surface(
-                        modifier = Modifier.fillMaxSize(),
-                        shape = CircleShape,
-                        color = Color(0xFFF0F0F0)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Person,
-                            contentDescription = null,
-                            modifier = Modifier.padding(30.dp),
-                            tint = Color.Gray
+                } else if (!existingBase64.isNullOrBlank()) {
+                    val decodedString = Base64.decode(existingBase64, Base64.DEFAULT)
+                    val bitmap = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.size)
+                    if (bitmap != null) {
+                        Image(
+                            bitmap = bitmap.asImageBitmap(),
+                            contentDescription = "Profile Picture",
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(CircleShape)
+                                .border(2.dp, AquaBlue, CircleShape),
+                            contentScale = ContentScale.Crop
                         )
+                    }
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color(0xFFE0F7FA), CircleShape)
+                            .border(2.dp, AquaBlue, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.Person, contentDescription = null, tint = AquaBlue, modifier = Modifier.size(60.dp))
                     }
                 }
                 
@@ -114,26 +143,25 @@ fun EditProfileScreen(
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
                         .size(36.dp),
-                    shape = CircleShape,
                     color = AquaBlue,
+                    shape = CircleShape,
                     shadowElevation = 4.dp
                 ) {
                     Icon(
-                        imageVector = Icons.Default.CameraAlt,
-                        contentDescription = "Change Photo",
-                        modifier = Modifier.padding(8.dp),
-                        tint = Color.White
+                        Icons.Default.CameraAlt,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.padding(8.dp)
                     )
                 }
             }
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Name Input
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text("Full Name") },
+                label = { Text("User Name") },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
                 singleLine = true
@@ -141,35 +169,49 @@ fun EditProfileScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Phone (Read-only as it's the identifier)
             OutlinedTextField(
                 value = "+91 $currentPhone",
                 onValueChange = { },
                 label = { Text("Phone Number") },
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
                 enabled = false,
-                readOnly = true
+                readOnly = true,
+                shape = RoundedCornerShape(12.dp)
             )
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // Save Button
             Button(
                 onClick = {
-                    val base64 = selectedBitmap?.let { bitmapToBase64(it) }
-                    authViewModel.updateProfile(name, base64) {
-                        onProfileUpdated(name)
-                        onBackClick()
+                    if (name.isNotBlank()) {
+                        isLoading = true
+                        var base64Image: String? = null
+                        profileBitmap?.let {
+                            val outputStream = ByteArrayOutputStream()
+                            it.compress(Bitmap.CompressFormat.JPEG, 70, outputStream)
+                            base64Image = Base64.encodeToString(outputStream.toByteArray(), Base64.DEFAULT)
+                        }
+                        
+                        authViewModel.updateProfile(name, base64Image) {
+                            isLoading = false
+                            Toast.makeText(context, "Profile Updated", Toast.LENGTH_SHORT).show()
+                            onProfileUpdated(name)
+                            onBackClick()
+                        }
                     }
                 },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
                 shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = AquaBlue)
+                colors = ButtonDefaults.buttonColors(containerColor = AquaBlue),
+                enabled = !isLoading
             ) {
-                Text("Save Changes", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                if (isLoading) {
+                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                } else {
+                    Text("Update Profile", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                }
             }
         }
     }

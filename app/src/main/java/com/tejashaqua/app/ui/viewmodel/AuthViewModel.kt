@@ -12,7 +12,8 @@ sealed class AuthState {
     object Idle : AuthState()
     object Loading : AuthState()
     data class OtpSent(val verificationId: String) : AuthState()
-    object Success : AuthState()
+    data class Success(val userId: String, val userName: String, val mobileNumber: String, val joinedAt: Long) : AuthState()
+    data class RequireName(val phoneNumber: String) : AuthState()
     data class Error(val message: String) : AuthState()
 }
 
@@ -30,8 +31,10 @@ class AuthViewModel : ViewModel() {
     }
 
     private fun checkCurrentSession() {
-        if (auth.currentUser != null) {
-            _authState.value = AuthState.Success
+        val currentUser = auth.currentUser
+        if (currentUser != null) {
+            _authState.value = AuthState.Loading
+            checkUserExists()
         }
     }
 
@@ -73,11 +76,86 @@ class AuthViewModel : ViewModel() {
         auth.signInWithCredential(credential)
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
-                    _authState.value = AuthState.Success
+                    checkUserExists()
                 } else {
                     _authState.value = AuthState.Error(task.exception?.localizedMessage ?: "Sign-in Failed")
                 }
             }
+    }
+
+    private fun checkUserExists() {
+        val userId = auth.currentUser?.uid ?: return
+        val phoneNumber = auth.currentUser?.phoneNumber ?: ""
+        
+        db.collection("users").document(userId).get()
+            .addOnSuccessListener { document ->
+                if (document.exists()) {
+                    val name = document.getString("name") ?: "User"
+                    val joinedAt = document.getLong("joinedAt") ?: System.currentTimeMillis()
+                    val onboardingComplete = document.getBoolean("onboardingComplete") ?: false
+                    
+                    if (onboardingComplete) {
+                        _authState.value = AuthState.Success(userId, name, phoneNumber, joinedAt)
+                    } else {
+                        _authState.value = AuthState.RequireName(phoneNumber)
+                    }
+                } else {
+                    val now = System.currentTimeMillis()
+                    val dummyName = "User_${userId.takeLast(4)}"
+                    val user = hashMapOf(
+                        "uid" to userId,
+                        "name" to dummyName,
+                        "phone" to phoneNumber,
+                        "joinedAt" to now,
+                        "onboardingComplete" to false
+                    )
+                    db.collection("users").document(userId).set(user)
+                    _authState.value = AuthState.RequireName(phoneNumber)
+                }
+            }
+            .addOnFailureListener { e ->
+                _authState.value = AuthState.Error(e.localizedMessage ?: "Failed to check user info")
+            }
+    }
+
+    fun saveUserName(name: String) {
+        val userId = auth.currentUser?.uid ?: return
+        val phoneNumber = auth.currentUser?.phoneNumber ?: ""
+        val now = System.currentTimeMillis()
+        
+        db.collection("users").document(userId).get().addOnSuccessListener { doc ->
+            val joinedAt = doc.getLong("joinedAt") ?: now
+            val updates = hashMapOf<String, Any>(
+                "name" to name,
+                "onboardingComplete" to true
+            )
+            
+            db.collection("users").document(userId).update(updates)
+                .addOnSuccessListener {
+                    _authState.value = AuthState.Success(userId, name, phoneNumber, joinedAt)
+                }
+                .addOnFailureListener { e ->
+                    _authState.value = AuthState.Error(e.localizedMessage ?: "Failed to save user info")
+                }
+        }
+    }
+
+    fun skipOnboarding() {
+        val userId = auth.currentUser?.uid ?: return
+        val phoneNumber = auth.currentUser?.phoneNumber ?: ""
+        db.collection("users").document(userId).update("onboardingComplete", true)
+            .addOnSuccessListener {
+                db.collection("users").document(userId).get().addOnSuccessListener { doc ->
+                    val currentName = doc.getString("name") ?: "User"
+                    val joinedAt = doc.getLong("joinedAt") ?: System.currentTimeMillis()
+                    _authState.value = AuthState.Success(userId, currentName, phoneNumber, joinedAt)
+                }
+            }
+    }
+
+    fun logout() {
+        auth.signOut()
+        _authState.value = AuthState.Idle
     }
 
     fun resetState() {

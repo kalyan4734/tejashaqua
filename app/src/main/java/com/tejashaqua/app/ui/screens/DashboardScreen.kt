@@ -34,7 +34,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.tejashaqua.app.R
-import com.tejashaqua.app.ui.LocationSearchViewModel
+import com.tejashaqua.app.ui.viewmodel.LocationSearchViewModel
 import com.tejashaqua.app.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -50,6 +50,7 @@ fun DashboardScreen(
     onAddClick: () -> Unit,
     onProfileClick: () -> Unit,
     onLocationClick: () -> Unit,
+    onItemClick: (Map<String, Any>) -> Unit,
     onLocationFetched: (String, String) -> Unit,
     showNameSheetInitial: Boolean,
     onNameSave: (String) -> Unit,
@@ -189,7 +190,7 @@ fun DashboardScreen(
                         onSelect = { selectedCategoryFilter = it }
                     )
                 }
-                item { MarketplaceSection(searchText = productSearchText, categoryFilter = selectedCategoryFilter) }
+                item { MarketplaceSection(searchText = productSearchText, categoryFilter = selectedCategoryFilter, onItemClick = onItemClick) }
                 item { FooterSection() }
             }
 
@@ -315,7 +316,7 @@ fun SearchHeader(
 }
 
 @Composable
-fun MarketplaceSection(searchText: String, categoryFilter: String) {
+fun MarketplaceSection(searchText: String, categoryFilter: String, onItemClick: (Map<String, Any>) -> Unit) {
     val db = FirebaseFirestore.getInstance()
     var listings by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
@@ -326,7 +327,11 @@ fun MarketplaceSection(searchText: String, categoryFilter: String) {
             .limit(50)
             .addSnapshotListener { value, error ->
                 if (value != null) {
-                    listings = value.documents.map { it.data ?: emptyMap() }
+                    listings = value.documents.map { 
+                        val data = it.data?.toMutableMap() ?: mutableMapOf()
+                        data["id"] = it.id
+                        data
+                    }
                 }
                 isLoading = false
             }
@@ -382,7 +387,7 @@ fun MarketplaceSection(searchText: String, categoryFilter: String) {
                                 location = data["location"]?.toString() ?: "Unknown",
                                 posterName = data["posterName"]?.toString() ?: "User",
                                 imageBase64 = images?.firstOrNull(),
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f).clickable { onItemClick(data) }
                             )
                         }
                         if (rowItems.size == 1) {

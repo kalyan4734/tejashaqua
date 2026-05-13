@@ -61,9 +61,13 @@ dependencies {
     // Image Loading
     implementation(libs.coil.compose)
 
-    // Google Places and Networking
+    // Google Places, Maps and Location
     implementation(libs.google.places)
     implementation(libs.play.services.location)
+    implementation(libs.play.services.maps)
+    implementation(libs.maps.compose)
+    
+    // Networking
     implementation(libs.retrofit)
     implementation(libs.retrofit.gson)
     implementation(libs.okhttp.logging)

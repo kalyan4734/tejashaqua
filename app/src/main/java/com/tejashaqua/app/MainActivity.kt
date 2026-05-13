@@ -11,14 +11,16 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.android.gms.maps.model.LatLng
 import com.tejashaqua.app.data.model.ListingCategory
-import com.tejashaqua.app.ui.AuthState
-import com.tejashaqua.app.ui.AuthViewModel
+import com.tejashaqua.app.ui.viewmodel.AuthState
+import com.tejashaqua.app.ui.viewmodel.AuthViewModel
 import com.tejashaqua.app.ui.screens.*
 import com.tejashaqua.app.ui.theme.TejashAquaTheme
 
@@ -35,12 +37,21 @@ class MainActivity : ComponentActivity() {
                 var currentScreen by remember { mutableStateOf("splash") }
                 var mobileNumber by remember { mutableStateOf("") }
                 var userName by remember { mutableStateOf("User") }
+                var userId by remember { mutableStateOf("") }
+                var joinedAt by remember { mutableLongStateOf(0L) }
+                
                 var selectedCategory by remember { mutableStateOf(ListingCategory.FISH) }
                 var isEditMode by remember { mutableStateOf(false) }
                 var selectedListingId by remember { mutableStateOf<String?>(null) }
+                var selectedListingData by remember { mutableStateOf<Map<String, Any>?>(null) }
+                var chatSourceScreen by remember { mutableStateOf("detailed_page") }
                 
                 var currentLocationName by remember { mutableStateOf("Fetching location...") }
                 var currentSubLocation by remember { mutableStateOf("") }
+                
+                // Track where the location picker was opened from
+                var locationPickerSource by remember { mutableStateOf("dashboard") } 
+                var pickedListingLocation by remember { mutableStateOf<Pair<String, LatLng?>?>(null) }
 
                 val locationPermissionLauncher = rememberLauncherForActivityResult(
                     ActivityResultContracts.RequestMultiplePermissions()
@@ -51,32 +62,38 @@ class MainActivity : ComponentActivity() {
                         locationPermissionLauncher.launch(
                             arrayOf(
                                 Manifest.permission.ACCESS_FINE_LOCATION,
-                                Manifest.permission.ACCESS_COARSE_LOCATION
+                                Manifest.permission.ACCESS_COARSE_LOCATION,
+                                Manifest.permission.CAMERA
                             )
                         )
                     }
                 }
 
                 LaunchedEffect(authState) {
-                    when (authState) {
+                    when (val state = authState) {
                         is AuthState.OtpSent -> {
                             currentScreen = "otp"
                         }
                         is AuthState.Success -> {
-                            val success = authState as AuthState.Success
-                            userName = success.userName
-                            mobileNumber = success.phoneNumber
-                            if (currentScreen == "otp" || currentScreen == "splash") {
+                            userName = state.userName
+                            mobileNumber = state.mobileNumber
+                            userId = state.userId
+                            joinedAt = state.joinedAt
+                            if (currentScreen == "otp" || currentScreen == "splash" || currentScreen == "login") {
                                 currentScreen = "dashboard"
                             }
                         }
                         is AuthState.RequireName -> {
-                            val require = authState as AuthState.RequireName
-                            mobileNumber = require.phoneNumber
+                            mobileNumber = state.phoneNumber
                             currentScreen = "dashboard"
                         }
                         is AuthState.Error -> {
-                            Toast.makeText(context, (authState as AuthState.Error).message, Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, state.message, Toast.LENGTH_SHORT).show()
+                        }
+                        AuthState.Idle -> {
+                            if (currentScreen != "splash" && currentScreen != "login") {
+                                currentScreen = "login"
+                            }
                         }
                         else -> {}
                     }
@@ -87,7 +104,7 @@ class MainActivity : ComponentActivity() {
                         "splash" -> SplashScreen(onTimeout = { 
                             if (authState is AuthState.Success) {
                                 currentScreen = "dashboard"
-                            } else {
+                            } else if (authState is AuthState.Idle) {
                                 currentScreen = "login"
                             }
                         })
@@ -112,10 +129,18 @@ class MainActivity : ComponentActivity() {
                             onAddClick = { 
                                 isEditMode = false
                                 selectedListingId = null
+                                pickedListingLocation = null
                                 currentScreen = "select_category" 
                             },
                             onProfileClick = { currentScreen = "profile" },
-                            onLocationClick = { currentScreen = "select_location" },
+                            onLocationClick = { 
+                                locationPickerSource = "dashboard"
+                                currentScreen = "select_location" 
+                            },
+                            onItemClick = { data ->
+                                selectedListingData = data
+                                currentScreen = "detailed_page"
+                            },
                             onLocationFetched = { name, sub ->
                                 currentLocationName = name
                                 currentSubLocation = sub
@@ -128,12 +153,59 @@ class MainActivity : ComponentActivity() {
                                 authViewModel.skipOnboarding()
                             }
                         )
+                        "detailed_page" -> selectedListingData?.let { data ->
+                            DetailedPageScreen(
+                                listingData = data,
+                                onBackClick = { currentScreen = "dashboard" },
+                                onChatClick = { updatedData ->
+                                    selectedListingData = updatedData
+                                    chatSourceScreen = "detailed_page"
+                                    currentScreen = "chat"
+                                }
+                            )
+                        }
+                        "chat" -> selectedListingData?.let { data ->
+                            ChatScreen(
+                                sellerName = data["posterName"]?.toString() ?: "Seller",
+                                sellerUserId = data["userId"]?.toString() ?: "",
+                                listingId = data["id"]?.toString() ?: "",
+                                listingData = data,
+                                currentUserId = userId,
+                                currentUserName = userName,
+                                currentUserPhone = mobileNumber,
+                                currentUserLocation = currentLocationName,
+                                onBackClick = { currentScreen = chatSourceScreen }
+                            )
+                        }
+                        "chat_list" -> ChatListScreen(
+                            currentUserId = userId,
+                            onBackClick = { currentScreen = "profile" },
+                            onChatClick = { data ->
+                                val isBuying = data["buyerId"] == userId
+                                val updatedData = data.toMutableMap()
+                                updatedData["id"] = data["listingId"] ?: ""
+                                updatedData["posterName"] = if (isBuying) data["sellerName"] ?: "Seller" else data["buyerName"] ?: "User"
+                                updatedData["userId"] = if (isBuying) data["sellerId"] ?: "" else data["buyerId"] ?: ""
+                                updatedData["title"] = data["listingTitle"] ?: ""
+                                
+                                selectedListingData = updatedData
+                                chatSourceScreen = "chat_list"
+                                currentScreen = "chat"
+                            }
+                        )
                         "select_location" -> SelectLocationScreen(
-                            onBackClick = { currentScreen = "dashboard" },
-                            onLocationConfirm = { name, sub ->
-                                currentLocationName = name
-                                currentSubLocation = sub
-                                currentScreen = "dashboard"
+                            onBackClick = { 
+                                currentScreen = if (locationPickerSource == "listing") "edit_listing" else "dashboard" 
+                            },
+                            onLocationConfirm = { name, sub, latLng ->
+                                if (locationPickerSource == "listing") {
+                                    pickedListingLocation = "$name, $sub" to latLng
+                                    currentScreen = "edit_listing"
+                                } else {
+                                    currentLocationName = name
+                                    currentSubLocation = sub
+                                    currentScreen = "dashboard"
+                                }
                             }
                         )
                         "aqua_rates" -> AquaRatesScreen(
@@ -153,12 +225,19 @@ class MainActivity : ComponentActivity() {
                             isEditMode = isEditMode,
                             listingId = selectedListingId,
                             userName = userName,
-                            initialLocation = if (currentSubLocation.isNotEmpty()) "$currentLocationName, $currentSubLocation" else currentLocationName,
-                            onBackClick = { 
-                                if (isEditMode) currentScreen = "my_listings" else currentScreen = "select_category" 
+                            initialLocation = pickedListingLocation?.first ?: if (currentSubLocation.isNotEmpty()) "$currentLocationName, $currentSubLocation" else currentLocationName,
+                            initialLatLng = pickedListingLocation?.second,
+                            onBackClick = {
+                                currentScreen = if (isEditMode) "my_listings" else "select_category"
                             },
                             onPostClick = { currentScreen = "dashboard" },
-                            onDeleteClick = { currentScreen = "dashboard" }
+                            onDeleteClick = { currentScreen = "dashboard" },
+                            onLocationChangeClick = {
+                                locationPickerSource = "listing"
+                                currentScreen = "select_location"
+                            },
+                            joinedAt = joinedAt,
+                            userId = userId
                         )
                         "profile" -> ProfileScreen(
                             userName = userName,
@@ -166,9 +245,9 @@ class MainActivity : ComponentActivity() {
                             onBackClick = { currentScreen = "dashboard" },
                             onEditClick = { currentScreen = "edit_profile" },
                             onMyListingsClick = { currentScreen = "my_listings" },
+                            onChatsClick = { currentScreen = "chat_list" },
                             onLogoutClick = { 
                                 authViewModel.logout()
-                                currentScreen = "login" 
                             }
                         )
                         "edit_profile" -> EditProfileScreen(
@@ -184,10 +263,10 @@ class MainActivity : ComponentActivity() {
                             onEditClick = { listingId, categoryStr ->
                                 selectedListingId = listingId
                                 isEditMode = true
-                                // Map string category back to enum
+                                pickedListingLocation = null
                                 selectedCategory = try {
                                     ListingCategory.valueOf(categoryStr)
-                                } catch (e: Exception) {
+                                } catch (_: Exception) {
                                     ListingCategory.FISH
                                 }
                                 currentScreen = "edit_listing"
@@ -196,7 +275,10 @@ class MainActivity : ComponentActivity() {
                     }
 
                     if (authState is AuthState.Loading) {
-                        CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                        CircularProgressIndicator(
+                            modifier = Modifier.align(Alignment.Center),
+                            color = MaterialTheme.colorScheme.primary
+                        )
                     }
                 }
             }
