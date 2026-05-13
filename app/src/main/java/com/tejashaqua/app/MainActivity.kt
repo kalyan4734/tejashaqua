@@ -235,6 +235,12 @@ class MainActivity : ComponentActivity() {
                                 updatedData["posterName"] = if (isBuying) data["sellerName"] ?: "Seller" else data["buyerName"] ?: "User"
                                 updatedData["userId"] = if (isBuying) data["sellerId"] ?: "" else data["buyerId"] ?: ""
                                 updatedData["title"] = data["listingTitle"] ?: ""
+                                updatedData["price"] = data["listingPrice"] ?: ""
+                                updatedData["location"] = data["listingLocation"] ?: ""
+                                val img = data["listingImage"]?.toString() ?: ""
+                                if (img.isNotEmpty()) {
+                                    updatedData["images"] = listOf(img)
+                                }
                                 
                                 selectedListingData = updatedData
                                 chatSourceScreen = "chat_list"

@@ -407,6 +407,9 @@ fun MarketplaceSection(searchText: String, categoryFilter: String, onItemClick: 
 
 @Composable
 fun MarketItem(title: String, price: String, category: String, location: String, posterName: String, imageBase64: String?, modifier: Modifier = Modifier) {
+    val displayLocation = remember(location) {
+        location.split(",").firstOrNull()?.trim() ?: location
+    }
     val bitmap = remember(imageBase64) {
         if (!imageBase64.isNullOrBlank()) {
             try {
@@ -440,7 +443,7 @@ fun MarketItem(title: String, price: String, category: String, location: String,
                 Text(price, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp, color = Color.Black)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.LocationOn, null, tint = GrayText, modifier = Modifier.size(10.dp))
-                    Text(location, color = GrayText, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(displayLocation, color = GrayText, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {

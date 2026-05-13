@@ -1,5 +1,8 @@
 package com.tejashaqua.app.ui.screens
 
+import android.graphics.BitmapFactory
+import android.util.Base64
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -17,15 +20,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
+import androidx.compose.ui.text.style.TextOverflow
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.tejashaqua.app.ui.theme.AquaBlue
 import com.tejashaqua.app.ui.theme.GrayText
+import com.tejashaqua.app.R
 
 data class UserListing(
     val id: String = "",
@@ -52,6 +57,33 @@ fun MyListingsScreen(
     
     var listings by remember { mutableStateOf<List<UserListing>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
+    
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var listingToDelete by remember { mutableStateOf<UserListing?>(null) }
+
+    if (showDeleteDialog && listingToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Delete Listing") },
+            text = { Text("Are you sure you want to delete this listing? This action cannot be undone.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        db.collection("listings").document(listingToDelete!!.id).delete()
+                        showDeleteDialog = false
+                        listingToDelete = null
+                    }
+                ) {
+                    Text("Delete", color = Color.Red)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     LaunchedEffect(currentUserId) {
         if (currentUserId != null) {
@@ -60,13 +92,14 @@ fun MyListingsScreen(
                 .addSnapshotListener { snapshot, error ->
                     if (snapshot != null) {
                         listings = snapshot.documents.map { doc ->
+                            val fullLocation = doc.getString("location") ?: ""
                             UserListing(
                                 id = doc.id,
                                 title = doc.getString("title") ?: "",
                                 category = doc.getString("category") ?: "FISH",
                                 price = doc.get("price")?.toString() ?: "",
                                 unit = doc.getString("unitType") ?: "kg",
-                                location = doc.getString("location") ?: "",
+                                location = fullLocation.split(",").firstOrNull()?.trim() ?: fullLocation,
                                 imageUrl = (doc.get("images") as? List<*>)?.firstOrNull() as? String
                             )
                         }
@@ -111,7 +144,8 @@ fun MyListingsScreen(
                         listing = listing,
                         onEditClick = { onEditClick(listing.id, listing.category) },
                         onDeleteClick = {
-                            db.collection("listings").document(listing.id).delete()
+                            listingToDelete = listing
+                            showDeleteDialog = true
                         }
                     )
                 }
@@ -126,6 +160,17 @@ fun ListingCard(
     onEditClick: () -> Unit,
     onDeleteClick: () -> Unit
 ) {
+    val bitmap = remember(listing.imageUrl) {
+        if (!listing.imageUrl.isNullOrBlank()) {
+            try {
+                val decodedString = Base64.decode(listing.imageUrl, Base64.DEFAULT)
+                BitmapFactory.decodeByteArray(decodedString, 0, decodedString.size)
+            } catch (_: Exception) {
+                null
+            }
+        } else null
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -137,24 +182,20 @@ fun ListingCard(
                 Box(
                     modifier = Modifier.size(100.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xFFF0F0F0))
                 ) {
-                    if (listing.imageUrl != null) {
-                        AsyncImage(
-                            model = listing.imageUrl,
+                    if (bitmap != null) {
+                        Image(
+                            bitmap = bitmap.asImageBitmap(),
                             contentDescription = null,
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop
                         )
-                    }
-                    Surface(
-                        modifier = Modifier.align(Alignment.BottomStart).padding(6.dp),
-                        color = Color.Black.copy(alpha = 0.6f),
-                        shape = RoundedCornerShape(4.dp)
-                    ) {
-                        Row(modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Visibility, contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(text = listing.views.toString(), color = Color.White, fontSize = 10.sp)
-                        }
+                    } else {
+                        Image(
+                            painter = androidx.compose.ui.res.painterResource(id = R.drawable.app_logo),
+                            contentDescription = null,
+                            modifier = Modifier.size(60.dp).align(Alignment.Center),
+                            alpha = 0.3f
+                        )
                     }
                 }
 
@@ -168,7 +209,13 @@ fun ListingCard(
                     Text(text = "₹${listing.price}/${listing.unit}", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, color = Color.Black)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Outlined.LocationOn, contentDescription = null, tint = GrayText, modifier = Modifier.size(14.dp))
-                        Text(text = " ${listing.location} • ${listing.distance}", color = GrayText, fontSize = 12.sp)
+                        Text(
+                            text = " ${listing.location} • ${listing.distance}",
+                            color = GrayText,
+                            fontSize = 12.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
                 }
             }

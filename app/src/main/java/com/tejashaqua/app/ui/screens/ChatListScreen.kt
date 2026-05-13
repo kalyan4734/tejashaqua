@@ -1,5 +1,8 @@
 package com.tejashaqua.app.ui.screens
 
+import android.graphics.BitmapFactory
+import android.util.Base64
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -14,7 +17,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -68,6 +74,7 @@ fun ChatListScreen(
                         time = (data["lastMessageTimestamp"] as? com.google.firebase.Timestamp)?.toDate()?.time ?: 
                                (data["lastMessageTimestamp"] as? Long) ?: 0L,
                         unreadCount = unreadCount,
+                        listingImage = data["listingImage"] as? String,
                         fullData = data + mapOf("id" to (data["listingId"] ?: ""))
                     )
                 }.sortedByDescending { it.time }
@@ -169,6 +176,15 @@ fun ChatListScreen(
 
 @Composable
 fun ChatListItem(chat: ChatListItemData, onClick: () -> Unit) {
+    val bitmap = remember(chat.listingImage) {
+        if (!chat.listingImage.isNullOrBlank()) {
+            try {
+                val decodedString = Base64.decode(chat.listingImage, Base64.DEFAULT)
+                BitmapFactory.decodeByteArray(decodedString, 0, decodedString.size)
+            } catch (_: Exception) { null }
+        } else null
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -192,14 +208,24 @@ fun ChatListItem(chat: ChatListItemData, onClick: () -> Unit) {
             Box(
                 modifier = Modifier
                     .size(48.dp)
-                    .background(AquaBlue.copy(alpha = 0.1f), CircleShape),
+                    .clip(CircleShape)
+                    .background(AquaBlue.copy(alpha = 0.1f)),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = chat.name.split(" ").filter { it.isNotEmpty() }.map { it.take(1) }.joinToString("").uppercase(),
-                    color = AquaBlue,
-                    fontWeight = FontWeight.Bold
-                )
+                if (bitmap != null) {
+                    Image(
+                        bitmap = bitmap.asImageBitmap(),
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Text(
+                        text = chat.name.split(" ").filter { it.isNotEmpty() }.map { it.take(1) }.joinToString("").uppercase(),
+                        color = AquaBlue,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
             
             Spacer(modifier = Modifier.width(12.dp))
@@ -265,5 +291,6 @@ data class ChatListItemData(
     val lastMessage: String,
     val time: Long,
     val unreadCount: Int,
+    val listingImage: String? = null,
     val fullData: Map<String, Any>
 )

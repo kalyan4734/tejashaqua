@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -61,29 +62,8 @@ fun EditListingScreen(
     var latLng by remember { mutableStateOf<LatLng?>(initialLatLng) }
     var contactNumber by remember { mutableStateOf(userMobileNumber) }
 
-    // Sync location if it changes from outside (via picker)
-    LaunchedEffect(initialLocation, initialLatLng) {
-        location = initialLocation
-        latLng = initialLatLng
-    }
-    
-    // Sync contact number if it changes from outside (e.g. initial load)
-    LaunchedEffect(userMobileNumber) {
-        if (contactNumber.isEmpty() || contactNumber == "+91 9876543210") {
-            contactNumber = userMobileNumber
-        }
-    }
-
     // Photos state (Base64 strings for simplicity in this demo)
     var selectedPhotos by remember { mutableStateOf(listOf<Bitmap>()) }
-    
-    val cameraLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.TakePicturePreview()
-    ) { bitmap ->
-        if (bitmap != null) {
-            selectedPhotos = selectedPhotos + bitmap
-        }
-    }
 
     // Specific fields
     var fishType by remember { mutableStateOf("") }
@@ -106,6 +86,135 @@ fun EditListingScreen(
     var tankAcres by remember { mutableStateOf("") }
     var estPricePerAcre by remember { mutableStateOf("") }
     var tankLocation by remember { mutableStateOf("") }
+
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicturePreview()
+    ) { bitmap ->
+        if (bitmap != null) {
+            selectedPhotos = selectedPhotos + bitmap
+        }
+    }
+
+    // Sync location if it changes from outside (via picker)
+    LaunchedEffect(initialLocation, initialLatLng) {
+        location = initialLocation
+        latLng = initialLatLng
+    }
+
+    // Sync contact number if it changes from outside (e.g. initial load)
+    LaunchedEffect(userMobileNumber) {
+        if (contactNumber.isEmpty() || contactNumber == "+91 9876543210") {
+            contactNumber = userMobileNumber
+        }
+    }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Delete Listing") },
+            text = { Text("Are you sure you want to delete this listing? This action cannot be undone.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        listingId?.let { listingViewModel.deleteListing(it) }
+                        showDeleteDialog = false
+                        onDeleteClick()
+                    }
+                ) {
+                    Text("Delete", color = Color.Red)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Fetch existing data if in edit mode
+    LaunchedEffect(isEditMode, listingId) {
+        if (isEditMode && listingId != null) {
+            com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                .collection("listings")
+                .document(listingId)
+                .get()
+                .addOnSuccessListener { doc ->
+                    if (doc != null && doc.exists()) {
+                        title = doc.getString("title") ?: ""
+                        description = doc.getString("description") ?: ""
+                        price = doc.get("price")?.toString() ?: ""
+                        location = doc.getString("location") ?: initialLocation
+                        val lat = doc.getDouble("lat")
+                        val lng = doc.getDouble("lng")
+                        if (lat != null && lng != null) {
+                            latLng = LatLng(lat, lng)
+                        }
+                        contactNumber = doc.getString("contactNumber") ?: userMobileNumber
+
+                        // Category specific fields
+                        when (category) {
+                            ListingCategory.FISH -> {
+                                fishType = doc.getString("fishType") ?: ""
+                                sizeType = doc.getString("sizeType") ?: "Inches"
+                                sizeValue = doc.getString("sizeValue") ?: ""
+                                fishAge = doc.getString("fishAge") ?: ""
+                                quantity = doc.getString("quantity") ?: ""
+                                unitType = doc.getString("unitType") ?: "Lakhs"
+                            }
+                            ListingCategory.PRAWNS -> {
+                                prawnType = doc.getString("prawnType") ?: ""
+                                hatcheryName = doc.getString("hatcheryName") ?: ""
+                                rateType = doc.getString("rateType") ?: "Paise"
+                                rateValue = doc.getString("rateValue") ?: ""
+                                quantity = doc.getString("quantity") ?: ""
+                                unitType = doc.getString("unitType") ?: "Lakhs"
+                            }
+                            ListingCategory.EQUIPMENTS -> {
+                                equipmentType = doc.getString("equipmentType") ?: ""
+                            }
+                            ListingCategory.VEHICLES -> {
+                                selectedServiceType = doc.getString("serviceType") ?: ""
+                                vehicleName = doc.getString("vehicleName") ?: ""
+                                vehicleCapacity = doc.getString("vehicleCapacity") ?: ""
+                            }
+                            ListingCategory.FEED -> {
+                                businessType = doc.getString("businessType") ?: ""
+                                feedName = doc.getString("feedName") ?: ""
+                                ratePerTon = doc.getString("ratePerTon") ?: ""
+                            }
+                            ListingCategory.BOREWELL -> {
+                                selectedServiceType = doc.getString("serviceType") ?: ""
+                                boreWellType = doc.getString("boreWellType") ?: ""
+                            }
+                            ListingCategory.TANKS -> {
+                                tankAcres = doc.getString("tankAcres") ?: ""
+                                estPricePerAcre = doc.getString("estPricePerAcre") ?: ""
+                                tankLocation = doc.getString("tankLocation") ?: ""
+                            }
+                        }
+
+                        // Handle images if any
+                        val images = doc.get("images") as? List<String>
+                        if (images != null) {
+                            val bitmaps = images.mapNotNull { base64 ->
+                                try {
+                                    val decodedString = Base64.decode(base64, Base64.DEFAULT)
+                                    android.graphics.BitmapFactory.decodeByteArray(decodedString, 0, decodedString.size)
+                                } catch (e: Exception) {
+                                    null
+                                }
+                            }
+                            selectedPhotos = bitmaps
+                        }
+                    }
+                }
+        }
+    }
+
+    // Sync location if it changes from outside (via picker)
 
     val screenTitle = if (isEditMode) "Edit Listing" else category.name.lowercase().replaceFirstChar { it.uppercase() }
 
@@ -145,7 +254,7 @@ fun EditListingScreen(
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         OutlinedButton(
-                            onClick = onDeleteClick,
+                            onClick = { showDeleteDialog = true },
                             modifier = Modifier.weight(1f).height(56.dp),
                             shape = RoundedCornerShape(12.dp),
                             border = BorderStroke(1.dp, Color(0xFFF44336)),
@@ -640,8 +749,15 @@ fun LocationSection(location: String, onClick: () -> Unit) {
             ) {
                 Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color.Red, modifier = Modifier.size(20.dp))
                 Spacer(modifier = Modifier.width(12.dp))
-                Text(location, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface, maxLines = 1)
-                Spacer(modifier = Modifier.weight(1f))
+                Text(
+                    text = location,
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
                 Text("Change", color = AquaBlue, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
         }

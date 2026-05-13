@@ -54,17 +54,36 @@ fun ChatScreen(
     sendInitialMessage: Boolean = false
 ) {
     val db = FirebaseFirestore.getInstance()
-    val title = listingData["title"]?.toString() ?: "No Title"
-    val priceValue = listingData["price"] ?: listingData["rateValue"] ?: "N/A"
+    var listingDetails by remember { mutableStateOf(listingData) }
+    
+    val title = listingDetails["title"]?.toString() ?: listingDetails["listingTitle"]?.toString() ?: "No Title"
+    val priceValue = listingDetails["price"] ?: listingDetails["rateValue"] ?: listingDetails["listingPrice"] ?: "N/A"
     val price = "₹$priceValue/kg"
-    val fullLocation = listingData["location"]?.toString() ?: "Unknown"
+    val fullLocation = listingDetails["location"]?.toString() ?: listingDetails["listingLocation"]?.toString() ?: "Unknown"
     val location = fullLocation.split(",").firstOrNull()?.trim() ?: fullLocation
-    val images = listingData["images"] as? List<*> ?: emptyList<String>()
+    
+    val imagesFromData = listingDetails["images"] as? List<*>
+    val singleImage = listingDetails["listingImage"]?.toString()
+    val images = if (!imagesFromData.isNullOrEmpty()) imagesFromData else if (!singleImage.isNullOrEmpty()) listOf(singleImage) else emptyList<String>()
     
     var messageText by remember { mutableStateOf("") }
     val chatMessages = remember { mutableStateListOf<ChatMessage>() }
     val listState = rememberLazyListState()
     var initialMessageSent by remember { mutableStateOf(false) }
+
+    // Fetch full listing details if missing (e.g. when coming from ChatList)
+    LaunchedEffect(listingId) {
+        if (listingId.isNotEmpty() && (images.isEmpty() || listingDetails["price"] == null)) {
+            db.collection("listings").document(listingId).get().addOnSuccessListener { doc ->
+                if (doc.exists()) {
+                    val data = doc.data
+                    if (data != null) {
+                        listingDetails = listingDetails + data
+                    }
+                }
+            }
+        }
+    }
 
     // Determine unique chat ID (senderId_receiverId_listingId)
     val chatRoomId = if (currentUserId < sellerUserId) {
@@ -99,6 +118,9 @@ fun ChatScreen(
             "lastMessageSenderId" to currentUserId,
             "listingId" to listingId,
             "listingTitle" to title,
+            "listingPrice" to priceValue,
+            "listingLocation" to fullLocation,
+            "listingImage" to (images.firstOrNull()?.toString() ?: ""),
             "sellerId" to sellerId,
             "sellerName" to sellerNameLabel,
             "buyerId" to buyerId,
