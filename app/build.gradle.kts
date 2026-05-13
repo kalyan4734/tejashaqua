@@ -65,6 +65,7 @@ dependencies {
     implementation(libs.google.places)
     implementation(libs.play.services.location)
     implementation(libs.play.services.maps)
+    implementation(libs.play.services.auth.api.phone)
     implementation(libs.maps.compose)
     
     // Networking

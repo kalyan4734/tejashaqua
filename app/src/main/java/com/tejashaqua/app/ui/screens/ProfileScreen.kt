@@ -45,6 +45,7 @@ fun ProfileScreen(
 ) {
     var showLogoutDialog by remember { mutableStateOf(false) }
     var listingCount by remember { mutableIntStateOf(0) }
+    var chatCount by remember { mutableIntStateOf(0) }
     var profilePicBase64 by remember { mutableStateOf<String?>(null) }
     
     val auth = FirebaseAuth.getInstance()
@@ -55,6 +56,7 @@ fun ProfileScreen(
 
     DisposableEffect(currentUserId) {
         var listingListener: ListenerRegistration? = null
+        var chatListener: ListenerRegistration? = null
         var userListener: ListenerRegistration? = null
 
         if (currentUserId != null) {
@@ -62,6 +64,12 @@ fun ProfileScreen(
                 .whereEqualTo("userId", currentUserId)
                 .addSnapshotListener { snapshot, _ ->
                     if (snapshot != null) listingCount = snapshot.size()
+                }
+
+            chatListener = db.collection("chats")
+                .whereArrayContains("participants", currentUserId)
+                .addSnapshotListener { snapshot, _ ->
+                    if (snapshot != null) chatCount = snapshot.size()
                 }
             
             userListener = db.collection("users").document(currentUserId)
@@ -74,31 +82,94 @@ fun ProfileScreen(
 
         onDispose {
             listingListener?.remove()
+            chatListener?.remove()
             userListener?.remove()
         }
     }
 
     if (showLogoutDialog) {
-        AlertDialog(
+        ModalBottomSheet(
             onDismissRequest = { showLogoutDialog = false },
-            title = { Text(text = "Logout", fontWeight = FontWeight.Bold) },
-            text = { Text(text = "Are you sure you want to logout?") },
-            confirmButton = {
-                TextButton(onClick = {
-                    showLogoutDialog = false
-                    onLogoutClick()
-                }) {
-                    Text(text = "Logout", color = Color.Red, fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showLogoutDialog = false }) {
-                    Text(text = "Cancel", color = AquaBlue, fontWeight = FontWeight.Bold)
-                }
-            },
             containerColor = Color.White,
-            shape = RoundedCornerShape(16.dp)
-        )
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+            dragHandle = null
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp)
+                    .navigationBarsPadding()
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Logout?",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
+                    )
+                    IconButton(onClick = { showLogoutDialog = false }) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close",
+                            tint = Color.Black
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text(
+                    text = "Are you sure you want to logout from Tejash Aqua?",
+                    fontSize = 16.sp,
+                    color = Color.Gray
+                )
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                Button(
+                    onClick = {
+                        showLogoutDialog = false
+                        onLogoutClick()
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(
+                        text = "Logout",
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                OutlinedButton(
+                    onClick = { showLogoutDialog = false },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color.LightGray),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Black)
+                ) {
+                    Text(
+                        text = "Cancel",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+        }
     }
 
     Scaffold(
@@ -133,7 +204,7 @@ fun ProfileScreen(
                 ) {
                     StatCard(listingCount.toString(), "My Listings", Modifier.weight(1f).clickable { onMyListingsClick() })
                     StatCard("0", "Saved Items", Modifier.weight(1f))
-                    StatCard("3", "Chats", Modifier.weight(1f).clickable { onChatsClick() })
+                    StatCard(chatCount.toString(), "Chats", Modifier.weight(1f).clickable { onChatsClick() })
                 }
             }
 

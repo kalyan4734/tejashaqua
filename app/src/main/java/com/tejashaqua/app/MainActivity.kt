@@ -45,6 +45,7 @@ class MainActivity : ComponentActivity() {
                 var selectedListingId by remember { mutableStateOf<String?>(null) }
                 var selectedListingData by remember { mutableStateOf<Map<String, Any>?>(null) }
                 var chatSourceScreen by remember { mutableStateOf("detailed_page") }
+                var shouldSendInitialChatMessage by remember { mutableStateOf(false) }
                 
                 var currentLocationName by remember { mutableStateOf("Fetching location...") }
                 var currentSubLocation by remember { mutableStateOf("") }
@@ -53,19 +54,24 @@ class MainActivity : ComponentActivity() {
                 var locationPickerSource by remember { mutableStateOf("dashboard") } 
                 var pickedListingLocation by remember { mutableStateOf<Pair<String, LatLng?>?>(null) }
 
-                val locationPermissionLauncher = rememberLauncherForActivityResult(
+                val permissionLauncher = rememberLauncherForActivityResult(
                     ActivityResultContracts.RequestMultiplePermissions()
                 ) { _ -> }
 
                 LaunchedEffect(currentScreen) {
-                    if (currentScreen == "dashboard") {
-                        locationPermissionLauncher.launch(
-                            arrayOf(
-                                Manifest.permission.ACCESS_FINE_LOCATION,
-                                Manifest.permission.ACCESS_COARSE_LOCATION,
-                                Manifest.permission.CAMERA
+                    when (currentScreen) {
+                        "dashboard" -> {
+                            permissionLauncher.launch(
+                                arrayOf(
+                                    Manifest.permission.ACCESS_FINE_LOCATION,
+                                    Manifest.permission.ACCESS_COARSE_LOCATION,
+                                    Manifest.permission.CAMERA
+                                )
                             )
-                        )
+                        }
+                        "otp" -> {
+                            // SMS permissions removed as we moved to SmsRetriever API
+                        }
                     }
                 }
 
@@ -156,10 +162,12 @@ class MainActivity : ComponentActivity() {
                         "detailed_page" -> selectedListingData?.let { data ->
                             DetailedPageScreen(
                                 listingData = data,
+                                currentUserId = userId,
                                 onBackClick = { currentScreen = "dashboard" },
                                 onChatClick = { updatedData ->
                                     selectedListingData = updatedData
                                     chatSourceScreen = "detailed_page"
+                                    shouldSendInitialChatMessage = true
                                     currentScreen = "chat"
                                 }
                             )
@@ -174,7 +182,8 @@ class MainActivity : ComponentActivity() {
                                 currentUserName = userName,
                                 currentUserPhone = mobileNumber,
                                 currentUserLocation = currentLocationName,
-                                onBackClick = { currentScreen = chatSourceScreen }
+                                onBackClick = { currentScreen = chatSourceScreen },
+                                sendInitialMessage = shouldSendInitialChatMessage
                             )
                         }
                         "chat_list" -> ChatListScreen(
@@ -190,6 +199,7 @@ class MainActivity : ComponentActivity() {
                                 
                                 selectedListingData = updatedData
                                 chatSourceScreen = "chat_list"
+                                shouldSendInitialChatMessage = false
                                 currentScreen = "chat"
                             }
                         )
@@ -225,6 +235,7 @@ class MainActivity : ComponentActivity() {
                             isEditMode = isEditMode,
                             listingId = selectedListingId,
                             userName = userName,
+                            userMobileNumber = mobileNumber,
                             initialLocation = pickedListingLocation?.first ?: if (currentSubLocation.isNotEmpty()) "$currentLocationName, $currentSubLocation" else currentLocationName,
                             initialLatLng = pickedListingLocation?.second,
                             onBackClick = {

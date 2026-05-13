@@ -2,8 +2,10 @@ package com.tejashaqua.app.ui.screens
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.*
@@ -29,12 +31,17 @@ import com.tejashaqua.app.R
 fun LoginScreen(onSendOtp: (String) -> Unit) {
     var mobileNumber by remember { mutableStateOf("") }
     var isError by remember { mutableStateOf(false) }
+    val scrollState = rememberScrollState()
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp)
-            .statusBarsPadding(),
+            .background(Color.White)
+            .statusBarsPadding()
+            .navigationBarsPadding()
+            .imePadding()
+            .verticalScroll(scrollState)
+            .padding(24.dp),
         horizontalAlignment = Alignment.Start
     ) {
         Spacer(modifier = Modifier.height(40.dp))
@@ -191,5 +198,7 @@ fun LoginScreen(onSendOtp: (String) -> Unit) {
             style = TextStyle(fontSize = 14.sp),
             modifier = Modifier.padding(top = 4.dp)
         )
+        
+        Spacer(modifier = Modifier.height(24.dp))
     }
 }

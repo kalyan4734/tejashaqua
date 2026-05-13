@@ -12,8 +12,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CameraAlt
@@ -53,6 +55,7 @@ fun EditProfileScreen(
     val context = LocalContext.current
     val db = FirebaseFirestore.getInstance()
     val auth = FirebaseAuth.getInstance()
+    val scrollState = rememberScrollState()
 
     // Load existing profile picture
     LaunchedEffect(Unit) {
@@ -91,6 +94,10 @@ fun EditProfileScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .background(Color.White)
+                .navigationBarsPadding()
+                .imePadding()
+                .verticalScroll(scrollState)
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -179,7 +186,7 @@ fun EditProfileScreen(
                 shape = RoundedCornerShape(12.dp)
             )
 
-            Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.height(32.dp))
 
             Button(
                 onClick = {
@@ -213,6 +220,8 @@ fun EditProfileScreen(
                     Text("Update Profile", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 }
             }
+            
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }

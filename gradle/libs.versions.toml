@@ -13,6 +13,7 @@ retrofit = "2.9.0"
 okhttp = "4.12.0"
 lifecycleCompose = "2.10.0"
 playServicesLocation = "21.3.0"
+playServicesAuthPhone = "18.1.0"
 firebaseBom = "33.5.1"
 coil = "2.6.0"
 googleMaps = "19.0.0"
@@ -38,6 +39,7 @@ androidx-compose-material-icons-extended = { group = "androidx.compose.material"
 google-places = { group = "com.google.android.libraries.places", name = "places", version.ref = "googlePlaces" }
 play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playServicesLocation" }
 play-services-maps = { group = "com.google.android.gms", name = "play-services-maps", version.ref = "googleMaps" }
+play-services-auth-api-phone = { group = "com.google.android.gms", name = "play-services-auth-api-phone", version.ref = "playServicesAuthPhone" }
 maps-compose = { group = "com.google.maps.android", name = "maps-compose", version.ref = "mapsCompose" }
 retrofit = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = "retrofit" }
 retrofit-gson = { group = "com.squareup.retrofit2", name = "converter-gson", version.ref = "retrofit" }

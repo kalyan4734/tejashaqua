@@ -39,6 +39,7 @@ import com.tejashaqua.app.ui.theme.GrayText
 @Composable
 fun DetailedPageScreen(
     listingData: Map<String, Any>,
+    currentUserId: String,
     onBackClick: () -> Unit,
     onChatClick: (Map<String, Any>) -> Unit
 ) {
@@ -53,6 +54,8 @@ fun DetailedPageScreen(
     val posterName = listingData["posterName"]?.toString() ?: "User"
     val images = listingData["images"] as? List<*> ?: emptyList<String>()
     val timestamp = listingData["timestamp"] as? Long ?: System.currentTimeMillis()
+    val listingUserId = listingData["userId"]?.toString() ?: ""
+    val isOwnListing = currentUserId == listingUserId
 
     Scaffold(
         topBar = {
@@ -72,19 +75,25 @@ fun DetailedPageScreen(
             )
         },
         bottomBar = {
-            Surface(tonalElevation = 8.dp, color = MaterialTheme.colorScheme.surface) {
-                Button(
-                    onClick = { onChatClick(listingData) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                        .height(56.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = AquaBlue)
+            if (!isOwnListing) {
+                Surface(
+                    tonalElevation = 8.dp, 
+                    color = MaterialTheme.colorScheme.surface,
+                    modifier = Modifier.navigationBarsPadding()
                 ) {
-                    Icon(Icons.Default.ChatBubbleOutline, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Chat with Seller", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Button(
+                        onClick = { onChatClick(listingData) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                            .height(56.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = AquaBlue)
+                    ) {
+                        Icon(Icons.Default.ChatBubbleOutline, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Chat with Seller", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    }
                 }
             }
         }

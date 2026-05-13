@@ -10,6 +10,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
@@ -25,6 +27,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -45,7 +48,8 @@ fun ChatScreen(
     currentUserName: String,
     currentUserPhone: String,
     currentUserLocation: String,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    sendInitialMessage: Boolean = false
 ) {
     val db = FirebaseFirestore.getInstance()
     val title = listingData["title"]?.toString() ?: "No Title"
@@ -58,6 +62,7 @@ fun ChatScreen(
     var messageText by remember { mutableStateOf("") }
     val chatMessages = remember { mutableStateListOf<ChatMessage>() }
     val listState = rememberLazyListState()
+    var initialMessageSent by remember { mutableStateOf(false) }
 
     // Determine unique chat ID (senderId_receiverId_listingId)
     val chatRoomId = if (currentUserId < sellerUserId) {
@@ -76,10 +81,8 @@ fun ChatScreen(
             "timestamp" to System.currentTimeMillis()
         )
 
-        // Save message to Firestore
         db.collection("chats").document(chatRoomId).collection("messages").add(messageData)
         
-        // Update chat metadata (for chat list screen)
         val chatMeta = hashMapOf(
             "lastMessage" to text,
             "lastMessageTimestamp" to System.currentTimeMillis(),
@@ -110,10 +113,11 @@ fun ChatScreen(
                         ChatMessage(text, senderId == currentUserId)
                     }
 
-                    // Auto-send default message if this is a brand new chat and current user is the buyer
-                    if (messages.isEmpty() && currentUserId.isNotEmpty() && currentUserId != sellerUserId) {
+                    // Logic to send initial message only if requested and chat is empty
+                    if (sendInitialMessage && !initialMessageSent && messages.isEmpty() && currentUserId.isNotEmpty() && currentUserId != sellerUserId) {
+                        initialMessageSent = true
                         val city = currentUserLocation.split(",").firstOrNull()?.trim() ?: currentUserLocation
-                        val defaultMsg = "Hi, This is $currentUserName from $city, Please call me at $currentUserPhone"
+                        val defaultMsg = "Hi $sellerName, I'm interested in your listing: $title. My name is $currentUserName from $city, please call me at $currentUserPhone."
                         sendMessage(defaultMsg)
                     }
 
@@ -123,7 +127,6 @@ fun ChatScreen(
             }
     }
 
-    // Scroll to bottom when messages change
     LaunchedEffect(chatMessages.size) {
         if (chatMessages.isNotEmpty()) {
             listState.animateScrollToItem(chatMessages.size - 1)
@@ -143,7 +146,12 @@ fun ChatScreen(
             )
         },
         bottomBar = {
-            Column(modifier = Modifier.background(Color.White)) {
+            Column(
+                modifier = Modifier
+                    .background(Color.White)
+                    .navigationBarsPadding()
+                    .imePadding()
+            ) {
                 Row(
                     modifier = Modifier
                         .padding(horizontal = 16.dp, vertical = 8.dp)
@@ -164,7 +172,7 @@ fun ChatScreen(
                 
                 Row(
                     modifier = Modifier
-                        .padding(16.dp)
+                        .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
                         .fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -174,6 +182,16 @@ fun ChatScreen(
                         modifier = Modifier.weight(1f),
                         placeholder = { Text("Type a message...") },
                         shape = RoundedCornerShape(24.dp),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                        keyboardActions = KeyboardActions(
+                            onSend = {
+                                if (messageText.isNotBlank()) {
+                                    sendMessage(messageText)
+                                    messageText = ""
+                                }
+                            }
+                        ),
                         colors = TextFieldDefaults.colors(
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
@@ -203,7 +221,6 @@ fun ChatScreen(
                 .fillMaxSize()
                 .background(Color.White)
         ) {
-            // Listing Header
             Surface(
                 tonalElevation = 2.dp,
                 shadowElevation = 2.dp,
@@ -250,8 +267,9 @@ fun ChatScreen(
                     
                     Column {
                         Surface(color = Color(0xFFE8F5E9), shape = RoundedCornerShape(4.dp)) {
+                            val isBuying = currentUserId != sellerUserId
                             Text(
-                                "Buying",
+                                if (isBuying) "Buying" else "Selling",
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                 fontSize = 10.sp,
                                 color = Color(0xFF2E7D32),
@@ -263,7 +281,7 @@ fun ChatScreen(
                         
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.AccessTime, null, tint = GrayText, modifier = Modifier.size(14.dp))
-                            Text(" Posted 1 hr ago", color = GrayText, fontSize = 12.sp)
+                            Text(" Recently", color = GrayText, fontSize = 12.sp)
                             Spacer(modifier = Modifier.width(8.dp))
                             Icon(Icons.Default.LocationOn, null, tint = GrayText, modifier = Modifier.size(14.dp))
                             Text(" $location", color = GrayText, fontSize = 12.sp)

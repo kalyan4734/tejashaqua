@@ -41,6 +41,7 @@ fun EditListingScreen(
     isEditMode: Boolean = false,
     listingId: String? = null,
     userName: String,
+    userMobileNumber: String,
     initialLocation: String,
     initialLatLng: LatLng? = null,
     onBackClick: () -> Unit,
@@ -58,12 +59,19 @@ fun EditListingScreen(
     var price by remember { mutableStateOf("") }
     var location by remember { mutableStateOf(initialLocation) }
     var latLng by remember { mutableStateOf<LatLng?>(initialLatLng) }
-    var contactNumber by remember { mutableStateOf("+91 9876543210") }
+    var contactNumber by remember { mutableStateOf(userMobileNumber) }
 
     // Sync location if it changes from outside (via picker)
     LaunchedEffect(initialLocation, initialLatLng) {
         location = initialLocation
         latLng = initialLatLng
+    }
+    
+    // Sync contact number if it changes from outside (e.g. initial load)
+    LaunchedEffect(userMobileNumber) {
+        if (contactNumber.isEmpty() || contactNumber == "+91 9876543210") {
+            contactNumber = userMobileNumber
+        }
     }
 
     // Photos state (Base64 strings for simplicity in this demo)
@@ -77,7 +85,7 @@ fun EditListingScreen(
         }
     }
 
-    // Specific fields (omitted for brevity in logic but kept for functionality)
+    // Specific fields
     var fishType by remember { mutableStateOf("") }
     var sizeType by remember { mutableStateOf("Inches") }
     var sizeValue by remember { mutableStateOf("") }
@@ -114,14 +122,18 @@ fun EditListingScreen(
             )
         },
         bottomBar = {
-            Surface(tonalElevation = 8.dp, color = MaterialTheme.colorScheme.surface) {
+            Surface(
+                tonalElevation = 8.dp, 
+                color = MaterialTheme.colorScheme.surface,
+                modifier = Modifier.navigationBarsPadding().imePadding()
+            ) {
                 val onActionClick = {
                     val data = buildListingMap(
                         listingId, category, title, description, price, location, latLng, contactNumber, 
                         userName, selectedPhotos, fishType, sizeType, sizeValue, fishAge, quantity, 
                         unitType, prawnType, hatcheryName, rateType, rateValue, equipmentType, 
                         vehicleName, vehicleCapacity, businessType, feedName, ratePerTon, boreWellType, 
-                        tankAcres, estPricePerAcre, tankLocation
+                        tankAcres, estPricePerAcre, tankLocation, userId
                     )
                     listingViewModel.saveListing(data)
                     onPostClick()
@@ -284,10 +296,12 @@ private fun buildListingMap(
     boreWellType: String,
     tankAcres: String,
     estPricePerAcre: String,
-    tankLocation: String
+    tankLocation: String,
+    userId: String
 ): Map<String, Any> {
     val data = mutableMapOf<String, Any>()
     if (id != null) data["id"] = id
+    data["userId"] = userId
     data["category"] = category.name
     data["title"] = title
     data["description"] = description
