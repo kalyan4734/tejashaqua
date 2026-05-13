@@ -1,7 +1,5 @@
 package com.tejashaqua.app.ui.screens
 
-import android.graphics.BitmapFactory
-import android.util.Base64
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -26,8 +24,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.google.firebase.firestore.FirebaseFirestore
 import com.tejashaqua.app.R
+import com.tejashaqua.app.ui.components.LoadingOverlay
 import com.tejashaqua.app.ui.theme.AquaBlue
 import com.tejashaqua.app.ui.theme.GrayText
 import java.text.SimpleDateFormat
@@ -131,44 +131,46 @@ fun ChatListScreen(
             }
         }
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .background(Color.White)
-        ) {
-            TabRow(
-                selectedTabIndex = selectedTabIndex,
-                containerColor = Color.White,
-                contentColor = AquaBlue,
-                divider = { HorizontalDivider(color = Color(0xFFEEEEEE)) }
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .background(Color.White)
             ) {
-                Tab(selected = selectedTabIndex == 0, onClick = { selectedTabIndex = 0 }) {
-                    Text(stringResource(R.string.all), modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold)
+                TabRow(
+                    selectedTabIndex = selectedTabIndex,
+                    containerColor = Color.White,
+                    contentColor = AquaBlue,
+                    divider = { HorizontalDivider(color = Color(0xFFEEEEEE)) }
+                ) {
+                    Tab(selected = selectedTabIndex == 0, onClick = { selectedTabIndex = 0 }) {
+                        Text(stringResource(R.string.all), modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold)
+                    }
+                    Tab(selected = selectedTabIndex == 1, onClick = { selectedTabIndex = 1 }) {
+                        Text(stringResource(R.string.buying), modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold)
+                    }
+                    Tab(selected = selectedTabIndex == 2, onClick = { selectedTabIndex = 2 }) {
+                        Text(stringResource(R.string.selling), modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold)
+                    }
                 }
-                Tab(selected = selectedTabIndex == 1, onClick = { selectedTabIndex = 1 }) {
-                    Text(stringResource(R.string.buying), modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold)
-                }
-                Tab(selected = selectedTabIndex == 2, onClick = { selectedTabIndex = 2 }) {
-                    Text(stringResource(R.string.selling), modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold)
+
+                if (filteredChats.isEmpty() && !isLoading) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(stringResource(R.string.no_chats), color = GrayText)
+                    }
+                } else {
+                    LazyColumn(modifier = Modifier.fillMaxSize()) {
+                        items(filteredChats) { chat ->
+                            ChatListItem(chat, onClick = { onChatClick(chat.fullData) })
+                            HorizontalDivider(color = Color(0xFFF5F5F5), modifier = Modifier.padding(horizontal = 16.dp))
+                        }
+                    }
                 }
             }
 
             if (isLoading) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = AquaBlue)
-                }
-            } else if (filteredChats.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(stringResource(R.string.no_chats), color = GrayText)
-                }
-            } else {
-                LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    items(filteredChats) { chat ->
-                        ChatListItem(chat, onClick = { onChatClick(chat.fullData) })
-                        HorizontalDivider(color = Color(0xFFF5F5F5), modifier = Modifier.padding(horizontal = 16.dp))
-                    }
-                }
+                LoadingOverlay("Loading your chats...")
             }
         }
     }
@@ -176,15 +178,6 @@ fun ChatListScreen(
 
 @Composable
 fun ChatListItem(chat: ChatListItemData, onClick: () -> Unit) {
-    val bitmap = remember(chat.listingImage) {
-        if (!chat.listingImage.isNullOrBlank()) {
-            try {
-                val decodedString = Base64.decode(chat.listingImage, Base64.DEFAULT)
-                BitmapFactory.decodeByteArray(decodedString, 0, decodedString.size)
-            } catch (_: Exception) { null }
-        } else null
-    }
-
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -212,12 +205,13 @@ fun ChatListItem(chat: ChatListItemData, onClick: () -> Unit) {
                     .background(AquaBlue.copy(alpha = 0.1f)),
                 contentAlignment = Alignment.Center
             ) {
-                if (bitmap != null) {
-                    Image(
-                        bitmap = bitmap.asImageBitmap(),
+                if (!chat.listingImage.isNullOrBlank()) {
+                    AsyncImage(
+                        model = chat.listingImage,
                         contentDescription = null,
                         modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
+                        contentScale = ContentScale.Crop,
+                        error = androidx.compose.ui.res.painterResource(id = R.drawable.app_logo)
                     )
                 } else {
                     Text(

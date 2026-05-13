@@ -1,9 +1,6 @@
 package com.tejashaqua.app.ui.screens
 
-import android.graphics.BitmapFactory
-import android.util.Base64
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -12,6 +9,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -27,6 +25,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
@@ -48,7 +47,7 @@ fun ProfileScreen(
     var showLogoutDialog by remember { mutableStateOf(false) }
     var listingCount by remember { mutableIntStateOf(0) }
     var chatCount by remember { mutableIntStateOf(0) }
-    var profilePicBase64 by remember { mutableStateOf<String?>(null) }
+    var profilePicUrl by remember { mutableStateOf<String?>(null) }
     
     val auth = FirebaseAuth.getInstance()
     val db = FirebaseFirestore.getInstance()
@@ -77,7 +76,7 @@ fun ProfileScreen(
             userListener = db.collection("users").document(currentUserId)
                 .addSnapshotListener { snapshot, _ ->
                     if (snapshot != null && snapshot.exists()) {
-                        profilePicBase64 = snapshot.getString("profilePic")
+                        profilePicUrl = snapshot.getString("profilePic")
                     }
                 }
         }
@@ -180,7 +179,7 @@ fun ProfileScreen(
                 title = { Text(stringResource(R.string.my_profile), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = AquaBlue)
@@ -194,7 +193,7 @@ fun ProfileScreen(
                 .background(Color(0xFFF8F9FA))
         ) {
             item {
-                ProfileHeader(userName, mobileNumber, profilePicBase64, onEditClick)
+                ProfileHeader(userName, mobileNumber, profilePicUrl, onEditClick)
             }
 
             item {
@@ -272,16 +271,7 @@ fun ProfileScreen(
 }
 
 @Composable
-fun ProfileHeader(userName: String, mobileNumber: String, profilePicBase64: String?, onEditClick: () -> Unit) {
-    val bitmap = remember(profilePicBase64) {
-        if (!profilePicBase64.isNullOrBlank()) {
-            try {
-                val decodedString = Base64.decode(profilePicBase64, Base64.DEFAULT)
-                BitmapFactory.decodeByteArray(decodedString, 0, decodedString.size)
-            } catch (e: Exception) { null }
-        } else null
-    }
-
+fun ProfileHeader(userName: String, mobileNumber: String, profilePicUrl: String?, onEditClick: () -> Unit) {
     Box(
         modifier = Modifier.fillMaxWidth().background(AquaBlue).padding(bottom = 32.dp, start = 24.dp, end = 24.dp, top = 16.dp)
     ) {
@@ -290,9 +280,9 @@ fun ProfileHeader(userName: String, mobileNumber: String, profilePicBase64: Stri
                 modifier = Modifier.size(80.dp).background(Color.White.copy(alpha = 0.2f), CircleShape).border(2.dp, Color.White, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                if (bitmap != null) {
-                    Image(
-                        bitmap = bitmap.asImageBitmap(),
+                if (!profilePicUrl.isNullOrBlank()) {
+                    AsyncImage(
+                        model = profilePicUrl,
                         contentDescription = "Profile Picture",
                         modifier = Modifier.fillMaxSize().clip(CircleShape),
                         contentScale = ContentScale.Crop

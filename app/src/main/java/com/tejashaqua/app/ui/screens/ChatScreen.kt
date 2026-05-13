@@ -1,7 +1,5 @@
 package com.tejashaqua.app.ui.screens
 
-import android.graphics.BitmapFactory
-import android.util.Base64
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -33,6 +31,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.tejashaqua.app.R
@@ -285,23 +284,16 @@ fun ChatScreen(
                         .fillMaxWidth()
                 ) {
                     val firstImage = images.firstOrNull()?.toString() ?: ""
-                    val bitmap = remember(firstImage) {
-                        if (firstImage.isNotEmpty()) {
-                            try {
-                                val decodedString = Base64.decode(firstImage, Base64.DEFAULT)
-                                BitmapFactory.decodeByteArray(decodedString, 0, decodedString.size)
-                            } catch (e: Exception) { null }
-                        } else null
-                    }
                     
-                    if (bitmap != null) {
-                        Image(
-                            bitmap = bitmap.asImageBitmap(),
+                    if (firstImage.isNotEmpty()) {
+                        AsyncImage(
+                            model = firstImage,
                             contentDescription = null,
                             modifier = Modifier
                                 .size(80.dp)
                                 .clip(RoundedCornerShape(8.dp)),
-                            contentScale = ContentScale.Crop
+                            contentScale = ContentScale.Crop,
+                            error = painterResource(id = R.drawable.app_logo)
                         )
                     } else {
                         Image(

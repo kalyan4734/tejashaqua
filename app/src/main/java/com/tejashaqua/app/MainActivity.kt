@@ -21,6 +21,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.android.gms.maps.model.LatLng
 import com.tejashaqua.app.data.model.ListingCategory
+import com.tejashaqua.app.ui.components.LoadingOverlay
 import com.tejashaqua.app.ui.viewmodel.AuthState
 import com.tejashaqua.app.ui.viewmodel.AuthViewModel
 import com.tejashaqua.app.ui.viewmodel.LocationSearchViewModel
@@ -168,7 +169,6 @@ class MainActivity : ComponentActivity() {
                         "dashboard" -> DashboardScreen(
                             locationName = currentLocationName,
                             subLocation = currentSubLocation,
-                            userName = userName,
                             onSeeAllRatesClick = { currentScreen = "aqua_rates" },
                             onAddClick = { 
                                 isEditMode = false
@@ -331,10 +331,7 @@ class MainActivity : ComponentActivity() {
                     }
 
                     if (authState is AuthState.Loading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.align(Alignment.Center),
-                            color = MaterialTheme.colorScheme.primary
-                        )
+                        LoadingOverlay("Signing you in...")
                     }
                 }
             }

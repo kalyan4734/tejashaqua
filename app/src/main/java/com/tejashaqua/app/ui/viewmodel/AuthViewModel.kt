@@ -1,11 +1,17 @@
 package com.tejashaqua.app.ui.viewmodel
 
 import android.app.Activity
+import android.graphics.Bitmap
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.*
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+import java.io.ByteArrayOutputStream
 import java.util.concurrent.TimeUnit
 
 sealed class AuthState {
@@ -20,6 +26,7 @@ sealed class AuthState {
 class AuthViewModel : ViewModel() {
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
     private val db = FirebaseFirestore.getInstance()
+    private val storage = FirebaseStorage.getInstance()
     
     private val _authState = MutableStateFlow<AuthState>(AuthState.Idle)
     val authState: StateFlow<AuthState> = _authState
@@ -85,7 +92,7 @@ class AuthViewModel : ViewModel() {
 
     private fun checkUserExists() {
         val userId = auth.currentUser?.uid ?: return
-        val phoneNumber = auth.currentUser?.phoneNumber ?: ""
+        val phoneNumber = auth.currentUser?.phoneNumber?.removePrefix("+91") ?: ""
         
         db.collection("users").document(userId).get()
             .addOnSuccessListener { document ->
@@ -120,7 +127,7 @@ class AuthViewModel : ViewModel() {
 
     fun saveUserName(name: String) {
         val userId = auth.currentUser?.uid ?: return
-        val phoneNumber = auth.currentUser?.phoneNumber ?: ""
+        val phoneNumber = auth.currentUser?.phoneNumber?.removePrefix("+91") ?: ""
         val now = System.currentTimeMillis()
         
         db.collection("users").document(userId).get().addOnSuccessListener { doc ->
@@ -140,9 +147,47 @@ class AuthViewModel : ViewModel() {
         }
     }
 
+    fun updateProfile(name: String, profileBitmap: Bitmap?, onSuccess: () -> Unit) {
+        val userId = auth.currentUser?.uid ?: return
+        
+        viewModelScope.launch {
+            try {
+                val updates = mutableMapOf<String, Any>("name" to name)
+                
+                if (profileBitmap != null) {
+                    val url = uploadProfileImage(userId, profileBitmap)
+                    updates["profilePic"] = url
+                }
+
+                db.collection("users").document(userId).update(updates).await()
+                
+                val doc = db.collection("users").document(userId).get().await()
+                val phoneNumber = doc.getString("phone") ?: ""
+                val joinedAt = doc.getLong("joinedAt") ?: System.currentTimeMillis()
+                
+                _authState.value = AuthState.Success(userId, name, phoneNumber, joinedAt)
+                onSuccess()
+            } catch (e: Exception) {
+                _authState.value = AuthState.Error(e.localizedMessage ?: "Failed to update profile")
+            }
+        }
+    }
+
+    private suspend fun uploadProfileImage(userId: String, bitmap: Bitmap): String {
+        val fileName = "profile_pics/$userId.jpg"
+        val ref = storage.reference.child(fileName)
+        
+        val baos = ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 70, baos)
+        val data = baos.toByteArray()
+        
+        ref.putBytes(data).await()
+        return ref.downloadUrl.await().toString()
+    }
+
     fun skipOnboarding() {
         val userId = auth.currentUser?.uid ?: return
-        val phoneNumber = auth.currentUser?.phoneNumber ?: ""
+        val phoneNumber = auth.currentUser?.phoneNumber?.removePrefix("+91") ?: ""
         db.collection("users").document(userId).update("onboardingComplete", true)
             .addOnSuccessListener {
                 db.collection("users").document(userId).get().addOnSuccessListener { doc ->

@@ -1,7 +1,5 @@
 package com.tejashaqua.app.ui.screens
 
-import android.graphics.BitmapFactory
-import android.util.Base64
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -32,6 +30,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.tejashaqua.app.R
@@ -46,7 +45,6 @@ import java.util.Locale
 fun DashboardScreen(
     locationName: String,
     subLocation: String,
-    userName: String,
     onSeeAllRatesClick: () -> Unit,
     onAddClick: () -> Unit,
     onProfileClick: () -> Unit,
@@ -368,8 +366,18 @@ fun MarketplaceSection(searchText: String, categoryFilter: String, onItemClick: 
         Spacer(modifier = Modifier.height(12.dp))
         
         if (isLoading) {
-            Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = AquaBlue)
+            Card(
+                modifier = Modifier.fillMaxWidth().height(200.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5))
+            ) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator(color = AquaBlue, modifier = Modifier.size(32.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text("Loading marketplace...", color = GrayText, fontSize = 14.sp)
+                    }
+                }
             }
         } else if (filteredListings.isEmpty()) {
             Box(modifier = Modifier.fillMaxWidth().height(150.dp), contentAlignment = Alignment.Center) {
@@ -391,7 +399,7 @@ fun MarketplaceSection(searchText: String, categoryFilter: String, onItemClick: 
                                 category = data["category"]?.toString() ?: "Other",
                                 location = data["location"]?.toString() ?: "Unknown",
                                 posterName = data["posterName"]?.toString() ?: "User",
-                                imageBase64 = images?.firstOrNull(),
+                                imageUrl = images?.firstOrNull(),
                                 modifier = Modifier.weight(1f).clickable { onItemClick(data) }
                             )
                         }
@@ -406,17 +414,9 @@ fun MarketplaceSection(searchText: String, categoryFilter: String, onItemClick: 
 }
 
 @Composable
-fun MarketItem(title: String, price: String, category: String, location: String, posterName: String, imageBase64: String?, modifier: Modifier = Modifier) {
+fun MarketItem(title: String, price: String, category: String, location: String, posterName: String, imageUrl: String?, modifier: Modifier = Modifier) {
     val displayLocation = remember(location) {
         location.split(",").firstOrNull()?.trim() ?: location
-    }
-    val bitmap = remember(imageBase64) {
-        if (!imageBase64.isNullOrBlank()) {
-            try {
-                val decodedString = Base64.decode(imageBase64, Base64.DEFAULT)
-                BitmapFactory.decodeByteArray(decodedString, 0, decodedString.size)
-            } catch (e: Exception) { null }
-        } else null
     }
 
     Surface(
@@ -427,8 +427,14 @@ fun MarketItem(title: String, price: String, category: String, location: String,
     ) {
         Column {
             Box(modifier = Modifier.height(110.dp).fillMaxWidth().background(Color(0xFFF5F5F5))) {
-                if (bitmap != null) {
-                    Image(bitmap = bitmap.asImageBitmap(), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                if (!imageUrl.isNullOrBlank()) {
+                    AsyncImage(
+                        model = imageUrl,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop,
+                        error = painterResource(id = R.drawable.app_logo) // Fallback on error
+                    )
                 } else {
                     Image(painter = painterResource(id = R.drawable.app_logo), contentDescription = null, modifier = Modifier.size(60.dp).align(Alignment.Center), alpha = 0.3f)
                 }

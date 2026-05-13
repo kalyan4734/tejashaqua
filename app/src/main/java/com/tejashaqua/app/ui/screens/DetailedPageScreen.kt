@@ -1,8 +1,6 @@
 package com.tejashaqua.app.ui.screens
 
-import android.graphics.BitmapFactory
 import android.location.Geocoder
-import android.util.Base64
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -20,7 +18,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -29,6 +26,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
+import coil.compose.AsyncImage
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
@@ -56,12 +54,12 @@ fun DetailedPageScreen(
     val location = fullLocation.split(",").firstOrNull()?.trim() ?: fullLocation
     val description = listingData["description"]?.toString() ?: "No description provided."
     val posterName = listingData["posterName"]?.toString() ?: "User"
-    val images = listingData["images"] as? List<*> ?: emptyList<String>()
-    val timestamp = listingData["timestamp"] as? Long ?: System.currentTimeMillis()
+    val images = (listingData["images"] as? List<*>) ?: emptyList<String>()
+    val timestamp = (listingData["timestamp"] as? Long) ?: System.currentTimeMillis()
     val listingUserId = listingData["userId"]?.toString() ?: ""
     val isOwnListing = currentUserId == listingUserId
 
-    val pagerState = rememberPagerState(pageCount = { if (images.isEmpty()) 1 else images.size })
+    val pagerState = rememberPagerState { if (images.isEmpty()) 1 else images.size }
 
     Scaffold(
         topBar = {
@@ -118,21 +116,14 @@ fun DetailedPageScreen(
                             state = pagerState,
                             modifier = Modifier.fillMaxSize()
                         ) { page ->
-                            val imageStr = images[page]?.toString() ?: ""
-                            val bitmap = remember(imageStr) {
-                                if (imageStr.isNotEmpty()) {
-                                    try {
-                                        val decodedString = Base64.decode(imageStr, Base64.DEFAULT)
-                                        BitmapFactory.decodeByteArray(decodedString, 0, decodedString.size)
-                                    } catch (_: Exception) { null }
-                                } else null
-                            }
-                            if (bitmap != null) {
-                                Image(
-                                    bitmap = bitmap.asImageBitmap(),
+                            val imageUrl = images[page]?.toString() ?: ""
+                            if (imageUrl.isNotEmpty()) {
+                                AsyncImage(
+                                    model = imageUrl,
                                     contentDescription = "Listing Image ${page + 1}",
                                     modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Crop
+                                    contentScale = ContentScale.Crop,
+                                    error = painterResource(id = R.drawable.app_logo)
                                 )
                             }
                         }
@@ -232,8 +223,8 @@ fun DetailedPageScreen(
                     
                     val context = LocalContext.current
                     // Safely extract coordinates as Numbers to handle Double/Float variations from Firestore
-                    var lat by remember { mutableStateOf<Double?>( (listingData["lat"] as? Number)?.toDouble() ) }
-                    var lng by remember { mutableStateOf<Double?>( (listingData["lng"] as? Number)?.toDouble() ) }
+                    var lat by remember { mutableStateOf((listingData["lat"] as? Number)?.toDouble()) }
+                    var lng by remember { mutableStateOf((listingData["lng"] as? Number)?.toDouble()) }
                     
                     // Default to Rajahmundry if absolutely no coordinates are found
                     val finalLat = lat ?: 17.0005
@@ -352,7 +343,7 @@ fun DetailedPageScreen(
                                 category = "Prawn Hatchery",
                                 location = "Nellore",
                                 posterName = "Sri Lakshmi",
-                                imageBase64 = null,
+                                imageUrl = null,
                                 modifier = Modifier.width(160.dp)
                             )
                         }

@@ -1,7 +1,5 @@
 package com.tejashaqua.app.ui.screens
 
-import android.graphics.BitmapFactory
-import android.util.Base64
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -20,16 +18,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.style.TextOverflow
+import coil.compose.AsyncImage
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.tejashaqua.app.ui.theme.AquaBlue
 import com.tejashaqua.app.ui.theme.GrayText
+import com.tejashaqua.app.ui.components.LoadingOverlay
 import com.tejashaqua.app.R
 
 data class UserListing(
@@ -122,33 +121,35 @@ fun MyListingsScreen(
             )
         }
     ) { innerPadding ->
-        if (isLoading) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = AquaBlue)
-            }
-        } else if (listings.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("No listings found", color = GrayText)
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .background(Color(0xFFF8F9FA)),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                items(listings) { listing ->
-                    ListingCard(
-                        listing = listing,
-                        onEditClick = { onEditClick(listing.id, listing.category) },
-                        onDeleteClick = {
-                            listingToDelete = listing
-                            showDeleteDialog = true
-                        }
-                    )
+        Box(modifier = Modifier.fillMaxSize()) {
+            if (listings.isEmpty() && !isLoading) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("No listings found", color = GrayText)
                 }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                        .background(Color(0xFFF8F9FA)),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    items(listings) { listing ->
+                        ListingCard(
+                            listing = listing,
+                            onEditClick = { onEditClick(listing.id, listing.category) },
+                            onDeleteClick = {
+                                listingToDelete = listing
+                                showDeleteDialog = true
+                            }
+                        )
+                    }
+                }
+            }
+            
+            if (isLoading) {
+                LoadingOverlay("Loading your listings...")
             }
         }
     }
@@ -160,17 +161,6 @@ fun ListingCard(
     onEditClick: () -> Unit,
     onDeleteClick: () -> Unit
 ) {
-    val bitmap = remember(listing.imageUrl) {
-        if (!listing.imageUrl.isNullOrBlank()) {
-            try {
-                val decodedString = Base64.decode(listing.imageUrl, Base64.DEFAULT)
-                BitmapFactory.decodeByteArray(decodedString, 0, decodedString.size)
-            } catch (_: Exception) {
-                null
-            }
-        } else null
-    }
-
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -182,12 +172,13 @@ fun ListingCard(
                 Box(
                     modifier = Modifier.size(100.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xFFF0F0F0))
                 ) {
-                    if (bitmap != null) {
-                        Image(
-                            bitmap = bitmap.asImageBitmap(),
+                    if (!listing.imageUrl.isNullOrBlank()) {
+                        AsyncImage(
+                            model = listing.imageUrl,
                             contentDescription = null,
                             modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
+                            contentScale = ContentScale.Crop,
+                            error = androidx.compose.ui.res.painterResource(id = R.drawable.app_logo)
                         )
                     } else {
                         Image(

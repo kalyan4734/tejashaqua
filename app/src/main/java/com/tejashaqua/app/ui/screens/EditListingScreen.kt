@@ -1,7 +1,7 @@
 package com.tejashaqua.app.ui.screens
 
 import android.graphics.Bitmap
-import android.util.Base64
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.launch
@@ -24,16 +24,18 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import com.google.android.gms.maps.model.LatLng
 import com.tejashaqua.app.data.model.ListingCategory
+import com.tejashaqua.app.ui.components.LoadingOverlay
 import com.tejashaqua.app.ui.theme.AquaBlue
 import com.tejashaqua.app.ui.viewmodel.ListingViewModel
-import java.io.ByteArrayOutputStream
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,8 +64,8 @@ fun EditListingScreen(
     var latLng by remember { mutableStateOf<LatLng?>(initialLatLng) }
     var contactNumber by remember { mutableStateOf(userMobileNumber) }
 
-    // Photos state (Base64 strings for simplicity in this demo)
-    var selectedPhotos by remember { mutableStateOf(listOf<Bitmap>()) }
+    // Photos state (Can be Bitmap or String URL)
+    var selectedPhotos by remember { mutableStateOf(listOf<Any>()) }
 
     // Specific fields
     var fishType by remember { mutableStateOf("") }
@@ -88,6 +90,9 @@ fun EditListingScreen(
     var tankLocation by remember { mutableStateOf("") }
 
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var isFetchingData by remember { mutableStateOf(false) }
+    val postState by listingViewModel.postState.collectAsState()
+    val context = LocalContext.current
 
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicturePreview()
@@ -137,11 +142,13 @@ fun EditListingScreen(
     // Fetch existing data if in edit mode
     LaunchedEffect(isEditMode, listingId) {
         if (isEditMode && listingId != null) {
+            isFetchingData = true
             com.google.firebase.firestore.FirebaseFirestore.getInstance()
                 .collection("listings")
                 .document(listingId)
                 .get()
                 .addOnSuccessListener { doc ->
+                    isFetchingData = false
                     if (doc != null && doc.exists()) {
                         title = doc.getString("title") ?: ""
                         description = doc.getString("description") ?: ""
@@ -197,180 +204,247 @@ fun EditListingScreen(
                         }
 
                         // Handle images if any
-                        val images = doc.get("images") as? List<String>
-                        if (images != null) {
-                            val bitmaps = images.mapNotNull { base64 ->
-                                try {
-                                    val decodedString = Base64.decode(base64, Base64.DEFAULT)
-                                    android.graphics.BitmapFactory.decodeByteArray(decodedString, 0, decodedString.size)
-                                } catch (e: Exception) {
-                                    null
-                                }
-                            }
-                            selectedPhotos = bitmaps
+                        val imageUrls = doc.get("images") as? List<String>
+                        if (imageUrls != null) {
+                            selectedPhotos = imageUrls
                         }
                     }
+                }
+                .addOnFailureListener {
+                    isFetchingData = false
                 }
         }
     }
 
-    // Sync location if it changes from outside (via picker)
+    LaunchedEffect(postState) {
+        if (postState is ListingViewModel.PostState.Success) {
+            listingViewModel.resetState()
+            onPostClick()
+        } else if (postState is ListingViewModel.PostState.Error) {
+            val message = (postState as ListingViewModel.PostState.Error).message
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        }
+    }
 
     val screenTitle = if (isEditMode) "Edit Listing" else category.name.lowercase().replaceFirstChar { it.uppercase() }
 
-    Scaffold(
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text(screenTitle, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp) },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            topBar = {
+                CenterAlignedTopAppBar(
+                    title = { Text(screenTitle, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp) },
+                    navigationIcon = {
+                        IconButton(onClick = onBackClick) {
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                        }
+                    },
+                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = AquaBlue)
+                )
+            },
+            bottomBar = {
+                Surface(
+                    tonalElevation = 8.dp, 
+                    color = MaterialTheme.colorScheme.surface,
+                    modifier = Modifier.navigationBarsPadding().imePadding()
+                ) {
+                    val onActionClick = {
+                        val data = buildListingMap(
+                            listingId, category, title, description, price, location, latLng, contactNumber, 
+                            userName, fishType, sizeType, sizeValue, fishAge, quantity, 
+                            unitType, prawnType, hatcheryName, rateType, rateValue, equipmentType, 
+                            vehicleName, vehicleCapacity, businessType, feedName, ratePerTon, boreWellType, 
+                            tankAcres, estPricePerAcre, tankLocation, userId
+                        )
+                        
+                        val newBitmaps = selectedPhotos.filterIsInstance<Bitmap>()
+                        val existingUrls = selectedPhotos.filterIsInstance<String>()
+                        
+                        listingViewModel.saveListing(data, newBitmaps, existingUrls)
                     }
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = AquaBlue)
-            )
-        },
-        bottomBar = {
-            Surface(
-                tonalElevation = 8.dp, 
-                color = MaterialTheme.colorScheme.surface,
-                modifier = Modifier.navigationBarsPadding().imePadding()
+
+                    if (isEditMode) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = { showDeleteDialog = true },
+                                modifier = Modifier.weight(1f).height(56.dp),
+                                shape = RoundedCornerShape(12.dp),
+                                border = BorderStroke(1.dp, Color(0xFFF44336)),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFF44336))
+                            ) {
+                                Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(20.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Delete", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                            }
+                            Button(
+                                onClick = onActionClick,
+                                modifier = Modifier.weight(1f).height(56.dp),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = AquaBlue)
+                            ) {
+                                Text("Save Changes", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                            }
+                        }
+                    } else {
+                        Box(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                            Button(
+                                onClick = onActionClick,
+                                modifier = Modifier.fillMaxWidth().height(56.dp),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = AquaBlue)
+                            ) {
+                                Text("Post Listing", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                            }
+                        }
+                    }
+                }
+            }
+        ) { innerPadding ->
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .background(MaterialTheme.colorScheme.background)
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                contentPadding = PaddingValues(top = 16.dp, bottom = 16.dp)
             ) {
-                val onActionClick = {
-                    val data = buildListingMap(
-                        listingId, category, title, description, price, location, latLng, contactNumber, 
-                        userName, selectedPhotos, fishType, sizeType, sizeValue, fishAge, quantity, 
-                        unitType, prawnType, hatcheryName, rateType, rateValue, equipmentType, 
-                        vehicleName, vehicleCapacity, businessType, feedName, ratePerTon, boreWellType, 
-                        tankAcres, estPricePerAcre, tankLocation, userId
-                    )
-                    listingViewModel.saveListing(data)
-                    onPostClick()
+                item {
+                    when (category) {
+                        ListingCategory.FISH -> FishFields(
+                            fishType, { fishType = it },
+                            title, { title = it },
+                            sizeType, { sizeType = it },
+                            sizeValue, { sizeValue = it },
+                            fishAge, { fishAge = it },
+                            quantity, { quantity = it },
+                            unitType, { unitType = it },
+                            price, { price = it }
+                        )
+                        ListingCategory.PRAWNS -> PrawnFields(
+                            prawnType, { prawnType = it },
+                            hatcheryName, { hatcheryName = it },
+                            rateType, { rateType = it },
+                            rateValue, { rateValue = it },
+                            quantity, { quantity = it },
+                            unitType, { unitType = it }
+                        )
+                        ListingCategory.EQUIPMENTS -> EquipmentFields(
+                            equipmentType, { equipmentType = it },
+                            title, { title = it },
+                            price, { price = it }
+                        )
+                        ListingCategory.VEHICLES -> VehicleFields(
+                            selectedServiceType, { selectedServiceType = it },
+                            vehicleName, { vehicleName = it },
+                            vehicleCapacity, { vehicleCapacity = it },
+                            title, { title = it }
+                        )
+                        ListingCategory.FEED -> FeedFields(
+                            businessType, { businessType = it },
+                            feedName, { feedName = it },
+                            title, { title = it },
+                            ratePerTon, { ratePerTon = it }
+                        )
+                        ListingCategory.BOREWELL -> BorewellFields(
+                            selectedServiceType, { selectedServiceType = it },
+                            boreWellType, { boreWellType = it },
+                            title, { title = it }
+                        )
+                        ListingCategory.TANKS -> TankFields(
+                            title, { title = it },
+                            tankAcres, { tankAcres = it },
+                            estPricePerAcre, { estPricePerAcre = it },
+                            tankLocation, { tankLocation = it }
+                        )
+                    }
                 }
 
-                if (isEditMode) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        OutlinedButton(
-                            onClick = { showDeleteDialog = true },
-                            modifier = Modifier.weight(1f).height(56.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            border = BorderStroke(1.dp, Color(0xFFF44336)),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFF44336))
-                        ) {
-                            Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(20.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Delete", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                        }
-                        Button(
-                            onClick = onActionClick,
-                            modifier = Modifier.weight(1f).height(56.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = AquaBlue)
-                        ) {
-                            Text("Save Changes", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                        }
-                    }
-                } else {
-                    Box(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                        Button(
-                            onClick = onActionClick,
-                            modifier = Modifier.fillMaxWidth().height(56.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = AquaBlue)
-                        ) {
-                            Text("Post Listing", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                        }
-                    }
+                item {
+                    ListingTextField(label = "Description", value = description, onValueChange = { description = it }, minLines = 3)
                 }
+
+                item {
+                    PhotoSection(
+                        photos = selectedPhotos,
+                        onAddPhoto = { cameraLauncher.launch() },
+                        onRemovePhoto = { index -> 
+                            selectedPhotos = selectedPhotos.toMutableList().apply { removeAt(index) }
+                        }
+                    )
+                }
+
+                item {
+                    LocationSection(location, onClick = onLocationChangeClick)
+                }
+
+                item {
+                    ListingTextField(label = "Contact Number", value = contactNumber, onValueChange = { contactNumber = it })
+                }
+                
+                item { Spacer(modifier = Modifier.height(20.dp)) }
             }
         }
-    ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .background(MaterialTheme.colorScheme.background)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            contentPadding = PaddingValues(top = 16.dp, bottom = 16.dp)
-        ) {
-            item {
-                when (category) {
-                    ListingCategory.FISH -> FishFields(
-                        fishType, { fishType = it },
-                        title, { title = it },
-                        sizeType, { sizeType = it },
-                        sizeValue, { sizeValue = it },
-                        fishAge, { fishAge = it },
-                        quantity, { quantity = it },
-                        unitType, { unitType = it },
-                        price, { price = it }
-                    )
-                    ListingCategory.PRAWNS -> PrawnFields(
-                        prawnType, { prawnType = it },
-                        hatcheryName, { hatcheryName = it },
-                        rateType, { rateType = it },
-                        rateValue, { rateValue = it },
-                        quantity, { quantity = it },
-                        unitType, { unitType = it }
-                    )
-                    ListingCategory.EQUIPMENTS -> EquipmentFields(
-                        equipmentType, { equipmentType = it },
-                        title, { title = it },
-                        price, { price = it }
-                    )
-                    ListingCategory.VEHICLES -> VehicleFields(
-                        selectedServiceType, { selectedServiceType = it },
-                        vehicleName, { vehicleName = it },
-                        vehicleCapacity, { vehicleCapacity = it },
-                        title, { title = it }
-                    )
-                    ListingCategory.FEED -> FeedFields(
-                        businessType, { businessType = it },
-                        feedName, { feedName = it },
-                        title, { title = it },
-                        ratePerTon, { ratePerTon = it }
-                    )
-                    ListingCategory.BOREWELL -> BorewellFields(
-                        selectedServiceType, { selectedServiceType = it },
-                        boreWellType, { boreWellType = it },
-                        title, { title = it }
-                    )
-                    ListingCategory.TANKS -> TankFields(
-                        title, { title = it },
-                        tankAcres, { tankAcres = it },
-                        estPricePerAcre, { estPricePerAcre = it },
-                        tankLocation, { tankLocation = it }
-                    )
+
+        if (isFetchingData || postState is ListingViewModel.PostState.Loading) {
+            LoadingOverlay(if (isFetchingData) "Fetching listing details..." else "Saving listing...")
+        }
+    }
+}
+
+@Composable
+fun PhotoSection(
+    photos: List<Any>,
+    onAddPhoto: () -> Unit,
+    onRemovePhoto: (Int) -> Unit
+) {
+    Column {
+        Text(text = "Photos (up to 3)", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
+        Spacer(modifier = Modifier.height(12.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            photos.forEachIndexed { index, photo ->
+                Box(
+                    modifier = Modifier
+                        .size(100.dp)
+                        .background(Color.LightGray, RoundedCornerShape(12.dp))
+                ) {
+                    if (photo is Bitmap) {
+                        Image(
+                            bitmap = photo.asImageBitmap(),
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp)),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else if (photo is String) {
+                        AsyncImage(
+                            model = photo,
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp)),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+                    Surface(
+                        modifier = Modifier.align(Alignment.TopEnd).padding(4.dp).size(20.dp).clickable { onRemovePhoto(index) },
+                        color = Color.Black.copy(alpha = 0.7f),
+                        shape = CircleShape
+                    ) {
+                        Icon(Icons.Default.Close, contentDescription = null, tint = Color.White, modifier = Modifier.padding(2.dp))
+                    }
                 }
             }
-
-            item {
-                ListingTextField(label = "Description", value = description, onValueChange = { description = it }, minLines = 3)
+            if (photos.size < 3) {
+                Box(
+                    modifier = Modifier
+                        .size(100.dp)
+                        .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
+                        .clickable { onAddPhoto() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.PhotoCamera, contentDescription = null, tint = AquaBlue, modifier = Modifier.size(32.dp))
+                }
             }
-
-            item {
-                PhotoSection(
-                    photos = selectedPhotos,
-                    onAddPhoto = { cameraLauncher.launch() },
-                    onRemovePhoto = { index -> 
-                        selectedPhotos = selectedPhotos.toMutableList().apply { removeAt(index) }
-                    }
-                )
-            }
-
-            item {
-                LocationSection(location, onClick = onLocationChangeClick)
-            }
-
-            item {
-                ListingTextField(label = "Contact Number", value = contactNumber, onValueChange = { contactNumber = it })
-            }
-            
-            item { Spacer(modifier = Modifier.height(20.dp)) }
         }
     }
 }
@@ -385,7 +459,6 @@ private fun buildListingMap(
     latLng: LatLng?,
     contactNumber: String,
     posterName: String,
-    photos: List<Bitmap>,
     fishType: String,
     sizeType: String,
     sizeValue: String,
@@ -423,13 +496,7 @@ private fun buildListingMap(
     data["contactNumber"] = contactNumber
     data["posterName"] = posterName
     
-    // Convert bitmaps to base64
-    val imageStrings = photos.map { bitmap ->
-        val outputStream = ByteArrayOutputStream()
-        bitmap.compress(Bitmap.CompressFormat.JPEG, 70, outputStream)
-        Base64.encodeToString(outputStream.toByteArray(), Base64.DEFAULT)
-    }
-    data["images"] = imageStrings
+    // Images will be handled in ViewModel
 
     // Specific fields based on category
     when(category) {
@@ -471,52 +538,6 @@ private fun buildListingMap(
         }
     }
     return data
-}
-
-@Composable
-fun PhotoSection(
-    photos: List<Bitmap>,
-    onAddPhoto: () -> Unit,
-    onRemovePhoto: (Int) -> Unit
-) {
-    Column {
-        Text(text = "Photos (up to 3)", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
-        Spacer(modifier = Modifier.height(12.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            photos.forEachIndexed { index, bitmap ->
-                Box(
-                    modifier = Modifier
-                        .size(100.dp)
-                        .background(Color.LightGray, RoundedCornerShape(12.dp))
-                ) {
-                    Image(
-                        bitmap = bitmap.asImageBitmap(),
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp)),
-                        contentScale = ContentScale.Crop
-                    )
-                    Surface(
-                        modifier = Modifier.align(Alignment.TopEnd).padding(4.dp).size(20.dp).clickable { onRemovePhoto(index) },
-                        color = Color.Black.copy(alpha = 0.7f),
-                        shape = CircleShape
-                    ) {
-                        Icon(Icons.Default.Close, contentDescription = null, tint = Color.White, modifier = Modifier.padding(2.dp))
-                    }
-                }
-            }
-            if (photos.size < 3) {
-                Box(
-                    modifier = Modifier
-                        .size(100.dp)
-                        .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
-                        .clickable { onAddPhoto() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Default.PhotoCamera, contentDescription = null, tint = AquaBlue, modifier = Modifier.size(32.dp))
-                }
-            }
-        }
-    }
 }
 
 @Composable
