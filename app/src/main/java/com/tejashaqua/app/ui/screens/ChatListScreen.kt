@@ -15,12 +15,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.Query
+import com.tejashaqua.app.R
 import com.tejashaqua.app.ui.theme.AquaBlue
 import com.tejashaqua.app.ui.theme.GrayText
 import java.text.SimpleDateFormat
@@ -39,12 +40,11 @@ fun ChatListScreen(
     var chats by remember { mutableStateOf(listOf<ChatListItemData>()) }
     var isLoading by remember { mutableStateOf(true) }
 
-    LaunchedEffect(currentUserId) {
-        if (currentUserId.isEmpty()) return@LaunchedEffect
+    DisposableEffect(currentUserId) {
+        if (currentUserId.isEmpty()) return@DisposableEffect onDispose {}
         
-        db.collection("chats")
+        val registration = db.collection("chats")
             .whereArrayContains("participants", currentUserId)
-            .orderBy("lastMessageTimestamp", Query.Direction.DESCENDING)
             .addSnapshotListener { snapshot, e ->
                 isLoading = false
                 if (e != null || snapshot == null) return@addSnapshotListener
@@ -54,6 +54,10 @@ fun ChatListScreen(
                     val buyerId = data["buyerId"] as? String ?: ""
                     val isBuying = buyerId == currentUserId
                     
+                    val unreadCounts = data["unreadCounts"] as? Map<*, *>
+                    val unreadCount = (unreadCounts?.get(currentUserId) as? Long)?.toInt() ?: 
+                                     (data["unreadCounts.$currentUserId"] as? Long)?.toInt() ?: 0
+
                     ChatListItemData(
                         chatId = doc.id,
                         name = if (isBuying) data["sellerName"] as? String ?: "Seller" else data["buyerName"] as? String ?: "Buyer",
@@ -61,13 +65,19 @@ fun ChatListScreen(
                         type = if (isBuying) "Buying" else "Selling",
                         listingInfo = data["listingTitle"] as? String ?: "Listing",
                         lastMessage = data["lastMessage"] as? String ?: "",
-                        time = data["lastMessageTimestamp"] as? Long ?: 0L,
-                        unreadCount = 0, // Implement unread logic if needed
+                        time = (data["lastMessageTimestamp"] as? com.google.firebase.Timestamp)?.toDate()?.time ?: 
+                               (data["lastMessageTimestamp"] as? Long) ?: 0L,
+                        unreadCount = unreadCount,
                         fullData = data + mapOf("id" to (data["listingId"] ?: ""))
                     )
-                }
+                }.sortedByDescending { it.time }
+                
                 chats = chatList
             }
+            
+        onDispose {
+            registration.remove()
+        }
     }
 
     val filteredChats = chats.filter {
@@ -83,7 +93,7 @@ fun ChatListScreen(
         topBar = {
             Column(modifier = Modifier.background(AquaBlue)) {
                 CenterAlignedTopAppBar(
-                    title = { Text("Chat", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp) },
+                    title = { Text(stringResource(R.string.chat_title), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp) },
                     navigationIcon = {
                         IconButton(onClick = onBackClick) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
@@ -99,7 +109,7 @@ fun ChatListScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp)
                         .height(50.dp),
-                    placeholder = { Text("Search Conversations...", fontSize = 14.sp) },
+                    placeholder = { Text(stringResource(R.string.search_conversations), fontSize = 14.sp) },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = GrayText) },
                     colors = TextFieldDefaults.colors(
                         focusedContainerColor = Color.White,
@@ -127,13 +137,13 @@ fun ChatListScreen(
                 divider = { HorizontalDivider(color = Color(0xFFEEEEEE)) }
             ) {
                 Tab(selected = selectedTabIndex == 0, onClick = { selectedTabIndex = 0 }) {
-                    Text("All", modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.all), modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold)
                 }
                 Tab(selected = selectedTabIndex == 1, onClick = { selectedTabIndex = 1 }) {
-                    Text("Buying", modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.buying), modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold)
                 }
                 Tab(selected = selectedTabIndex == 2, onClick = { selectedTabIndex = 2 }) {
-                    Text("Selling", modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.selling), modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold)
                 }
             }
 
@@ -143,7 +153,7 @@ fun ChatListScreen(
                 }
             } else if (filteredChats.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("No chats found", color = GrayText)
+                    Text(stringResource(R.string.no_chats), color = GrayText)
                 }
             } else {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
@@ -174,7 +184,7 @@ fun ChatListItem(chat: ChatListItemData, onClick: () -> Unit) {
                 text = chat.listingInfo,
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                 fontSize = 11.sp,
-                color = Color.DarkGray
+                color = Color.Black
             )
         }
         
@@ -196,14 +206,14 @@ fun ChatListItem(chat: ChatListItemData, onClick: () -> Unit) {
             
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(text = chat.name, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    Text(text = chat.name, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color.Black)
                     Spacer(modifier = Modifier.width(8.dp))
                     Surface(
                         color = if (chat.type == "Buying") Color(0xFFE8F5E9) else Color(0xFFE3F2FD),
                         shape = RoundedCornerShape(4.dp)
                     ) {
                         Text(
-                            text = chat.type,
+                            text = if (chat.type == "Buying") stringResource(R.string.buying) else stringResource(R.string.selling),
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                             fontSize = 10.sp,
                             color = if (chat.type == "Buying") Color(0xFF2E7D32) else AquaBlue,
@@ -214,7 +224,8 @@ fun ChatListItem(chat: ChatListItemData, onClick: () -> Unit) {
                 Text(
                     text = chat.lastMessage,
                     fontSize = 13.sp,
-                    color = Color.Gray,
+                    color = if (chat.unreadCount > 0) Color.Black else Color.Gray,
+                    fontWeight = if (chat.unreadCount > 0) FontWeight.Bold else FontWeight.Normal,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )

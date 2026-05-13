@@ -15,6 +15,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -38,7 +41,8 @@ import kotlinx.coroutines.delay
 fun OtpScreen(
     mobileNumber: String,
     onVerifyClick: (String) -> Unit,
-    onResendClick: () -> Unit
+    onResendClick: () -> Unit,
+    onBackClick: () -> Unit
 ) {
     var otpValue by remember { mutableStateOf("") }
     var timerSeconds by remember { mutableStateOf(24) }
@@ -114,7 +118,18 @@ fun OtpScreen(
             .padding(24.dp),
         horizontalAlignment = Alignment.Start
     ) {
-        Spacer(modifier = Modifier.height(40.dp))
+        IconButton(
+            onClick = onBackClick,
+            modifier = Modifier.offset(x = (-12).dp)
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "Back",
+                tint = Color.Black
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
 
         Image(
             painter = painterResource(id = R.drawable.app_logo),
@@ -125,14 +140,14 @@ fun OtpScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            text = "Enter OTP",
+            text = stringResource(R.string.enter_otp),
             fontSize = 28.sp,
             fontWeight = FontWeight.Bold,
             color = Color(0xFF0D1B3E)
         )
 
         Text(
-            text = "Sent to +91 $mobileNumber",
+            text = stringResource(R.string.sent_to, mobileNumber),
             fontSize = 16.sp,
             color = GrayText,
             modifier = Modifier.padding(top = 8.dp)
@@ -141,7 +156,7 @@ fun OtpScreen(
         Spacer(modifier = Modifier.height(32.dp))
 
         Text(
-            text = "Enter 6-digit code",
+            text = stringResource(R.string.enter_6_digit_code),
             fontSize = 16.sp,
             fontWeight = FontWeight.SemiBold,
             color = Color.Black
@@ -198,7 +213,7 @@ fun OtpScreen(
             contentPadding = PaddingValues(0.dp)
         ) {
             Text(
-                text = if (timerSeconds > 0) "Resend OTP in $timerSeconds Sec" else "Resend OTP",
+                text = if (timerSeconds > 0) stringResource(R.string.resend_otp_in, timerSeconds) else stringResource(R.string.resend_otp),
                 fontSize = 14.sp,
                 color = if (timerSeconds > 0) GrayText else AquaBlue,
                 fontWeight = if (timerSeconds > 0) FontWeight.Normal else FontWeight.Bold
@@ -214,7 +229,7 @@ fun OtpScreen(
             colors = ButtonDefaults.buttonColors(containerColor = AquaBlue),
             enabled = otpValue.length == 6
         ) {
-            Text(text = "Verify & Continue", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Text(text = stringResource(R.string.verify_continue), fontSize = 18.sp, fontWeight = FontWeight.Bold)
         }
         
         Spacer(modifier = Modifier.height(24.dp))

@@ -4,6 +4,7 @@ import android.app.Application
 import android.location.Geocoder
 import androidx.lifecycle.AndroidViewModel
 import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.libraries.places.api.Places
 import com.google.android.libraries.places.api.model.AutocompletePrediction
@@ -11,6 +12,7 @@ import com.google.android.libraries.places.api.model.AutocompleteSessionToken
 import com.google.android.libraries.places.api.model.Place
 import com.google.android.libraries.places.api.net.FetchPlaceRequest
 import com.google.android.libraries.places.api.net.FindAutocompletePredictionsRequest
+import com.tejashaqua.app.R
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import java.util.Locale
@@ -23,7 +25,7 @@ class LocationSearchViewModel(application: Application) : AndroidViewModel(appli
     private val _searchResults = MutableStateFlow<List<AutocompletePrediction>>(emptyList())
     val searchResults: StateFlow<List<AutocompletePrediction>> = _searchResults
 
-    private val _currentLocationName = MutableStateFlow("Fetching location...")
+    private val _currentLocationName = MutableStateFlow(application.getString(R.string.fetching_location))
     val currentLocationName: StateFlow<String> = _currentLocationName
 
     private val _currentSubLocation = MutableStateFlow("")
@@ -33,24 +35,46 @@ class LocationSearchViewModel(application: Application) : AndroidViewModel(appli
     val error: StateFlow<String?> = _error
 
     fun fetchCurrentLocation() {
+        _currentLocationName.value = getApplication<Application>().getString(R.string.fetching_location)
         try {
             fusedLocationClient.lastLocation.addOnSuccessListener { location ->
                 if (location != null) {
-                    val geocoder = Geocoder(getApplication(), Locale.getDefault())
-                    val addresses = geocoder.getFromLocation(location.latitude, location.longitude, 1)
-                    if (addresses != null && addresses.isNotEmpty()) {
-                        val address = addresses[0]
-                        _currentLocationName.value = address.locality ?: address.subAdminArea ?: "Unknown Location"
-                        _currentSubLocation.value = address.getAddressLine(0) ?: ""
-                    }
+                    processLocation(location.latitude, location.longitude)
                 } else {
-                    _currentLocationName.value = "Location not found"
+                    // If last location is null, request current location
+                    fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
+                        .addOnSuccessListener { currentLoc ->
+                            if (currentLoc != null) {
+                                processLocation(currentLoc.latitude, currentLoc.longitude)
+                            } else {
+                                _currentLocationName.value = getApplication<Application>().getString(R.string.location_not_found)
+                            }
+                        }
+                        .addOnFailureListener {
+                            _currentLocationName.value = getApplication<Application>().getString(R.string.failed_get_location)
+                        }
                 }
             }.addOnFailureListener {
-                _currentLocationName.value = "Failed to get location"
+                _currentLocationName.value = getApplication<Application>().getString(R.string.failed_get_location)
             }
         } catch (e: SecurityException) {
             _currentLocationName.value = "Permission denied"
+        }
+    }
+
+    private fun processLocation(latitude: Double, longitude: Double) {
+        val geocoder = Geocoder(getApplication(), Locale.getDefault())
+        try {
+            val addresses = geocoder.getFromLocation(latitude, longitude, 1)
+            if (!addresses.isNullOrEmpty()) {
+                val address = addresses[0]
+                _currentLocationName.value = address.locality ?: address.subAdminArea ?: "Unknown Location"
+                _currentSubLocation.value = address.getAddressLine(0) ?: ""
+            } else {
+                _currentLocationName.value = "Unknown Location"
+            }
+        } catch (e: Exception) {
+            _currentLocationName.value = "Unknown Location"
         }
     }
 

@@ -15,11 +15,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -31,7 +35,7 @@ import com.tejashaqua.app.R
 @Composable
 fun LoginScreen(onSendOtp: (String) -> Unit) {
     var mobileNumber by remember { mutableStateOf("") }
-    var isError by remember { mutableStateOf(false) }
+    var isError by remember { mutableStateOf(value = false) }
     val scrollState = rememberScrollState()
 
     Column(
@@ -43,7 +47,7 @@ fun LoginScreen(onSendOtp: (String) -> Unit) {
             .imePadding()
             .verticalScroll(scrollState)
             .padding(24.dp),
-        horizontalAlignment = Alignment.Start
+        horizontalAlignment = Alignment.Start,
     ) {
         Spacer(modifier = Modifier.height(40.dp))
 
@@ -59,9 +63,9 @@ fun LoginScreen(onSendOtp: (String) -> Unit) {
         // Welcome Text
         Text(
             text = buildAnnotatedString {
-                append("Welcome to ")
+                append(stringResource(R.string.welcome_to))
                 withStyle(style = SpanStyle(color = AquaBlue, fontWeight = FontWeight.Bold)) {
-                    append("Tejash Aqua!")
+                    append(stringResource(R.string.tejash_aqua))
                 }
             },
             fontSize = 28.sp,
@@ -73,7 +77,7 @@ fun LoginScreen(onSendOtp: (String) -> Unit) {
 
         // Label
         Text(
-            text = "Enter Your Mobile Number",
+            text = stringResource(R.string.enter_mobile_number),
             fontSize = 16.sp,
             fontWeight = FontWeight.SemiBold,
             color = Color.Black
@@ -84,7 +88,7 @@ fun LoginScreen(onSendOtp: (String) -> Unit) {
         // Input Row
         Row(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.Top
         ) {
             // Country Code Card
             OutlinedCard(
@@ -99,7 +103,7 @@ fun LoginScreen(onSendOtp: (String) -> Unit) {
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
                 ) {
-                    Text(text = "+91", fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                    Text(text = stringResource(R.string.country_code), fontSize = 16.sp, fontWeight = FontWeight.Medium)
                     Spacer(modifier = Modifier.width(4.dp))
                     Icon(
                         imageVector = Icons.Default.KeyboardArrowDown,
@@ -115,17 +119,26 @@ fun LoginScreen(onSendOtp: (String) -> Unit) {
             OutlinedTextField(
                 value = mobileNumber,
                 onValueChange = { 
-                    if (it.length <= 10 && it.all { char -> char.isDigit() }) {
+                    if ((it.length <= 10) && it.all { char -> char.isDigit() }) {
                         mobileNumber = it
                         isError = false
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text(text = "9876543210", color = Color.Gray) },
+                placeholder = { Text(text = stringResource(R.string.phone_placeholder), color = Color.Gray) },
                 shape = RoundedCornerShape(12.dp),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                 singleLine = true,
                 isError = isError,
+                supportingText = if (isError) {
+                    {
+                        Text(
+                            text = stringResource(R.string.invalid_phone_error),
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                } else null,
                 colors = OutlinedTextFieldDefaults.colors(
                     unfocusedBorderColor = Color(0xFFE0E0E0),
                     focusedBorderColor = AquaBlue,
@@ -134,20 +147,11 @@ fun LoginScreen(onSendOtp: (String) -> Unit) {
             )
         }
 
-        if (isError) {
-            Text(
-                text = "Please enter a valid 10-digit mobile number",
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(start = 100.dp, top = 4.dp)
-            )
-        }
-
         Spacer(modifier = Modifier.height(16.dp))
 
         // Helper Text
         Text(
-            text = "We will send a 6-digit OTP to verify your number",
+            text = stringResource(R.string.otp_helper_text),
             fontSize = 14.sp,
             color = GrayText
         )
@@ -169,7 +173,7 @@ fun LoginScreen(onSendOtp: (String) -> Unit) {
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(containerColor = AquaBlue)
         ) {
-            Text(text = "Send OTP", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Text(text = stringResource(R.string.send_otp), fontSize = 18.sp, fontWeight = FontWeight.Bold)
         }
 
         Spacer(modifier = Modifier.height(20.dp))
@@ -177,21 +181,40 @@ fun LoginScreen(onSendOtp: (String) -> Unit) {
         // Terms and Privacy Footer
         val annotatedText = buildAnnotatedString {
             withStyle(style = SpanStyle(color = Color.Black)) {
-                append("By continuing you agree to our ")
+                append(stringResource(R.string.agree_terms_prefix))
             }
-            pushStringAnnotation(tag = "TERMS", annotation = "terms")
-            withStyle(style = SpanStyle(color = AquaBlue, fontWeight = FontWeight.Bold)) {
-                append("Terms & Conditions")
+
+            val linkStyle = TextLinkStyles(
+                style = SpanStyle(color = AquaBlue, fontWeight = FontWeight.Bold)
+            )
+
+            withLink(
+                LinkAnnotation.Clickable(
+                    tag = "TERMS",
+                    styles = linkStyle,
+                    linkInteractionListener = {
+                        // Handle Terms & Conditions click
+                    }
+                )
+            ) {
+                append(stringResource(R.string.terms_conditions))
             }
-            pop()
+
             withStyle(style = SpanStyle(color = Color.Black)) {
-                append(" and ")
+                append(stringResource(R.string.and))
             }
-            pushStringAnnotation(tag = "PRIVACY", annotation = "privacy")
-            withStyle(style = SpanStyle(color = AquaBlue, fontWeight = FontWeight.Bold)) {
-                append("Privacy Policy")
+
+            withLink(
+                LinkAnnotation.Clickable(
+                    tag = "PRIVACY",
+                    styles = linkStyle,
+                    linkInteractionListener = {
+                        // Handle Privacy Policy click
+                    }
+                )
+            ) {
+                append(stringResource(R.string.privacy_policy))
             }
-            pop()
         }
 
         Text(

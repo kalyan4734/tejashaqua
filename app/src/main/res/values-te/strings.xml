@@ -1,0 +1,73 @@
+<resources>
+    <string name="app_name">తేజశ్ ఆక్వా</string>
+    <string name="welcome_to">స్వాగతం </string>
+    <string name="tejash_aqua">తేజశ్ ఆక్వా!</string>
+    <string name="enter_mobile_number">మీ మొబైల్ నంబర్‌ను నమోదు చేయండి</string>
+    <string name="country_code">+91</string>
+    <string name="phone_placeholder">9876543210</string>
+    <string name="invalid_phone_error">దయచేసి సరైన 10-అంకెల మొబైల్ నంబర్‌ను నమోదు చేయండి</string>
+    <string name="otp_helper_text">మీ నంబర్‌ను ధృవీకరించడానికి మేము 6-అంకెల OTPని పంపుతాము</string>
+    <string name="send_otp">OTP పంపండి</string>
+    <string name="agree_terms_prefix">కొనసాగడం ద్వారా మీరు మా </string>
+    <string name="terms_conditions">నిబంధనలు &amp; షరతులు</string>
+    <string name="and"> మరియు </string>
+    <string name="privacy_policy">గోప్యతా విధానానికి</string>
+
+    <!-- OTP Screen -->
+    <string name="enter_otp">OTPని నమోదు చేయండి</string>
+    <string name="sent_to">+91 %s కి పంపబడింది</string>
+    <string name="enter_6_digit_code">6-అంకెల కోడ్‌ను నమోదు చేయండి</string>
+    <string name="resend_otp_in">%d సెకన్లలో OTPని మళ్లీ పంపండి</string>
+    <string name="resend_otp">OTPని మళ్లీ పంపండి</string>
+    <string name="verify_continue">ధృవీకరించండి &amp; కొనసాగించండి</string>
+
+    <!-- Dashboard -->
+    <string name="fetching_location">స్థానాన్ని పొందుతోంది…</string>
+    <string name="home">హోమ్</string>
+    <string name="jobs">ఉద్యోగాలు</string>
+    <string name="add">జోడించు</string>
+    <string name="news">వార్తలు</string>
+    <string name="profile">ప్రొఫైల్</string>
+    <string name="search_placeholder">శీర్షిక, స్థానం లేదా వస్తువు కోసం వెతకండి…</string>
+    <string name="fresh_marketplace">మార్కెట్‌ప్లేస్‌లో కొత్తవి</string>
+    <string name="items_count">%d వస్తువులు</string>
+    <string name="no_listings">జాబితాలు ఏవీ లేవు</string>
+    <string name="no_match_search">మీ శోధనకు సరిపోయే వస్తువులేవీ లేవు</string>
+    <string name="new_label">⭐ కొత్తది</string>
+    <string name="by_label">ద్వారా: %s</string>
+    <string name="footer_text">భారతదేశపు అత్యంత విశ్వసనీయమైన #1 ఆక్వా మార్కెట్‌ప్లేస్ యాప్.</string>
+    <string name="today_aqua_rates">నేటి ఆక్వా ధరలు</string>
+    <string name="live">లైవ్</string>
+    <string name="see_all_rates">అన్ని ధరలను చూడండి →</string>
+    <string name="location_not_found">స్థానం కనుగొనబడలేదు</string>
+    <string name="failed_get_location">స్థానాన్ని పొందడంలో విఫలమైంది</string>
+
+    <!-- Welcome Sheet -->
+    <string name="welcome_title">తేజశ్ ఆక్వాకు స్వాగతం! 👋</string>
+    <string name="welcome_desc">కొనుగోలుదారులు &amp; విక్రేతలు మిమ్మల్ని గుర్తించడానికి మీ పేరును సెట్ చేయండి. ఇది మార్కెట్‌ప్లేస్‌లో నమ్మకాన్ని పెంచడంలో సహాయపడుతుంది.</string>
+    <string name="enter_name">మీ పేరును నమోదు చేయండి</string>
+    <string name="skip_now">ప్రస్తుతానికి వద్దు</string>
+    <string name="save">సేవ్ చేయండి</string>
+
+    <!-- Profile -->
+    <string name="my_profile">నా ప్రొఫైల్</string>
+    <string name="my_listings">నా జాబితాలు</string>
+    <string name="saved_items">సేవ్ చేసిన వస్తువులు</string>
+    <string name="chats">చాట్‌లు</string>
+    <string name="about_app">యాప్ గురించి</string>
+    <string name="logout">లాగ్ అవుట్</string>
+    <string name="cancel">రద్దు చేయండి</string>
+    <string name="logout_confirm">మీరు తేజశ్ ఆక్వా నుండి లాగ్ అవుట్ చేయాలనుకుంటున్నారా?</string>
+
+    <!-- Chat -->
+    <string name="chat_title">చాట్</string>
+    <string name="search_conversations">సంభాషణలను వెతకండి…</string>
+    <string name="all">అన్నీ</string>
+    <string name="buying">కొనుగోలు</string>
+    <string name="selling">విక్రయం</string>
+    <string name="no_chats">చాట్‌లేవీ లేవు</string>
+    <string name="type_message">సందేశాన్ని టైప్ చేయండి…</string>
+    <string name="is_available">ఇది అందుబాటులో ఉందా?</string>
+    <string name="best_price">ఉత్తమ ధర?</string>
+    <string name="recently"> ఇటీవల</string>
+</resources>

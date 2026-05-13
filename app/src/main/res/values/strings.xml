@@ -1,3 +1,73 @@
 <resources>
     <string name="app_name">TejashAqua</string>
+    <string name="welcome_to">Welcome to </string>
+    <string name="tejash_aqua">Tejash Aqua!</string>
+    <string name="enter_mobile_number">Enter Your Mobile Number</string>
+    <string name="country_code">+91</string>
+    <string name="phone_placeholder">9876543210</string>
+    <string name="invalid_phone_error">Please enter a valid 10-digit mobile number</string>
+    <string name="otp_helper_text">We will send a 6-digit OTP to verify your number</string>
+    <string name="send_otp">Send OTP</string>
+    <string name="agree_terms_prefix">By continuing you agree to our </string>
+    <string name="terms_conditions">Terms &amp; Conditions</string>
+    <string name="and"> and </string>
+    <string name="privacy_policy">Privacy Policy</string>
+
+    <!-- OTP Screen -->
+    <string name="enter_otp">Enter OTP</string>
+    <string name="sent_to">Sent to +91 %s</string>
+    <string name="enter_6_digit_code">Enter 6-digit code</string>
+    <string name="resend_otp_in">Resend OTP in %d Sec</string>
+    <string name="resend_otp">Resend OTP</string>
+    <string name="verify_continue">Verify &amp; Continue</string>
+
+    <!-- Dashboard -->
+    <string name="fetching_location">Fetching location…</string>
+    <string name="home">Home</string>
+    <string name="jobs">Jobs</string>
+    <string name="add">Add</string>
+    <string name="news">News</string>
+    <string name="profile">Profile</string>
+    <string name="search_placeholder">Search title, location or item…</string>
+    <string name="fresh_marketplace">Fresh in Marketplace</string>
+    <string name="items_count">%d items</string>
+    <string name="no_listings">No listings available</string>
+    <string name="no_match_search">No items match your search</string>
+    <string name="new_label">⭐ New</string>
+    <string name="by_label">By: %s</string>
+    <string name="footer_text">India\'s most trusted #1 aqua marketplace app.</string>
+    <string name="today_aqua_rates">Today\'s Aqua Rates</string>
+    <string name="live">LIVE</string>
+    <string name="see_all_rates">See All Rates →</string>
+    <string name="location_not_found">Location not found</string>
+    <string name="failed_get_location">Failed to get location</string>
+
+    <!-- Welcome Sheet -->
+    <string name="welcome_title">Welcome to Tejash Aqua! 👋</string>
+    <string name="welcome_desc">Set your name so buyers &amp; sellers can identify you. This helps build trust in the marketplace.</string>
+    <string name="enter_name">Enter your name</string>
+    <string name="skip_now">Skip for Now</string>
+    <string name="save">Save</string>
+
+    <!-- Profile -->
+    <string name="my_profile">My Profile</string>
+    <string name="my_listings">My Listings</string>
+    <string name="saved_items">Saved Items</string>
+    <string name="chats">Chats</string>
+    <string name="about_app">About App</string>
+    <string name="logout">Logout</string>
+    <string name="cancel">Cancel</string>
+    <string name="logout_confirm">Are you sure you want to logout from Tejash Aqua?</string>
+
+    <!-- Chat -->
+    <string name="chat_title">Chat</string>
+    <string name="search_conversations">Search Conversations…</string>
+    <string name="all">All</string>
+    <string name="buying">Buying</string>
+    <string name="selling">Selling</string>
+    <string name="no_chats">No chats found</string>
+    <string name="type_message">Type a message…</string>
+    <string name="is_available">Is this available?</string>
+    <string name="best_price">Best Price?</string>
+    <string name="recently"> Recently</string>
 </resources>

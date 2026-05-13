@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
@@ -64,17 +65,21 @@ fun DashboardScreen(
     val fetchedName by locationViewModel.currentLocationName.collectAsState()
     val fetchedSub by locationViewModel.currentSubLocation.collectAsState()
 
+    val fetchingLocText = stringResource(R.string.fetching_location)
+    val notFoundText = stringResource(R.string.location_not_found)
+    val failedText = stringResource(R.string.failed_get_location)
+    
     LaunchedEffect(Unit) {
-        if (locationName == "Fetching location...") {
+        if (locationName == fetchingLocText) {
             locationViewModel.fetchCurrentLocation()
         }
     }
 
     LaunchedEffect(fetchedName, fetchedSub) {
-        if (locationName == "Fetching location..." && 
-            fetchedName != "Fetching location..." && 
-            fetchedName != "Location not found" &&
-            fetchedName != "Failed to get location") {
+        if (locationName == fetchingLocText && 
+            fetchedName != fetchingLocText && 
+            fetchedName != notFoundText &&
+            fetchedName != failedText) {
             onLocationFetched(fetchedName, fetchedSub)
         }
     }
@@ -133,13 +138,13 @@ fun DashboardScreen(
         bottomBar = {
             NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 8.dp) {
                 NavigationBarItem(
-                    icon = { Icon(Icons.Default.Home, "Home") },
+                    icon = { Icon(Icons.Default.Home, stringResource(R.string.home)) },
                     selected = selectedItem == 0,
                     onClick = { selectedItem = 0 },
                     colors = NavigationBarItemDefaults.colors(selectedIconColor = AquaBlue, unselectedIconColor = GrayText)
                 )
                 NavigationBarItem(
-                    icon = { Icon(Icons.Default.Work, "Jobs") },
+                    icon = { Icon(Icons.Default.Work, stringResource(R.string.jobs)) },
                     selected = selectedItem == 1,
                     onClick = { selectedItem = 1 },
                     colors = NavigationBarItemDefaults.colors(selectedIconColor = AquaBlue, unselectedIconColor = GrayText)
@@ -151,16 +156,16 @@ fun DashboardScreen(
                     shape = CircleShape,
                     modifier = Modifier.size(56.dp).offset(y = (-10).dp)
                 ) {
-                    Icon(Icons.Default.Add, "Add", modifier = Modifier.size(30.dp))
+                    Icon(Icons.Default.Add, stringResource(R.string.add), modifier = Modifier.size(30.dp))
                 }
                 NavigationBarItem(
-                    icon = { Icon(Icons.Default.Article, "News") },
+                    icon = { Icon(Icons.Default.Article, stringResource(R.string.news)) },
                     selected = selectedItem == 2,
                     onClick = { selectedItem = 2 },
                     colors = NavigationBarItemDefaults.colors(selectedIconColor = AquaBlue, unselectedIconColor = GrayText)
                 )
                 NavigationBarItem(
-                    icon = { Icon(Icons.Default.Person, "Profile") },
+                    icon = { Icon(Icons.Default.Person, stringResource(R.string.profile)) },
                     selected = selectedItem == 3,
                     onClick = { 
                         selectedItem = 3
@@ -206,16 +211,16 @@ fun DashboardScreen(
                 ) {
                     Column(modifier = Modifier.fillMaxWidth().padding(24.dp)) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Text("Welcome to Tejash Aqua! 👋", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                            Text(stringResource(R.string.welcome_title), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                             IconButton(onClick = { 
                                 showWelcomeSheet = false
                                 onNameSkip()
                             }) { Icon(Icons.Default.Close, contentDescription = "Close") }
                         }
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text("Set your name so buyers & sellers can identify you. This helps build trust in the marketplace.", fontSize = 14.sp, color = GrayText, lineHeight = 20.sp)
+                        Text(stringResource(R.string.welcome_desc), fontSize = 14.sp, color = GrayText, lineHeight = 20.sp)
                         Spacer(modifier = Modifier.height(24.dp))
-                        OutlinedTextField(value = tempName, onValueChange = { tempName = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text("Enter your name", color = Color.Gray) }, leadingIcon = { Icon(Icons.Default.PersonOutline, contentDescription = null, tint = Color.Black) }, shape = RoundedCornerShape(12.dp), singleLine = true)
+                        OutlinedTextField(value = tempName, onValueChange = { tempName = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text(stringResource(R.string.enter_name), color = Color.Gray) }, leadingIcon = { Icon(Icons.Default.PersonOutline, contentDescription = null, tint = Color.Black) }, shape = RoundedCornerShape(12.dp), singleLine = true)
                         Spacer(modifier = Modifier.height(24.dp))
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             OutlinedButton(
@@ -227,7 +232,7 @@ fun DashboardScreen(
                                 shape = RoundedCornerShape(12.dp), 
                                 border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE0E0E0))
                             ) {
-                                Text("Skip for Now", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                                Text(stringResource(R.string.skip_now), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                             }
                             Button(
                                 onClick = { 
@@ -240,7 +245,7 @@ fun DashboardScreen(
                                 shape = RoundedCornerShape(12.dp), 
                                 colors = ButtonDefaults.buttonColors(containerColor = AquaBlue)
                             ) {
-                                Text("Save", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                Text(stringResource(R.string.save), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
                             }
                         }
                         Spacer(modifier = Modifier.height(16.dp))
@@ -288,7 +293,7 @@ fun SearchHeader(
             value = productSearchText,
             onValueChange = { onProductSearchChange(it) },
             modifier = Modifier.fillMaxWidth().height(50.dp),
-            placeholder = { Text("Search title, location or item...", fontSize = 14.sp) },
+            placeholder = { Text(stringResource(R.string.search_placeholder), fontSize = 14.sp) },
             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = GrayText) },
             trailingIcon = {
                 if (productSearchText.isNotEmpty()) {
@@ -356,9 +361,9 @@ fun MarketplaceSection(searchText: String, categoryFilter: String, onItemClick: 
 
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Fresh in Marketplace", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = DarkBlueText)
+            Text(stringResource(R.string.fresh_marketplace), fontWeight = FontWeight.Bold, fontSize = 18.sp, color = DarkBlueText)
             Spacer(modifier = Modifier.weight(1f))
-            Text("${filteredListings.size} items", color = GrayText, fontSize = 12.sp)
+            Text(stringResource(R.string.items_count, filteredListings.size), color = GrayText, fontSize = 12.sp)
         }
         Spacer(modifier = Modifier.height(12.dp))
         
@@ -368,7 +373,7 @@ fun MarketplaceSection(searchText: String, categoryFilter: String, onItemClick: 
             }
         } else if (filteredListings.isEmpty()) {
             Box(modifier = Modifier.fillMaxWidth().height(150.dp), contentAlignment = Alignment.Center) {
-                val message = if (searchText.isEmpty() && categoryFilter == "All") "No listings available" else "No items match your search"
+                val message = if (searchText.isEmpty() && categoryFilter == "All") stringResource(R.string.no_listings) else stringResource(R.string.no_match_search)
                 Text(message, color = GrayText)
             }
         } else {
@@ -425,7 +430,7 @@ fun MarketItem(title: String, price: String, category: String, location: String,
                     Image(painter = painterResource(id = R.drawable.app_logo), contentDescription = null, modifier = Modifier.size(60.dp).align(Alignment.Center), alpha = 0.3f)
                 }
                 Surface(modifier = Modifier.padding(8.dp).align(Alignment.TopStart), color = Color.White, shape = RoundedCornerShape(4.dp)) {
-                    Text("⭐ New", modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp), fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                    Text(stringResource(R.string.new_label), modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp), fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                 }
             }
             Column(modifier = Modifier.padding(8.dp)) {
@@ -441,7 +446,7 @@ fun MarketItem(title: String, price: String, category: String, location: String,
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Person, null, tint = AquaBlue, modifier = Modifier.size(12.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = "By: $posterName", fontSize = 10.sp, color = Color.DarkGray, maxLines = 1)
+                    Text(text = stringResource(R.string.by_label, posterName), fontSize = 10.sp, color = Color.DarkGray, maxLines = 1)
                 }
             }
         }
@@ -451,7 +456,7 @@ fun MarketItem(title: String, price: String, category: String, location: String,
 @Composable
 fun FooterSection() {
     Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
-        Text("India's most trusted #1 aqua marketplace app.", fontSize = 32.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD1D9E6), lineHeight = 38.sp)
+        Text(stringResource(R.string.footer_text), fontSize = 32.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD1D9E6), lineHeight = 38.sp)
         Spacer(modifier = Modifier.height(24.dp))
     }
 }
@@ -462,7 +467,7 @@ fun AquaRatesSection(onSeeAllClick: () -> Unit) {
     Column(modifier = Modifier.padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column {
-                Text("Today's Aqua Rates", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = DarkBlueText)
+                Text(stringResource(R.string.today_aqua_rates), fontWeight = FontWeight.Bold, fontSize = 18.sp, color = DarkBlueText)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.DateRange, contentDescription = null, tint = GrayText, modifier = Modifier.size(14.dp))
                     Spacer(modifier = Modifier.width(4.dp))
@@ -474,7 +479,7 @@ fun AquaRatesSection(onSeeAllClick: () -> Unit) {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
                     Box(modifier = Modifier.size(6.dp).background(LiveGreen, CircleShape))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("LIVE", color = LiveGreen, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.live), color = LiveGreen, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -486,7 +491,7 @@ fun AquaRatesSection(onSeeAllClick: () -> Unit) {
         }
         Spacer(modifier = Modifier.height(12.dp))
         Button(onClick = onSeeAllClick, modifier = Modifier.fillMaxWidth().height(48.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE3F2FD), contentColor = AquaBlue), shape = RoundedCornerShape(12.dp)) {
-            Text("See All Rates →", fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.see_all_rates), fontWeight = FontWeight.Bold)
         }
     }
 }

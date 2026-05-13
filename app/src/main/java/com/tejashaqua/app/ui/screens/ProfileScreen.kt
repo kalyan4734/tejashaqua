@@ -23,12 +23,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
+import com.tejashaqua.app.R
 import com.tejashaqua.app.ui.theme.AquaBlue
 import com.tejashaqua.app.ui.theme.GrayText
 
@@ -106,7 +108,7 @@ fun ProfileScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Logout?",
+                        text = stringResource(R.string.logout) + "?",
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.Black
@@ -123,7 +125,7 @@ fun ProfileScreen(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Text(
-                    text = "Are you sure you want to logout from Tejash Aqua?",
+                    text = stringResource(R.string.logout_confirm),
                     fontSize = 16.sp,
                     color = Color.Gray
                 )
@@ -142,7 +144,7 @@ fun ProfileScreen(
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Text(
-                        text = "Logout",
+                        text = stringResource(R.string.logout),
                         color = Color.White,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold
@@ -161,7 +163,7 @@ fun ProfileScreen(
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Black)
                 ) {
                     Text(
-                        text = "Cancel",
+                        text = stringResource(R.string.cancel),
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -175,7 +177,7 @@ fun ProfileScreen(
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("My Profile", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp) },
+                title = { Text(stringResource(R.string.my_profile), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
@@ -202,9 +204,9 @@ fun ProfileScreen(
                         .padding(horizontal = 16.dp, vertical = 20.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    StatCard(listingCount.toString(), "My Listings", Modifier.weight(1f).clickable { onMyListingsClick() })
-                    StatCard("0", "Saved Items", Modifier.weight(1f))
-                    StatCard(chatCount.toString(), "Chats", Modifier.weight(1f).clickable { onChatsClick() })
+                    StatCard(listingCount.toString(), stringResource(R.string.my_listings), Modifier.weight(1f).clickable { onMyListingsClick() })
+                    StatCard("0", stringResource(R.string.saved_items), Modifier.weight(1f))
+                    StatCard(chatCount.toString(), stringResource(R.string.chats), Modifier.weight(1f).clickable { onChatsClick() })
                 }
             }
 
@@ -216,11 +218,11 @@ fun ProfileScreen(
                     elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
                 ) {
                     Column {
-                        ProfileMenuItem(Icons.Default.CheckCircle, "My Listings", Color(0xFF4CAF50), onClick = onMyListingsClick)
+                        ProfileMenuItem(Icons.Default.CheckCircle, stringResource(R.string.my_listings), Color(0xFF4CAF50), onClick = onMyListingsClick)
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = Color(0xFFF0F0F0))
-                        ProfileMenuItem(Icons.Default.Chat, "Chats", AquaBlue, onClick = onChatsClick)
+                        ProfileMenuItem(Icons.Default.Chat, stringResource(R.string.chats), AquaBlue, onClick = onChatsClick)
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = Color(0xFFF0F0F0))
-                        ProfileMenuItem(Icons.Default.Favorite, "Saved Items", Color(0xFFF44336), onClick = {})
+                        ProfileMenuItem(Icons.Default.Favorite, stringResource(R.string.saved_items), Color(0xFFF44336), onClick = {})
                     }
                 }
             }
@@ -235,11 +237,11 @@ fun ProfileScreen(
                     elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
                 ) {
                     Column {
-                        ProfileMenuItem(Icons.Default.Description, "Privacy Policy", Color(0xFF009688), onClick = {})
+                        ProfileMenuItem(Icons.Default.Description, stringResource(R.string.privacy_policy), Color(0xFF009688), onClick = {})
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = Color(0xFFF0F0F0))
-                        ProfileMenuItem(Icons.Default.Assignment, "Terms & Conditions", Color(0xFF9C27B0), onClick = {})
+                        ProfileMenuItem(Icons.Default.Assignment, stringResource(R.string.terms_conditions), Color(0xFF9C27B0), onClick = {})
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = Color(0xFFF0F0F0))
-                        ProfileMenuItem(Icons.Default.Info, "About App", Color(0xFF03A9F4), onClick = {})
+                        ProfileMenuItem(Icons.Default.Info, stringResource(R.string.about_app), Color(0xFF03A9F4), onClick = {})
                     }
                 }
             }
@@ -259,7 +261,7 @@ fun ProfileScreen(
                     ) {
                         Icon(Icons.Default.Logout, contentDescription = null, tint = Color(0xFFF44336))
                         Spacer(modifier = Modifier.width(12.dp))
-                        Text("Logout", color = Color(0xFFF44336), fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.logout), color = Color(0xFFF44336), fontWeight = FontWeight.Bold)
                     }
                 }
             }

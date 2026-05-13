@@ -4,6 +4,7 @@ import android.Manifest
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -16,11 +17,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.android.gms.maps.model.LatLng
 import com.tejashaqua.app.data.model.ListingCategory
 import com.tejashaqua.app.ui.viewmodel.AuthState
 import com.tejashaqua.app.ui.viewmodel.AuthViewModel
+import com.tejashaqua.app.ui.viewmodel.LocationSearchViewModel
 import com.tejashaqua.app.ui.screens.*
 import com.tejashaqua.app.ui.theme.TejashAquaTheme
 
@@ -31,6 +34,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             TejashAquaTheme {
                 val authViewModel: AuthViewModel = viewModel()
+                val locationViewModel: LocationSearchViewModel = viewModel()
                 val authState by authViewModel.authState.collectAsState()
                 val context = LocalContext.current
 
@@ -47,16 +51,46 @@ class MainActivity : ComponentActivity() {
                 var chatSourceScreen by remember { mutableStateOf("detailed_page") }
                 var shouldSendInitialChatMessage by remember { mutableStateOf(false) }
                 
-                var currentLocationName by remember { mutableStateOf("Fetching location...") }
+                val fetchingLocText = stringResource(R.string.fetching_location)
+                var currentLocationName by remember { mutableStateOf(fetchingLocText) }
                 var currentSubLocation by remember { mutableStateOf("") }
                 
                 // Track where the location picker was opened from
                 var locationPickerSource by remember { mutableStateOf("dashboard") } 
                 var pickedListingLocation by remember { mutableStateOf<Pair<String, LatLng?>?>(null) }
 
+                BackHandler(enabled = currentScreen != "dashboard" && currentScreen != "login" && currentScreen != "splash") {
+                    when (currentScreen) {
+                        "otp" -> {
+                            authViewModel.resetState()
+                            currentScreen = "login"
+                        }
+                        "aqua_rates" -> currentScreen = "dashboard"
+                        "select_category" -> currentScreen = "dashboard"
+                        "edit_listing" -> {
+                            currentScreen = if (isEditMode) "my_listings" else "select_category"
+                        }
+                        "profile" -> currentScreen = "dashboard"
+                        "edit_profile" -> currentScreen = "profile"
+                        "my_listings" -> currentScreen = "profile"
+                        "detailed_page" -> currentScreen = "dashboard"
+                        "chat" -> currentScreen = chatSourceScreen
+                        "chat_list" -> currentScreen = "profile"
+                        "select_location" -> {
+                            currentScreen = if (locationPickerSource == "listing") "edit_listing" else "dashboard"
+                        }
+                    }
+                }
+
                 val permissionLauncher = rememberLauncherForActivityResult(
                     ActivityResultContracts.RequestMultiplePermissions()
-                ) { _ -> }
+                ) { permissions ->
+                    val isGranted = permissions.getOrDefault(Manifest.permission.ACCESS_FINE_LOCATION, false) ||
+                            permissions.getOrDefault(Manifest.permission.ACCESS_COARSE_LOCATION, false)
+                    if (isGranted) {
+                        locationViewModel.fetchCurrentLocation()
+                    }
+                }
 
                 LaunchedEffect(currentScreen) {
                     when (currentScreen) {
@@ -125,6 +159,10 @@ class MainActivity : ComponentActivity() {
                             },
                             onResendClick = {
                                 authViewModel.sendOtp(mobileNumber, this@MainActivity)
+                            },
+                            onBackClick = {
+                                authViewModel.resetState()
+                                currentScreen = "login"
                             }
                         )
                         "dashboard" -> DashboardScreen(
@@ -157,7 +195,8 @@ class MainActivity : ComponentActivity() {
                             },
                             onNameSkip = {
                                 authViewModel.skipOnboarding()
-                            }
+                            },
+                            locationViewModel = locationViewModel
                         )
                         "detailed_page" -> selectedListingData?.let { data ->
                             DetailedPageScreen(

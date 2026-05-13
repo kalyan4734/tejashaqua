@@ -1,19 +1,21 @@
 package com.tejashaqua.app.ui.screens
 
 import android.graphics.BitmapFactory
+import android.location.Geocoder
 import android.util.Base64
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -27,13 +29,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
-import com.google.android.gms.maps.GoogleMapOptions
+import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
 import com.tejashaqua.app.R
 import com.tejashaqua.app.ui.theme.AquaBlue
 import com.tejashaqua.app.ui.theme.GrayText
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,6 +60,8 @@ fun DetailedPageScreen(
     val timestamp = listingData["timestamp"] as? Long ?: System.currentTimeMillis()
     val listingUserId = listingData["userId"]?.toString() ?: ""
     val isOwnListing = currentUserId == listingUserId
+
+    val pagerState = rememberPagerState(pageCount = { if (images.isEmpty()) 1 else images.size })
 
     Scaffold(
         topBar = {
@@ -108,22 +114,27 @@ fun DetailedPageScreen(
             item {
                 Box(modifier = Modifier.fillMaxWidth().height(250.dp).background(Color(0xFFF5F5F5))) {
                     if (images.isNotEmpty()) {
-                        val firstImage = images[0]?.toString() ?: ""
-                        val bitmap = remember(firstImage) {
-                            if (firstImage.isNotEmpty()) {
-                                try {
-                                    val decodedString = Base64.decode(firstImage, Base64.DEFAULT)
-                                    BitmapFactory.decodeByteArray(decodedString, 0, decodedString.size)
-                                } catch (_: Exception) { null }
-                            } else null
-                        }
-                        if (bitmap != null) {
-                            Image(
-                                bitmap = bitmap.asImageBitmap(),
-                                contentDescription = null,
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop
-                            )
+                        HorizontalPager(
+                            state = pagerState,
+                            modifier = Modifier.fillMaxSize()
+                        ) { page ->
+                            val imageStr = images[page]?.toString() ?: ""
+                            val bitmap = remember(imageStr) {
+                                if (imageStr.isNotEmpty()) {
+                                    try {
+                                        val decodedString = Base64.decode(imageStr, Base64.DEFAULT)
+                                        BitmapFactory.decodeByteArray(decodedString, 0, decodedString.size)
+                                    } catch (_: Exception) { null }
+                                } else null
+                            }
+                            if (bitmap != null) {
+                                Image(
+                                    bitmap = bitmap.asImageBitmap(),
+                                    contentDescription = "Listing Image ${page + 1}",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                            }
                         }
                     } else {
                         Image(
@@ -134,17 +145,19 @@ fun DetailedPageScreen(
                         )
                     }
                     
-                    Surface(
-                        modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
-                        color = Color.Black.copy(alpha = 0.6f),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text(
-                            text = "1/${if(images.isEmpty()) 1 else images.size}",
-                            color = Color.White,
-                            fontSize = 12.sp,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        )
+                    if (images.size > 1) {
+                        Surface(
+                            modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
+                            color = Color.Black.copy(alpha = 0.6f),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text(
+                                text = "${pagerState.currentPage + 1}/${images.size}",
+                                color = Color.White,
+                                fontSize = 12.sp,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -214,22 +227,51 @@ fun DetailedPageScreen(
             // Location Section with Map Tile
             item {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text(text = "Location", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                    Text(text = "Posted Location", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                     Spacer(modifier = Modifier.height(12.dp))
                     
                     val context = LocalContext.current
-                    // Use coordinates if available in listingData, else default to Rajahmundry
-                    val lat = listingData["lat"] as? Double ?: 17.0005
-                    val lng = listingData["lng"] as? Double ?: 81.7729
-                    val position = LatLng(lat, lng)
+                    // Safely extract coordinates as Numbers to handle Double/Float variations from Firestore
+                    var lat by remember { mutableStateOf<Double?>( (listingData["lat"] as? Number)?.toDouble() ) }
+                    var lng by remember { mutableStateOf<Double?>( (listingData["lng"] as? Number)?.toDouble() ) }
+                    
+                    // Default to Rajahmundry if absolutely no coordinates are found
+                    val finalLat = lat ?: 17.0005
+                    val finalLng = lng ?: 81.7729
+                    val position = LatLng(finalLat, finalLng)
+                    
                     val cameraPositionState = rememberCameraPositionState {
                         this.position = CameraPosition.fromLatLngZoom(position, 13f)
+                    }
+
+                    // Fallback: If coordinates are missing, try to find them using the location name
+                    LaunchedEffect(fullLocation) {
+                        if (lat == null || lng == null) {
+                            try {
+                                val geocoder = Geocoder(context, Locale.getDefault())
+                                val addresses = geocoder.getFromLocationName(fullLocation, 1)
+                                if (!addresses.isNullOrEmpty()) {
+                                    val address = addresses[0]
+                                    lat = address.latitude
+                                    lng = address.longitude
+                                }
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            }
+                        }
+                    }
+
+                    // Force camera update when coordinates change (e.g. navigating to a different listing or Geocoder result)
+                    LaunchedEffect(lat, lng) {
+                        if (lat != null && lng != null) {
+                            cameraPositionState.move(CameraUpdateFactory.newLatLngZoom(LatLng(lat!!, lng!!), 13f))
+                        }
                     }
 
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(180.dp)
+                            .height(200.dp)
                             .clip(RoundedCornerShape(12.dp))
                             .background(Color(0xFFF5F5F5))
                             .border(1.dp, Color(0xFFEEEEEE), RoundedCornerShape(12.dp))
@@ -237,26 +279,19 @@ fun DetailedPageScreen(
                         GoogleMap(
                             modifier = Modifier.fillMaxSize(),
                             cameraPositionState = cameraPositionState,
-                            googleMapOptionsFactory = { GoogleMapOptions().liteMode(true) },
-                            uiSettings = MapUiSettings(zoomControlsEnabled = false, mapToolbarEnabled = false)
+                            uiSettings = MapUiSettings(
+                                zoomControlsEnabled = false,
+                                mapToolbarEnabled = true,
+                                myLocationButtonEnabled = false,
+                                compassEnabled = false
+                            )
                         ) {
                             Marker(
-                                state = MarkerState(position = position),
-                                title = location
+                                state = MarkerState(position = LatLng(lat ?: finalLat, lng ?: finalLng)),
+                                title = location,
+                                icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)
                             )
                         }
-                        
-                        // Transparent clickable overlay to open in Google Maps app
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .clickable {
-                                    val gmmIntentUri = "geo:$lat,$lng?q=${android.net.Uri.encode(fullLocation)}".toUri()
-                                    val mapIntent = android.content.Intent(android.content.Intent.ACTION_VIEW, gmmIntentUri)
-                                    mapIntent.setPackage("com.google.android.apps.maps")
-                                    context.startActivity(mapIntent)
-                                }
-                        )
                     }
                     
                     Spacer(modifier = Modifier.height(8.dp))
@@ -270,7 +305,7 @@ fun DetailedPageScreen(
                             Icon(Icons.Default.LocationOn, contentDescription = null, tint = AquaBlue, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = fullLocation, 
+                                text = location, 
                                 fontSize = 14.sp, 
                                 color = Color.Black, 
                                 maxLines = 1, 
@@ -278,7 +313,9 @@ fun DetailedPageScreen(
                             )
                         }
                         TextButton(onClick = {
-                            val gmmIntentUri = "geo:$lat,$lng?q=${android.net.Uri.encode(fullLocation)}".toUri()
+                            val targetLat = lat ?: finalLat
+                            val targetLng = lng ?: finalLng
+                            val gmmIntentUri = "geo:$targetLat,$targetLng?q=${android.net.Uri.encode(fullLocation)}".toUri()
                             val mapIntent = android.content.Intent(android.content.Intent.ACTION_VIEW, gmmIntentUri)
                             mapIntent.setPackage("com.google.android.apps.maps")
                             context.startActivity(mapIntent)
@@ -298,7 +335,7 @@ fun DetailedPageScreen(
                     DetailRowItem("Type of Prawn", listingData["prawnType"]?.toString() ?: "Growth Line")
                     DetailRowItem("PL Days", "PL10")
                     DetailRowItem("Rate", "$price/kg")
-                    DetailRowItem("Location", location)
+                    DetailRowItem("Posted Location", location)
                 }
             }
 

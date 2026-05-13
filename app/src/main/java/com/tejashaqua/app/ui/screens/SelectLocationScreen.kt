@@ -180,9 +180,13 @@ fun SelectLocationScreen(
                             isSelected = isSelected,
                             onClick = {
                                 selectedLocation = primaryText to secondaryText
-                                // In a real app, we'd fetch the LatLng for this prediction here
-                                selectedLatLng = null 
                                 keyboardController?.hide()
+                                // Fetch LatLng for the selected place
+                                locationViewModel.getPlaceLatLng(prediction.placeId) { latLng ->
+                                    selectedLatLng = latLng
+                                    // Optionally move camera to the selected location if they switch to map tab
+                                    cameraPositionState.position = CameraPosition.fromLatLngZoom(latLng, 15f)
+                                }
                             }
                         )
                     }

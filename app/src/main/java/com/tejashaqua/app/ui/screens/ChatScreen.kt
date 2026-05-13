@@ -25,7 +25,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
@@ -83,22 +85,50 @@ fun ChatScreen(
 
         db.collection("chats").document(chatRoomId).collection("messages").add(messageData)
         
+        val listingSellerId = listingData["userId"]?.toString() ?: ""
+        val isMeSeller = currentUserId == listingSellerId
+        
+        val buyerId = if (isMeSeller) sellerUserId else currentUserId
+        val buyerName = if (isMeSeller) sellerName else currentUserName
+        val sellerId = listingSellerId
+        val sellerNameLabel = if (isMeSeller) currentUserName else sellerName
+
         val chatMeta = hashMapOf(
             "lastMessage" to text,
-            "lastMessageTimestamp" to System.currentTimeMillis(),
+            "lastMessageTimestamp" to com.google.firebase.firestore.FieldValue.serverTimestamp(),
+            "lastMessageSenderId" to currentUserId,
             "listingId" to listingId,
             "listingTitle" to title,
-            "sellerId" to sellerUserId,
-            "sellerName" to sellerName,
-            "buyerId" to currentUserId,
-            "buyerName" to currentUserName,
+            "sellerId" to sellerId,
+            "sellerName" to sellerNameLabel,
+            "buyerId" to buyerId,
+            "buyerName" to buyerName,
             "participants" to listOf(currentUserId, sellerUserId)
         )
+        
+        // First ensure doc exists with basic meta
         db.collection("chats").document(chatRoomId).set(chatMeta, com.google.firebase.firestore.SetOptions.merge())
+            .addOnSuccessListener {
+                // Then increment the specific unread count field
+                db.collection("chats").document(chatRoomId).update(
+                    "unreadCounts.$sellerUserId", com.google.firebase.firestore.FieldValue.increment(1),
+                    "lastMessageTimestamp", com.google.firebase.firestore.FieldValue.serverTimestamp() // Update timestamp again to be sure
+                )
+            }
     }
 
     // Load messages from Firestore
     LaunchedEffect(chatRoomId) {
+        // Clear unread count for current user
+        db.collection("chats").document(chatRoomId).update("unreadCounts.$currentUserId", 0)
+            .addOnFailureListener {
+                // If update fails (e.g. field doesn't exist), use set with merge to initialize
+                db.collection("chats").document(chatRoomId).set(
+                    mapOf("unreadCounts" to mapOf(currentUserId to 0)),
+                    com.google.firebase.firestore.SetOptions.merge()
+                )
+            }
+
         db.collection("chats")
             .document(chatRoomId)
             .collection("messages")
@@ -152,6 +182,7 @@ fun ChatScreen(
                     .navigationBarsPadding()
                     .imePadding()
             ) {
+                val context = LocalContext.current
                 Row(
                     modifier = Modifier
                         .padding(horizontal = 16.dp, vertical = 8.dp)
@@ -159,13 +190,13 @@ fun ChatScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     SuggestionChip(
-                        onClick = { sendMessage("Is this available?") },
-                        label = { Text("Is this available?") },
+                        onClick = { sendMessage(context.getString(R.string.is_available)) },
+                        label = { Text(stringResource(R.string.is_available)) },
                         colors = SuggestionChipDefaults.suggestionChipColors(containerColor = Color(0xFFE3F2FD))
                     )
                     SuggestionChip(
-                        onClick = { sendMessage("Best Price?") },
-                        label = { Text("Best Price?") },
+                        onClick = { sendMessage(context.getString(R.string.best_price)) },
+                        label = { Text(stringResource(R.string.best_price)) },
                         colors = SuggestionChipDefaults.suggestionChipColors(containerColor = Color(0xFFE3F2FD))
                     )
                 }
@@ -180,7 +211,7 @@ fun ChatScreen(
                         value = messageText,
                         onValueChange = { messageText = it },
                         modifier = Modifier.weight(1f),
-                        placeholder = { Text("Type a message...") },
+                        placeholder = { Text(stringResource(R.string.type_message)) },
                         shape = RoundedCornerShape(24.dp),
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
@@ -269,19 +300,19 @@ fun ChatScreen(
                         Surface(color = Color(0xFFE8F5E9), shape = RoundedCornerShape(4.dp)) {
                             val isBuying = currentUserId != sellerUserId
                             Text(
-                                if (isBuying) "Buying" else "Selling",
+                                if (isBuying) stringResource(R.string.buying) else stringResource(R.string.selling),
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                 fontSize = 10.sp,
                                 color = Color(0xFF2E7D32),
                                 fontWeight = FontWeight.Bold
                             )
                         }
-                        Text(text = title, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(text = title, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(text = price, fontWeight = FontWeight.Bold, color = AquaBlue, fontSize = 16.sp)
                         
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.AccessTime, null, tint = GrayText, modifier = Modifier.size(14.dp))
-                            Text(" Recently", color = GrayText, fontSize = 12.sp)
+                            Text(stringResource(R.string.recently), color = GrayText, fontSize = 12.sp)
                             Spacer(modifier = Modifier.width(8.dp))
                             Icon(Icons.Default.LocationOn, null, tint = GrayText, modifier = Modifier.size(14.dp))
                             Text(" $location", color = GrayText, fontSize = 12.sp)
