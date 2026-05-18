@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -36,6 +37,7 @@ import com.google.firebase.firestore.Query
 import com.tejashaqua.app.R
 import com.tejashaqua.app.ui.viewmodel.LocationSearchViewModel
 import com.tejashaqua.app.ui.theme.*
+import com.tejashaqua.app.ui.components.MarketItem
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -43,6 +45,7 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
+    currentUserId: String,
     locationName: String,
     subLocation: String,
     onSeeAllRatesClick: () -> Unit,
@@ -50,6 +53,7 @@ fun DashboardScreen(
     onProfileClick: () -> Unit,
     onLocationClick: () -> Unit,
     onItemClick: (Map<String, Any>) -> Unit,
+    onPrawnsClick: () -> Unit,
     onLocationFetched: (String, String) -> Unit,
     showNameSheetInitial: Boolean,
     onNameSave: (String) -> Unit,
@@ -186,14 +190,26 @@ fun DashboardScreen(
                         onProductSearchChange = { productSearchText = it }
                     ) 
                 }
-                item { AquaRatesSection(onSeeAllRatesClick) }
+                item { 
+                    AquaRatesSection(
+                        onSeeAllClick = onSeeAllRatesClick,
+                        onPrawnsClick = onPrawnsClick
+                    ) 
+                }
                 item {
                     CategoryFilterRow(
                         selected = selectedCategoryFilter,
                         onSelect = { selectedCategoryFilter = it }
                     )
                 }
-                item { MarketplaceSection(searchText = productSearchText, categoryFilter = selectedCategoryFilter, onItemClick = onItemClick) }
+                item { 
+                    MarketplaceSection(
+                        currentUserId = currentUserId,
+                        searchText = productSearchText, 
+                        categoryFilter = selectedCategoryFilter, 
+                        onItemClick = onItemClick
+                    ) 
+                }
                 item { FooterSection() }
             }
 
@@ -319,9 +335,10 @@ fun SearchHeader(
 }
 
 @Composable
-fun MarketplaceSection(searchText: String, categoryFilter: String, onItemClick: (Map<String, Any>) -> Unit) {
+fun MarketplaceSection(currentUserId: String, searchText: String, categoryFilter: String, onItemClick: (Map<String, Any>) -> Unit) {
     val db = FirebaseFirestore.getInstance()
     var listings by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
+    var favoriteIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     var isLoading by remember { mutableStateOf(true) }
 
     LaunchedEffect(Unit) {
@@ -338,6 +355,18 @@ fun MarketplaceSection(searchText: String, categoryFilter: String, onItemClick: 
                 }
                 isLoading = false
             }
+    }
+
+    LaunchedEffect(currentUserId) {
+        if (currentUserId.isNotEmpty()) {
+            db.collection("users").document(currentUserId)
+                .collection("favorites")
+                .addSnapshotListener { snapshot, _ ->
+                    if (snapshot != null) {
+                        favoriteIds = snapshot.documents.map { it.id }.toSet()
+                    }
+                }
+        }
     }
 
     val filteredListings = remember(listings, searchText, categoryFilter) {
@@ -392,7 +421,10 @@ fun MarketplaceSection(searchText: String, categoryFilter: String, onItemClick: 
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         rowItems.forEach { data ->
-                            val images = data["images"] as? List<String>
+                            val listingId = data["id"]?.toString() ?: ""
+                            val images = (data["images"] as? List<*>)?.filterIsInstance<String>()
+                            val isFavorited = favoriteIds.contains(listingId)
+
                             MarketItem(
                                 title = data["title"]?.toString() ?: "No Title",
                                 price = "₹${data["price"] ?: data["rateValue"] ?: "N/A"}",
@@ -400,6 +432,18 @@ fun MarketplaceSection(searchText: String, categoryFilter: String, onItemClick: 
                                 location = data["location"]?.toString() ?: "Unknown",
                                 posterName = data["posterName"]?.toString() ?: "User",
                                 imageUrl = images?.firstOrNull(),
+                                isFavorited = isFavorited,
+                                onFavoriteClick = {
+                                    if (currentUserId.isNotEmpty() && listingId.isNotEmpty()) {
+                                        val favRef = db.collection("users").document(currentUserId)
+                                            .collection("favorites").document(listingId)
+                                        if (isFavorited) {
+                                            favRef.delete()
+                                        } else {
+                                            favRef.set(data)
+                                        }
+                                    }
+                                },
                                 modifier = Modifier.weight(1f).clickable { onItemClick(data) }
                             )
                         }
@@ -407,55 +451,6 @@ fun MarketplaceSection(searchText: String, categoryFilter: String, onItemClick: 
                             Spacer(modifier = Modifier.weight(1f))
                         }
                     }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun MarketItem(title: String, price: String, category: String, location: String, posterName: String, imageUrl: String?, modifier: Modifier = Modifier) {
-    val displayLocation = remember(location) {
-        location.split(",").firstOrNull()?.trim() ?: location
-    }
-
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEEEEEE)),
-        color = Color.White
-    ) {
-        Column {
-            Box(modifier = Modifier.height(110.dp).fillMaxWidth().background(Color(0xFFF5F5F5))) {
-                if (!imageUrl.isNullOrBlank()) {
-                    AsyncImage(
-                        model = imageUrl,
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop,
-                        error = painterResource(id = R.drawable.app_logo) // Fallback on error
-                    )
-                } else {
-                    Image(painter = painterResource(id = R.drawable.app_logo), contentDescription = null, modifier = Modifier.size(60.dp).align(Alignment.Center), alpha = 0.3f)
-                }
-                Surface(modifier = Modifier.padding(8.dp).align(Alignment.TopStart), color = Color.White, shape = RoundedCornerShape(4.dp)) {
-                    Text(stringResource(R.string.new_label), modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp), fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Black)
-                }
-            }
-            Column(modifier = Modifier.padding(8.dp)) {
-                Surface(color = Color(0xFFE8EAF6), shape = RoundedCornerShape(4.dp)) { Text(category, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), fontSize = 10.sp, color = AquaBlue, fontWeight = FontWeight.Bold) }
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(title, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(price, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp, color = Color.Black)
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.LocationOn, null, tint = GrayText, modifier = Modifier.size(10.dp))
-                    Text(displayLocation, color = GrayText, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
-                Spacer(modifier = Modifier.height(4.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Person, null, tint = AquaBlue, modifier = Modifier.size(12.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = stringResource(R.string.by_label, posterName), fontSize = 10.sp, color = Color.DarkGray, maxLines = 1)
                 }
             }
         }
@@ -471,7 +466,7 @@ fun FooterSection() {
 }
 
 @Composable
-fun AquaRatesSection(onSeeAllClick: () -> Unit) {
+fun AquaRatesSection(onSeeAllClick: () -> Unit, onPrawnsClick: () -> Unit) {
     val currentDate = SimpleDateFormat("MMMM dd, yyyy", Locale.getDefault()).format(Date())
     Column(modifier = Modifier.padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -494,26 +489,96 @@ fun AquaRatesSection(onSeeAllClick: () -> Unit) {
         }
         Spacer(modifier = Modifier.height(12.dp))
         LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            item { RateCard("Prawns", "₹280-1000", "View Prices", Color(0xFFE3F2FD), Icons.Default.Opacity) }
-            item { RateCard("Rohu", "₹160/kg", "+₹5", Color(0xFFFFF3E0), Icons.Default.Info) }
-            item { RateCard("Tilapia", "₹120/kg", "No Change", Color(0xFFF3E5F5), Icons.Default.TrendingFlat) }
+            item { 
+                RateCard(
+                    name = "Prawns", 
+                    price = "₹280-1000", 
+                    status = "View All Prices", 
+                    bgColor = Color(0xFFE0F2F1), 
+                    icon = painterResource(id = R.drawable.prawn),
+                    isPrawn = true,
+                    onClick = onPrawnsClick
+                ) 
+            }
+            item { 
+                RateCard(
+                    name = "Rohu", 
+                    price = "₹160/kg", 
+                    status = "+₹5 (3%)", 
+                    bgColor = Color(0xFFFFF3E0), 
+                    icon = painterResource(id = R.drawable.fish),
+                    onClick = onSeeAllClick
+                ) 
+            }
+            item { 
+                RateCard(
+                    name = "Tilapia", 
+                    price = "₹120/kg", 
+                    status = "No Change", 
+                    bgColor = Color(0xFFE8EAF6), 
+                    icon = painterResource(id = R.drawable.fish),
+                    onClick = onSeeAllClick
+                ) 
+            }
         }
         Spacer(modifier = Modifier.height(12.dp))
-        Button(onClick = onSeeAllClick, modifier = Modifier.fillMaxWidth().height(48.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE3F2FD), contentColor = AquaBlue), shape = RoundedCornerShape(12.dp)) {
-            Text(stringResource(R.string.see_all_rates), fontWeight = FontWeight.Bold)
+        Button(
+            onClick = onSeeAllClick, 
+            modifier = Modifier.fillMaxWidth().height(52.dp), 
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE3F2FD), contentColor = AquaBlue), 
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("See All Rates", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Spacer(modifier = Modifier.width(8.dp))
+                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(18.dp))
+            }
         }
     }
 }
 
 @Composable
-fun RateCard(name: String, price: String, status: String, bgColor: Color, icon: androidx.compose.ui.graphics.vector.ImageVector) {
-    Surface(modifier = Modifier.width(110.dp), shape = RoundedCornerShape(12.dp), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEEEEEE)), color = Color.White) {
+fun RateCard(
+    name: String, 
+    price: String, 
+    status: String, 
+    bgColor: Color, 
+    icon: androidx.compose.ui.graphics.painter.Painter,
+    isPrawn: Boolean = false,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .width(140.dp)
+            .clickable { onClick() }, 
+        shape = RoundedCornerShape(16.dp), 
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEEEEEE)), 
+        color = Color.White
+    ) {
         Column(modifier = Modifier.padding(12.dp)) {
-            Box(modifier = Modifier.size(40.dp).background(bgColor, CircleShape), contentAlignment = Alignment.Center) { Icon(icon, null, tint = AquaBlue, modifier = Modifier.size(20.dp)) }
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
+                Box(modifier = Modifier.size(44.dp).background(bgColor, CircleShape), contentAlignment = Alignment.Center) { 
+                    Icon(icon, null, tint = Color.Unspecified, modifier = Modifier.size(24.dp)) 
+                }
+                if (isPrawn) {
+                    Surface(modifier = Modifier.size(20.dp), shape = CircleShape, color = AquaBlue) {
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = Color.White, modifier = Modifier.size(14.dp))
+                    }
+                }
+            }
             Spacer(modifier = Modifier.height(12.dp))
-            Text(name, fontSize = 12.sp, color = GrayText)
-            Text(price, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-            Text(status, fontSize = 10.sp, color = if (status.contains("+")) Color.Red else AquaBlue)
+            Text(name, fontSize = 15.sp, color = Color.Black, fontWeight = FontWeight.Medium)
+            Text(price, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color.Black)
+            
+            if (!isPrawn && status.contains("+")) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.AutoMirrored.Filled.TrendingDown, null, tint = Color.Red, modifier = Modifier.size(14.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(status, fontSize = 12.sp, color = Color.Red)
+                }
+            } else {
+                Text(status, fontSize = 12.sp, color = if (isPrawn) AquaBlue else GrayText)
+            }
         }
     }
 }

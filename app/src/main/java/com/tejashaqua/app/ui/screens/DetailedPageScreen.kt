@@ -5,6 +5,7 @@ import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
@@ -32,7 +33,10 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
+import com.google.firebase.firestore.FirebaseFirestore
+import com.tejashaqua.app.data.model.ListingCategory
 import com.tejashaqua.app.R
+import com.tejashaqua.app.ui.components.MarketItem
 import com.tejashaqua.app.ui.theme.AquaBlue
 import com.tejashaqua.app.ui.theme.GrayText
 import java.util.Locale
@@ -48,7 +52,8 @@ fun DetailedPageScreen(
     val title = listingData["title"]?.toString() ?: "No Title"
     val priceValue = listingData["price"] ?: listingData["rateValue"] ?: "N/A"
     val price = "₹$priceValue"
-    val category = listingData["category"]?.toString() ?: "Other"
+    val categoryString = listingData["category"]?.toString() ?: "Other"
+    val category = try { ListingCategory.valueOf(categoryString.uppercase()) } catch (e: Exception) { null }
     val fullLocation = listingData["location"]?.toString() ?: "Unknown"
     // Use the first part of the address (Locality) as the main location
     val location = fullLocation.split(",").firstOrNull()?.trim() ?: fullLocation
@@ -58,6 +63,62 @@ fun DetailedPageScreen(
     val timestamp = (listingData["timestamp"] as? Long) ?: System.currentTimeMillis()
     val listingUserId = listingData["userId"]?.toString() ?: ""
     val isOwnListing = currentUserId == listingUserId
+    val listingId = listingData["id"]?.toString() ?: ""
+
+    var isFavorited by remember { mutableStateOf(false) }
+    var favoriteIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+    val db = FirebaseFirestore.getInstance()
+
+    LaunchedEffect(listingId, currentUserId) {
+        if (currentUserId.isNotEmpty() && listingId.isNotEmpty()) {
+            db.collection("users").document(currentUserId)
+                .collection("favorites").document(listingId)
+                .addSnapshotListener { snapshot, _ ->
+                    isFavorited = snapshot != null && snapshot.exists()
+                }
+        }
+    }
+
+    LaunchedEffect(currentUserId) {
+        if (currentUserId.isNotEmpty()) {
+            db.collection("users").document(currentUserId)
+                .collection("favorites")
+                .addSnapshotListener { snapshot, _ ->
+                    if (snapshot != null) {
+                        favoriteIds = snapshot.documents.map { it.id }.toSet()
+                    }
+                }
+        }
+    }
+
+    val toggleFavorite = { listing: Map<String, Any>, isFav: Boolean ->
+        val id = listing["id"]?.toString() ?: ""
+        if (currentUserId.isNotEmpty() && id.isNotEmpty()) {
+            val favRef = db.collection("users").document(currentUserId)
+                .collection("favorites").document(id)
+            if (isFav) {
+                favRef.delete()
+            } else {
+                favRef.set(listing)
+            }
+        }
+    }
+
+    var similarListings by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
+
+    LaunchedEffect(categoryString, listingData["id"]) {
+        db.collection("listings")
+            .whereEqualTo("category", categoryString)
+            .limit(10)
+            .get()
+            .addOnSuccessListener { snapshot ->
+                similarListings = snapshot.documents.mapNotNull { doc ->
+                    val data = doc.data?.toMutableMap() ?: mutableMapOf()
+                    data["id"] = doc.id
+                    if (doc.id != listingData["id"]) data else null
+                }.take(5)
+            }
+    }
 
     val pagerState = rememberPagerState { if (images.isEmpty()) 1 else images.size }
 
@@ -71,8 +132,12 @@ fun DetailedPageScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { /* Save logic */ }) {
-                        Icon(Icons.Default.FavoriteBorder, contentDescription = "Save", tint = Color.White)
+                    IconButton(onClick = { toggleFavorite(listingData, isFavorited) }) {
+                        Icon(
+                            if (isFavorited) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                            contentDescription = "Save",
+                            tint = if (isFavorited) Color.Red else Color.White
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = AquaBlue)
@@ -158,7 +223,7 @@ fun DetailedPageScreen(
                 Column(modifier = Modifier.padding(16.dp)) {
                     Surface(color = Color(0xFFE8EAF6), shape = RoundedCornerShape(4.dp)) {
                         Text(
-                            text = category,
+                            text = categoryString,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                             fontSize = 12.sp,
                             color = AquaBlue,
@@ -169,7 +234,18 @@ fun DetailedPageScreen(
                     Spacer(modifier = Modifier.height(12.dp))
                     
                     Text(text = title, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.Black)
-                    Text(text = "$price/kg", fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = AquaBlue)
+                    
+                    val priceLabel = when(category) {
+                        ListingCategory.PRAWNS -> {
+                            val rate = listingData["rateValue"] ?: "N/A"
+                            val unit = listingData["rateType"]?.toString()?.lowercase() ?: "kg"
+                            "₹$rate/$unit"
+                        }
+                        ListingCategory.FEED -> "₹${listingData["ratePerTon"] ?: "N/A"}/ton"
+                        ListingCategory.JOBS -> "₹${listingData["salary"] ?: "N/A"}"
+                        else -> price
+                    }
+                    Text(text = priceLabel, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = AquaBlue)
                     
                     Spacer(modifier = Modifier.height(12.dp))
                     
@@ -322,30 +398,91 @@ fun DetailedPageScreen(
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(text = "Details", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                     Spacer(modifier = Modifier.height(12.dp))
-                    DetailRowItem("Hatchery Name", listingData["hatcheryName"]?.toString() ?: posterName)
-                    DetailRowItem("Type of Prawn", listingData["prawnType"]?.toString() ?: "Growth Line")
-                    DetailRowItem("PL Days", "PL10")
-                    DetailRowItem("Rate", "$price/kg")
+                    
+                    when(category) {
+                        ListingCategory.FISH -> {
+                            DetailRowItem("Fish Type", listingData["fishType"]?.toString() ?: "N/A")
+                            DetailRowItem("Size", "${listingData["sizeValue"] ?: ""} ${listingData["sizeType"] ?: ""}")
+                            DetailRowItem("Age", "${listingData["fishAge"] ?: ""} Months")
+                            DetailRowItem("Quantity", "${listingData["quantity"] ?: ""} ${listingData["unitType"] ?: ""}")
+                            DetailRowItem("Price", price)
+                        }
+                        ListingCategory.PRAWNS -> {
+                            DetailRowItem("Hatchery Name", listingData["hatcheryName"]?.toString() ?: "N/A")
+                            DetailRowItem("Type of Prawn", listingData["prawnType"]?.toString() ?: "N/A")
+                            DetailRowItem("PL Days", listingData["plDays"]?.toString() ?: "N/A")
+                            DetailRowItem("Quantity", "${listingData["quantity"] ?: ""} ${listingData["unitType"] ?: ""}")
+                            DetailRowItem("Rate", "₹${listingData["rateValue"] ?: "N/A"}/${listingData["rateType"] ?: ""}")
+                        }
+                        ListingCategory.EQUIPMENTS -> {
+                            DetailRowItem("Equipment Type", listingData["equipmentType"]?.toString() ?: "N/A")
+                            DetailRowItem("Price", price)
+                        }
+                        ListingCategory.VEHICLES -> {
+                            DetailRowItem("Vehicle Name", listingData["vehicleName"]?.toString() ?: "N/A")
+                            DetailRowItem("Capacity", listingData["vehicleCapacity"]?.toString() ?: "N/A")
+                            DetailRowItem("Service Type", listingData["serviceType"]?.toString() ?: "N/A")
+                        }
+                        ListingCategory.FEED -> {
+                            DetailRowItem("Feed Name", listingData["feedName"]?.toString() ?: "N/A")
+                            DetailRowItem("Business Type", listingData["businessType"]?.toString() ?: "N/A")
+                            DetailRowItem("Rate per ton", "₹${listingData["ratePerTon"] ?: "N/A"}")
+                        }
+                        ListingCategory.SERVICES -> {
+                            DetailRowItem("Service Type", listingData["serviceType"]?.toString() ?: "N/A")
+                            when(listingData["serviceType"]?.toString()) {
+                                "Bore Well" -> DetailRowItem("Bore Type", listingData["boreWellType"]?.toString() ?: "N/A")
+                                "Live Fish Vehicles" -> {
+                                    DetailRowItem("Vehicle", listingData["vehicleName"]?.toString() ?: "N/A")
+                                    DetailRowItem("Capacity", listingData["vehicleCapacity"]?.toString() ?: "N/A")
+                                }
+                                "Nets" -> DetailRowItem("Net Type", listingData["netType"]?.toString() ?: "N/A")
+                            }
+                        }
+                        ListingCategory.TANKS -> {
+                            DetailRowItem("Tank Size", "${listingData["tankAcres"] ?: "N/A"} Acres")
+                            DetailRowItem("Est. Price/Acre", "₹${listingData["estPricePerAcre"] ?: "N/A"}")
+                            DetailRowItem("Village/Town", listingData["tankLocation"]?.toString() ?: "N/A")
+                        }
+                        ListingCategory.JOBS -> {
+                            DetailRowItem("Job Type", listingData["jobType"]?.toString() ?: "N/A")
+                            DetailRowItem("Salary", "₹${listingData["salary"] ?: "N/A"}")
+                            DetailRowItem("Tank Acres", listingData["tankAcres"]?.toString() ?: "N/A")
+                            DetailRowItem("Work Location", listingData["tankLocation"]?.toString() ?: "N/A")
+                        }
+                        else -> {
+                            DetailRowItem("Category", categoryString)
+                            DetailRowItem("Price", price)
+                        }
+                    }
                     DetailRowItem("Posted Location", location)
                 }
             }
 
             // Similar Listings
-            item {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(text = "Similar Listings", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
-                    Spacer(modifier = Modifier.height(12.dp))
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        items(3) {
-                            MarketItem(
-                                title = "Vannamei PL10",
-                                price = "₹180/kg",
-                                category = "Prawn Hatchery",
-                                location = "Nellore",
-                                posterName = "Sri Lakshmi",
-                                imageUrl = null,
-                                modifier = Modifier.width(160.dp)
-                            )
+            if (similarListings.isNotEmpty()) {
+                item {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(text = "Similar Listings", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                        Spacer(modifier = Modifier.height(12.dp))
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            items(items = similarListings) { data ->
+                                val simId = data["id"]?.toString() ?: ""
+                                val simImages = (data["images"] as? List<*>)?.filterIsInstance<String>()
+                                val isSimFav = favoriteIds.contains(simId)
+
+                                MarketItem(
+                                    title = data["title"]?.toString() ?: "No Title",
+                                    price = "₹${data["price"] ?: data["rateValue"] ?: "N/A"}",
+                                    category = data["category"]?.toString() ?: "Other",
+                                    location = data["location"]?.toString() ?: "Unknown",
+                                    posterName = data["posterName"]?.toString() ?: "User",
+                                    imageUrl = simImages?.firstOrNull(),
+                                    isFavorited = isSimFav,
+                                    onFavoriteClick = { toggleFavorite(data, isSimFav) },
+                                    modifier = Modifier.width(160.dp)
+                                )
+                            }
                         }
                     }
                 }

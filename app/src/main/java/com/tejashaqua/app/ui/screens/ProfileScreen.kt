@@ -41,11 +41,13 @@ fun ProfileScreen(
     onBackClick: () -> Unit,
     onEditClick: () -> Unit,
     onMyListingsClick: () -> Unit,
+    onSavedItemsClick: () -> Unit,
     onChatsClick: () -> Unit,
     onLogoutClick: () -> Unit
 ) {
     var showLogoutDialog by remember { mutableStateOf(false) }
     var listingCount by remember { mutableIntStateOf(0) }
+    var savedCount by remember { mutableIntStateOf(0) }
     var chatCount by remember { mutableIntStateOf(0) }
     var profilePicUrl by remember { mutableStateOf<String?>(null) }
     
@@ -57,6 +59,7 @@ fun ProfileScreen(
 
     DisposableEffect(currentUserId) {
         var listingListener: ListenerRegistration? = null
+        var savedListener: ListenerRegistration? = null
         var chatListener: ListenerRegistration? = null
         var userListener: ListenerRegistration? = null
 
@@ -65,6 +68,12 @@ fun ProfileScreen(
                 .whereEqualTo("userId", currentUserId)
                 .addSnapshotListener { snapshot, _ ->
                     if (snapshot != null) listingCount = snapshot.size()
+                }
+
+            savedListener = db.collection("users").document(currentUserId)
+                .collection("favorites")
+                .addSnapshotListener { snapshot, _ ->
+                    if (snapshot != null) savedCount = snapshot.size()
                 }
 
             chatListener = db.collection("chats")
@@ -83,6 +92,7 @@ fun ProfileScreen(
 
         onDispose {
             listingListener?.remove()
+            savedListener?.remove()
             chatListener?.remove()
             userListener?.remove()
         }
@@ -204,7 +214,7 @@ fun ProfileScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     StatCard(listingCount.toString(), stringResource(R.string.my_listings), Modifier.weight(1f).clickable { onMyListingsClick() })
-                    StatCard("0", stringResource(R.string.saved_items), Modifier.weight(1f))
+                    StatCard(savedCount.toString(), stringResource(R.string.saved_items), Modifier.weight(1f).clickable { onSavedItemsClick() })
                     StatCard(chatCount.toString(), stringResource(R.string.chats), Modifier.weight(1f).clickable { onChatsClick() })
                 }
             }
@@ -221,7 +231,7 @@ fun ProfileScreen(
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = Color(0xFFF0F0F0))
                         ProfileMenuItem(Icons.Default.Chat, stringResource(R.string.chats), AquaBlue, onClick = onChatsClick)
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = Color(0xFFF0F0F0))
-                        ProfileMenuItem(Icons.Default.Favorite, stringResource(R.string.saved_items), Color(0xFFF44336), onClick = {})
+                        ProfileMenuItem(Icons.Default.Favorite, stringResource(R.string.saved_items), Color(0xFFF44336), onClick = onSavedItemsClick)
                     }
                 }
             }

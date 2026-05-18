@@ -3,6 +3,7 @@ package com.tejashaqua.app.ui.theme
 import androidx.compose.ui.graphics.Color
 
 val AquaBlue = Color(0xFF00639B)
+val VibrantBlue = Color(0xFF155DFC)
 val AquaLightBlue = Color(0xFF0073B1)
 val GrayText = Color(0xFF757575)
 val LightBlueBg = Color(0xFFE3F2FD)

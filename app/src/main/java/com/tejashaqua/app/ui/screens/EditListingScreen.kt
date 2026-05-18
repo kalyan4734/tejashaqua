@@ -12,9 +12,11 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -61,7 +63,7 @@ fun EditListingScreen(
     var description by remember { mutableStateOf("") }
     var price by remember { mutableStateOf("") }
     var location by remember { mutableStateOf(initialLocation) }
-    var latLng by remember { mutableStateOf<LatLng?>(initialLatLng) }
+    var latLng by remember { mutableStateOf(initialLatLng) }
     var contactNumber by remember { mutableStateOf(userMobileNumber) }
 
     // Photos state (Can be Bitmap or String URL)
@@ -78,6 +80,7 @@ fun EditListingScreen(
     var hatcheryName by remember { mutableStateOf("") }
     var rateType by remember { mutableStateOf("Paise") }
     var rateValue by remember { mutableStateOf("") }
+    var plDays by remember { mutableStateOf("") }
     var equipmentType by remember { mutableStateOf("") }
     var vehicleName by remember { mutableStateOf("") }
     var vehicleCapacity by remember { mutableStateOf("") }
@@ -88,6 +91,9 @@ fun EditListingScreen(
     var tankAcres by remember { mutableStateOf("") }
     var estPricePerAcre by remember { mutableStateOf("") }
     var tankLocation by remember { mutableStateOf("") }
+    var jobType by remember { mutableStateOf("") }
+    var salary by remember { mutableStateOf("") }
+    var netType by remember { mutableStateOf("") }
 
     var showDeleteDialog by remember { mutableStateOf(false) }
     var isFetchingData by remember { mutableStateOf(false) }
@@ -176,6 +182,7 @@ fun EditListingScreen(
                                 hatcheryName = doc.getString("hatcheryName") ?: ""
                                 rateType = doc.getString("rateType") ?: "Paise"
                                 rateValue = doc.getString("rateValue") ?: ""
+                                plDays = doc.getString("plDays") ?: ""
                                 quantity = doc.getString("quantity") ?: ""
                                 unitType = doc.getString("unitType") ?: "Lakhs"
                             }
@@ -192,14 +199,23 @@ fun EditListingScreen(
                                 feedName = doc.getString("feedName") ?: ""
                                 ratePerTon = doc.getString("ratePerTon") ?: ""
                             }
-                            ListingCategory.BOREWELL -> {
+                            ListingCategory.SERVICES -> {
                                 selectedServiceType = doc.getString("serviceType") ?: ""
                                 boreWellType = doc.getString("boreWellType") ?: ""
+                                vehicleName = doc.getString("vehicleName") ?: ""
+                                vehicleCapacity = doc.getString("vehicleCapacity") ?: ""
+                                netType = doc.getString("netType") ?: ""
                             }
                             ListingCategory.TANKS -> {
                                 tankAcres = doc.getString("tankAcres") ?: ""
                                 estPricePerAcre = doc.getString("estPricePerAcre") ?: ""
                                 tankLocation = doc.getString("tankLocation") ?: ""
+                            }
+                            ListingCategory.JOBS -> {
+                                jobType = doc.getString("jobType") ?: ""
+                                tankAcres = doc.getString("tankAcres") ?: ""
+                                tankLocation = doc.getString("tankLocation") ?: ""
+                                salary = doc.getString("salary") ?: ""
                             }
                         }
 
@@ -235,7 +251,7 @@ fun EditListingScreen(
                     title = { Text(screenTitle, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp) },
                     navigationIcon = {
                         IconButton(onClick = onBackClick) {
-                            Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
                         }
                     },
                     colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = AquaBlue)
@@ -250,10 +266,10 @@ fun EditListingScreen(
                     val onActionClick = {
                         val data = buildListingMap(
                             listingId, category, title, description, price, location, latLng, contactNumber, 
-                            userName, fishType, sizeType, sizeValue, fishAge, quantity, 
-                            unitType, prawnType, hatcheryName, rateType, rateValue, equipmentType, 
+                            userName, selectedServiceType, fishType, sizeType, sizeValue, fishAge, quantity,
+                            unitType, prawnType, hatcheryName, rateType, rateValue, plDays, equipmentType, 
                             vehicleName, vehicleCapacity, businessType, feedName, ratePerTon, boreWellType, 
-                            tankAcres, estPricePerAcre, tankLocation, userId
+                            tankAcres, estPricePerAcre, tankLocation, jobType, salary, netType, userId
                         )
                         
                         val newBitmaps = selectedPhotos.filterIsInstance<Bitmap>()
@@ -328,6 +344,7 @@ fun EditListingScreen(
                             hatcheryName, { hatcheryName = it },
                             rateType, { rateType = it },
                             rateValue, { rateValue = it },
+                            plDays, { plDays = it },
                             quantity, { quantity = it },
                             unitType, { unitType = it }
                         )
@@ -348,9 +365,12 @@ fun EditListingScreen(
                             title, { title = it },
                             ratePerTon, { ratePerTon = it }
                         )
-                        ListingCategory.BOREWELL -> BorewellFields(
+                        ListingCategory.SERVICES -> ServiceFields(
                             selectedServiceType, { selectedServiceType = it },
                             boreWellType, { boreWellType = it },
+                            vehicleName, { vehicleName = it },
+                            vehicleCapacity, { vehicleCapacity = it },
+                            netType, { netType = it },
                             title, { title = it }
                         )
                         ListingCategory.TANKS -> TankFields(
@@ -359,6 +379,13 @@ fun EditListingScreen(
                             estPricePerAcre, { estPricePerAcre = it },
                             tankLocation, { tankLocation = it }
                         )
+                        ListingCategory.JOBS -> JobFields(
+                            jobType, { jobType = it },
+                            tankAcres, { tankAcres = it },
+                            tankLocation, { tankLocation = it },
+                            salary, { salary = it },
+                            title, { title = it }
+                        )
                     }
                 }
 
@@ -366,14 +393,16 @@ fun EditListingScreen(
                     ListingTextField(label = "Description", value = description, onValueChange = { description = it }, minLines = 3)
                 }
 
-                item {
-                    PhotoSection(
-                        photos = selectedPhotos,
-                        onAddPhoto = { cameraLauncher.launch() },
-                        onRemovePhoto = { index -> 
-                            selectedPhotos = selectedPhotos.toMutableList().apply { removeAt(index) }
-                        }
-                    )
+                if (category != ListingCategory.JOBS) {
+                    item {
+                        PhotoSection(
+                            photos = selectedPhotos,
+                            onAddPhoto = { cameraLauncher.launch() },
+                            onRemovePhoto = { index -> 
+                                selectedPhotos = selectedPhotos.toMutableList().apply { removeAt(index) }
+                            }
+                        )
+                    }
                 }
 
                 item {
@@ -459,6 +488,7 @@ private fun buildListingMap(
     latLng: LatLng?,
     contactNumber: String,
     posterName: String,
+    serviceType: String,
     fishType: String,
     sizeType: String,
     sizeValue: String,
@@ -469,6 +499,7 @@ private fun buildListingMap(
     hatcheryName: String,
     rateType: String,
     rateValue: String,
+    plDays: String,
     equipmentType: String,
     vehicleName: String,
     vehicleCapacity: String,
@@ -479,6 +510,9 @@ private fun buildListingMap(
     tankAcres: String,
     estPricePerAcre: String,
     tankLocation: String,
+    jobType: String,
+    salary: String,
+    netType: String,
     userId: String
 ): Map<String, Any> {
     val data = mutableMapOf<String, Any>()
@@ -513,6 +547,7 @@ private fun buildListingMap(
             data["hatcheryName"] = hatcheryName
             data["rateType"] = rateType
             data["rateValue"] = rateValue
+            data["plDays"] = plDays
             data["quantity"] = quantity
             data["unitType"] = unitType
         }
@@ -528,13 +563,23 @@ private fun buildListingMap(
             data["feedName"] = feedName
             data["ratePerTon"] = ratePerTon
         }
-        ListingCategory.BOREWELL -> {
+        ListingCategory.SERVICES -> {
+            data["serviceType"] = serviceType
             data["boreWellType"] = boreWellType
+            data["vehicleName"] = vehicleName
+            data["vehicleCapacity"] = vehicleCapacity
+            data["netType"] = netType
         }
         ListingCategory.TANKS -> {
             data["tankAcres"] = tankAcres
             data["estPricePerAcre"] = estPricePerAcre
             data["tankLocation"] = tankLocation
+        }
+        ListingCategory.JOBS -> {
+            data["jobType"] = jobType
+            data["tankAcres"] = tankAcres
+            data["tankLocation"] = tankLocation
+            data["salary"] = salary
         }
     }
     return data
@@ -552,7 +597,7 @@ fun FishFields(
     price: String, onPriceChange: (String) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        ListingDropdown(label = "Fish Type", value = fishType, options = listOf("Katla", "Rohu", "Tilapia"), onSelectionChange = onFishTypeChange)
+        SearchableListingDropdown(label = "Fish Type", value = fishType, options = listOf("Rohu", "Katla", "Karamosu", "Gaddi chepa", "Pangasius", "Roopchand", "Pandu gappa", "Tilapia", "Chitala", "Koramenu", "Valuga", "Engilayi", "Jalla", "Tuna", "Pulasa", "Crab", "Others"), onSelectionChange = onFishTypeChange)
         ListingTextField(label = "Title", value = title, onValueChange = onTitleChange)
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(modifier = Modifier.weight(1f)) {
@@ -581,12 +626,14 @@ fun PrawnFields(
     hatcheryName: String, onHatcheryNameChange: (String) -> Unit,
     rateType: String, onRateTypeChange: (String) -> Unit,
     rateValue: String, onRateValueChange: (String) -> Unit,
+    plDays: String, onPlDaysChange: (String) -> Unit,
     quantity: String, onQuantityChange: (String) -> Unit,
     unitType: String, onUnitTypeChange: (String) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        ListingDropdown(label = "Type of Prawns", value = prawnType, options = listOf("Growth Line Plus", "Vannamei"), onSelectionChange = onPrawnTypeChange)
+        SearchableListingDropdown(label = "Type of Prawns", value = prawnType, options = listOf("Growth Line Plus", "Growth Line","Hard Line", "Hard Line Plus", "Sy Aqua", "Benchmark", "Cong", "Blue genetic"), onSelectionChange = onPrawnTypeChange)
         ListingTextField(label = "Hatchery Name", value = hatcheryName, onValueChange = onHatcheryNameChange)
+        ListingTextField(label = "PL Days", value = plDays, onValueChange = onPlDaysChange)
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(modifier = Modifier.weight(1f)) {
                 ListingDropdown(label = "Rate", value = rateType, options = listOf("Paise", "Rupees"), onSelectionChange = onRateTypeChange)
@@ -613,7 +660,7 @@ fun EquipmentFields(
     price: String, onPriceChange: (String) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        ListingDropdown(label = "Equipment Type", value = equipmentType, options = listOf("Aerators", "Pumps", "Feeders"), onSelectionChange = onEquipmentTypeChange)
+        SearchableListingDropdown(label = "Equipment Type", value = equipmentType, options = listOf("Aerators", "Motors", "Pump Motors", "Bore Motors", "Generators", "Pump Engines", "Boats", "Electrical Wires", "Others"), onSelectionChange = onEquipmentTypeChange)
         ListingTextField(label = "Title", value = title, onValueChange = onTitleChange)
         ListingTextField(label = "Price (in ₹)", value = price, onValueChange = onPriceChange)
     }
@@ -650,14 +697,44 @@ fun FeedFields(
 }
 
 @Composable
-fun BorewellFields(
+fun ServiceFields(
     serviceType: String, onServiceTypeChange: (String) -> Unit,
     boreWellType: String, onBoreWellTypeChange: (String) -> Unit,
+    vehicleName: String, onVehicleNameChange: (String) -> Unit,
+    vehicleCapacity: String, onVehicleCapacityChange: (String) -> Unit,
+    netType: String, onNetTypeChange: (String) -> Unit,
     title: String, onTitleChange: (String) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        ListingDropdown(label = "Service Type", value = serviceType, options = listOf("Bore Well", "Pump Installation"), onSelectionChange = onServiceTypeChange)
-        ListingDropdown(label = "Bore Well", value = boreWellType, options = listOf("Bore Well", "Tube Well"), onSelectionChange = onBoreWellTypeChange)
+        SearchableListingDropdown(
+            label = "Service Type",
+            value = serviceType,
+            options = listOf("Bore Well", "Live Fish Vehicles", "Nets"),
+            onSelectionChange = onServiceTypeChange
+        )
+
+        when (serviceType) {
+            "Bore Well" -> {
+                SearchableListingDropdown(
+                    label = "Bore Well Type",
+                    value = boreWellType,
+                    options = listOf("Drill bore", "Hand bore", "Others"),
+                    onSelectionChange = onBoreWellTypeChange
+                )
+            }
+            "Live Fish Vehicles" -> {
+                ListingTextField(label = "Vehicle Name", value = vehicleName, onValueChange = onVehicleNameChange)
+                ListingTextField(label = "Vehicle Capacity (Tons)", value = vehicleCapacity, onValueChange = onVehicleCapacityChange)
+            }
+            "Nets" -> {
+                SearchableListingDropdown(
+                    label = "Net Type",
+                    value = netType,
+                    options = listOf("Harvest netting", "Hand netting", "Others"),
+                    onSelectionChange = onNetTypeChange
+                )
+            }
+        }
         ListingTextField(label = "Title", value = title, onValueChange = onTitleChange)
     }
 }
@@ -677,6 +754,39 @@ fun TankFields(
             }
             Box(modifier = Modifier.weight(1f)) {
                 ListingTextField(label = "Est. Price/Acre (in ₹)", value = estPricePerAcre, onValueChange = onEstPricePerAcreChange)
+            }
+        }
+        ListingTextField(label = "Tank Location (Village/Town)", value = tankLocation, onValueChange = onTankLocationChange)
+    }
+}
+
+@Composable
+fun JobFields(
+    jobType: String, onJobTypeChange: (String) -> Unit,
+    tankAcres: String, onTankAcresChange: (String) -> Unit,
+    tankLocation: String, onTankLocationChange: (String) -> Unit,
+    salary: String, onSalaryChange: (String) -> Unit,
+    title: String, onTitleChange: (String) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        SearchableListingDropdown(
+            label = "Job Type",
+            value = jobType,
+            options = listOf(
+                "Watch man on fish tank (For Feeding fish)",
+                "Supervisor on fish tank (For Maintenance)",
+                "Electrician",
+                "Technician"
+            ),
+            onSelectionChange = onJobTypeChange
+        )
+        ListingTextField(label = "Title", value = title, onValueChange = onTitleChange)
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Box(modifier = Modifier.weight(1f)) {
+                ListingTextField(label = "Tank Acres", value = tankAcres, onValueChange = onTankAcresChange)
+            }
+            Box(modifier = Modifier.weight(1f)) {
+                ListingTextField(label = "Salary (in ₹)", value = salary, onValueChange = onSalaryChange)
             }
         }
         ListingTextField(label = "Tank Location (Village/Town)", value = tankLocation, onValueChange = onTankLocationChange)
@@ -706,6 +816,139 @@ fun ListingTextField(label: String, value: String, onValueChange: (String) -> Un
                 focusedContainerColor = MaterialTheme.colorScheme.surface
             )
         )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SearchableListingDropdown(
+    label: String,
+    value: String,
+    options: List<String>,
+    onSelectionChange: (String) -> Unit
+) {
+    var showSheet by remember { mutableStateOf(false) }
+
+    Column {
+        Text(
+            text = "$label *",
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Surface(
+            onClick = { showSheet = true },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+            color = MaterialTheme.colorScheme.surface
+        ) {
+            Row(
+                modifier = Modifier
+                    .padding(horizontal = 16.dp, vertical = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = value.ifEmpty { "Select $label" },
+                    color = if (value.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+                    fontSize = 16.sp
+                )
+                Icon(
+                    Icons.Default.ArrowDropDown,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+
+    if (showSheet) {
+        var searchQuery by remember { mutableStateOf("") }
+        val filteredOptions = options.filter { it.contains(searchQuery, ignoreCase = true) }
+
+        ModalBottomSheet(
+            onDismissRequest = { showSheet = false },
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 0.dp
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .fillMaxHeight(0.8f)
+            ) {
+                Text(
+                    text = "Select $label",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text("Search $label...") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    singleLine = true,
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { searchQuery = "" }) {
+                                Icon(Icons.Default.Clear, contentDescription = "Clear")
+                            }
+                        }
+                    },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = AquaBlue,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(bottom = 24.dp)
+                ) {
+                    items(filteredOptions) { option ->
+                        ListItem(
+                            headlineContent = {
+                                Text(
+                                    text = option,
+                                    fontWeight = if (option == value) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (option == value) AquaBlue else MaterialTheme.colorScheme.onSurface
+                                )
+                            },
+                            trailingContent = {
+                                if (option == value) {
+                                    Icon(Icons.Default.Check, contentDescription = null, tint = AquaBlue)
+                                }
+                            },
+                            modifier = Modifier.clickable {
+                                onSelectionChange(option)
+                                showSheet = false
+                            }
+                        )
+                    }
+                    if (filteredOptions.isEmpty()) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(32.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("No results found", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 

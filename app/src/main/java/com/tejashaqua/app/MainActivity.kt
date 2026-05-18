@@ -74,6 +74,8 @@ class MainActivity : ComponentActivity() {
                         "profile" -> currentScreen = "dashboard"
                         "edit_profile" -> currentScreen = "profile"
                         "my_listings" -> currentScreen = "profile"
+                        "saved_items" -> currentScreen = "profile"
+                        "prawn_rates" -> currentScreen = "dashboard"
                         "detailed_page" -> currentScreen = "dashboard"
                         "chat" -> currentScreen = chatSourceScreen
                         "chat_list" -> currentScreen = "profile"
@@ -167,6 +169,7 @@ class MainActivity : ComponentActivity() {
                             }
                         )
                         "dashboard" -> DashboardScreen(
+                            currentUserId = userId,
                             locationName = currentLocationName,
                             subLocation = currentSubLocation,
                             onSeeAllRatesClick = { currentScreen = "aqua_rates" },
@@ -181,8 +184,10 @@ class MainActivity : ComponentActivity() {
                                 locationPickerSource = "dashboard"
                                 currentScreen = "select_location" 
                             },
+                            onPrawnsClick = { currentScreen = "prawn_rates" },
                             onItemClick = { data ->
                                 selectedListingData = data
+                                chatSourceScreen = "dashboard"
                                 currentScreen = "detailed_page"
                             },
                             onLocationFetched = { name, sub ->
@@ -202,7 +207,7 @@ class MainActivity : ComponentActivity() {
                             DetailedPageScreen(
                                 listingData = data,
                                 currentUserId = userId,
-                                onBackClick = { currentScreen = "dashboard" },
+                                onBackClick = { currentScreen = chatSourceScreen },
                                 onChatClick = { updatedData ->
                                     selectedListingData = updatedData
                                     chatSourceScreen = "detailed_page"
@@ -266,6 +271,9 @@ class MainActivity : ComponentActivity() {
                         "aqua_rates" -> AquaRatesScreen(
                             onBackClick = { currentScreen = "dashboard" }
                         )
+                        "prawn_rates" -> PrawnRatesScreen(
+                            onBackClick = { currentScreen = "dashboard" }
+                        )
                         "select_category" -> SelectCategoryScreen(
                             onBackClick = { currentScreen = "dashboard" },
                             onCategorySelect = { category ->
@@ -301,9 +309,18 @@ class MainActivity : ComponentActivity() {
                             onBackClick = { currentScreen = "dashboard" },
                             onEditClick = { currentScreen = "edit_profile" },
                             onMyListingsClick = { currentScreen = "my_listings" },
+                            onSavedItemsClick = { currentScreen = "saved_items" },
                             onChatsClick = { currentScreen = "chat_list" },
                             onLogoutClick = { 
                                 authViewModel.logout()
+                            }
+                        )
+                        "saved_items" -> SavedItemsScreen(
+                            onBackClick = { currentScreen = "profile" },
+                            onItemClick = { data ->
+                                selectedListingData = data
+                                chatSourceScreen = "saved_items"
+                                currentScreen = "detailed_page"
                             }
                         )
                         "edit_profile" -> EditProfileScreen(

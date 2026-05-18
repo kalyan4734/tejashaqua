@@ -99,7 +99,7 @@ fun MyListingsScreen(
                                 price = doc.get("price")?.toString() ?: "",
                                 unit = doc.getString("unitType") ?: "kg",
                                 location = fullLocation.split(",").firstOrNull()?.trim() ?: fullLocation,
-                                imageUrl = (doc.get("images") as? List<*>)?.firstOrNull() as? String
+                                imageUrl = (doc.get("images") as? List<*>)?.filterIsInstance<String>()?.firstOrNull()
                             )
                         }
                     }
