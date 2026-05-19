@@ -44,30 +44,26 @@ class LocationSearchViewModel(application: Application) : AndroidViewModel(appli
     fun fetchCurrentLocation() {
         Log.d("LocationVM", "fetchCurrentLocation called")
         try {
-            fusedLocationClient.lastLocation.addOnSuccessListener { location ->
-                Log.d("LocationVM", "lastLocation success: $location")
-                if (location != null) {
-                    updateLocationData(location.latitude, location.longitude)
-                } else {
-                    Log.d("LocationVM", "lastLocation was null, requesting current location")
-                    fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
-                        .addOnSuccessListener { currentLoc ->
-                            Log.d("LocationVM", "getCurrentLocation success: $currentLoc")
-                            if (currentLoc != null) {
-                                updateLocationData(currentLoc.latitude, currentLoc.longitude)
+            fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
+                .addOnSuccessListener { currentLoc ->
+                    Log.d("LocationVM", "getCurrentLocation success: $currentLoc")
+                    if (currentLoc != null) {
+                        updateLocationData(currentLoc.latitude, currentLoc.longitude)
+                    } else {
+                        Log.d("LocationVM", "getCurrentLocation was null, trying lastLocation")
+                        fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+                            if (location != null) {
+                                updateLocationData(location.latitude, location.longitude)
                             } else {
                                 _currentLocationName.value = getApplication<Application>().getString(R.string.location_not_found)
                             }
                         }
-                        .addOnFailureListener { e ->
-                            Log.e("LocationVM", "getCurrentLocation failure", e)
-                            _currentLocationName.value = getApplication<Application>().getString(R.string.failed_get_location)
-                        }
+                    }
                 }
-            }.addOnFailureListener { e ->
-                Log.e("LocationVM", "lastLocation failure", e)
-                _currentLocationName.value = getApplication<Application>().getString(R.string.failed_get_location)
-            }
+                .addOnFailureListener { e ->
+                    Log.e("LocationVM", "getCurrentLocation failure", e)
+                    _currentLocationName.value = getApplication<Application>().getString(R.string.failed_get_location)
+                }
         } catch (e: SecurityException) {
             Log.e("LocationVM", "SecurityException: permission denied", e)
             _currentLocationName.value = "Permission denied"

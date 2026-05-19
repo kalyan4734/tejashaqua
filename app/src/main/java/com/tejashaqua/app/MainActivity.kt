@@ -24,6 +24,7 @@ import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.android.gms.maps.model.LatLng
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.messaging.FirebaseMessaging
 import com.tejashaqua.app.data.model.ListingCategory
 import com.tejashaqua.app.ui.components.LoadingOverlay
 import com.tejashaqua.app.ui.viewmodel.AuthState
@@ -62,6 +63,11 @@ class MainActivity : ComponentActivity() {
                 val isLanguageSelected = remember { mutableStateOf(LocaleHelper.getSelectedLanguage(context) != null) }
 
                 LaunchedEffect(Unit) {
+                    FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+                        if (task.isSuccessful) {
+                            android.util.Log.d("FCM_TOKEN", task.result)
+                        }
+                    }
                     val db = FirebaseFirestore.getInstance()
                     db.collection("app_config").document("version").get()
                         .addOnSuccessListener { document ->
@@ -161,13 +167,15 @@ class MainActivity : ComponentActivity() {
                 LaunchedEffect(currentScreen) {
                     when (currentScreen) {
                         "dashboard" -> {
-                            permissionLauncher.launch(
-                                arrayOf(
-                                    Manifest.permission.ACCESS_FINE_LOCATION,
-                                    Manifest.permission.ACCESS_COARSE_LOCATION,
-                                    Manifest.permission.CAMERA
-                                )
+                            val permissions = mutableListOf(
+                                Manifest.permission.ACCESS_FINE_LOCATION,
+                                Manifest.permission.ACCESS_COARSE_LOCATION,
+                                Manifest.permission.CAMERA
                             )
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                permissions.add(Manifest.permission.POST_NOTIFICATIONS)
+                            }
+                            permissionLauncher.launch(permissions.toTypedArray())
                         }
                         "otp" -> {
                             // SMS permissions removed as we moved to SmsRetriever API

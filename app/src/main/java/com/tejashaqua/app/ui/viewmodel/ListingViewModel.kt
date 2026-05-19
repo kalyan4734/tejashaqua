@@ -1,10 +1,12 @@
 package com.tejashaqua.app.ui.viewmodel
 
+import android.app.Application
 import android.graphics.Bitmap
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
+import com.tejashaqua.app.utils.NotificationUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -12,7 +14,7 @@ import kotlinx.coroutines.tasks.await
 import java.io.ByteArrayOutputStream
 import java.util.UUID
 
-class ListingViewModel : ViewModel() {
+class ListingViewModel(application: Application) : AndroidViewModel(application) {
     private val db = FirebaseFirestore.getInstance()
     private val storage = FirebaseStorage.getInstance()
 
@@ -27,12 +29,21 @@ class ListingViewModel : ViewModel() {
                 val finalUrls = existingUrls + uploadedUrls
                 
                 val listingId = data["id"] as? String ?: db.collection("listings").document().id
+                val title = data["title"]?.toString() ?: "Listing"
                 val finalData = data.toMutableMap()
                 finalData["id"] = listingId
                 finalData["timestamp"] = System.currentTimeMillis()
                 finalData["images"] = finalUrls
 
                 db.collection("listings").document(listingId).set(finalData).await()
+                
+                // Show local notification for feedback
+                NotificationUtils.showLocalNotification(
+                    getApplication(),
+                    "Ad Posted Successfully!",
+                    "Your listing '$title' is now live."
+                )
+
                 _postState.value = PostState.Success
             } catch (e: Exception) {
                 _postState.value = PostState.Error(e.localizedMessage ?: "Failed to post listing")

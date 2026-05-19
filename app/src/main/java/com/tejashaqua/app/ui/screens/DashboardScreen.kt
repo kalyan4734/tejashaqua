@@ -78,13 +78,11 @@ fun DashboardScreen(
     val fetchingLocText = stringResource(R.string.fetching_location)
     
     LaunchedEffect(Unit) {
-        if (locationName == fetchingLocText) {
-            locationViewModel.fetchCurrentLocation()
-        }
+        locationViewModel.fetchCurrentLocation()
     }
 
     LaunchedEffect(fetchedName, fetchedSub) {
-        if (locationName == fetchingLocText && fetchedName != fetchingLocText) {
+        if (fetchedName != fetchingLocText) {
             onLocationFetched(fetchedName, fetchedSub)
         }
     }
