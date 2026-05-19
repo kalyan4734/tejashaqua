@@ -34,6 +34,7 @@ import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
 import com.google.firebase.firestore.FirebaseFirestore
+import androidx.compose.ui.res.stringResource
 import com.tejashaqua.app.data.model.ListingCategory
 import com.tejashaqua.app.R
 import com.tejashaqua.app.ui.components.MarketItem
@@ -125,10 +126,10 @@ fun DetailedPageScreen(
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Detailed Page", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp) },
+                title = { Text(stringResource(R.string.detailed_page_title), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back), tint = Color.White)
                     }
                 },
                 actions = {
@@ -161,7 +162,7 @@ fun DetailedPageScreen(
                     ) {
                         Icon(Icons.Default.ChatBubbleOutline, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Chat with Seller", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text(stringResource(R.string.chat_with_seller), fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     }
                 }
             }
@@ -252,7 +253,7 @@ fun DetailedPageScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.AccessTime, contentDescription = null, tint = GrayText, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = "Posted ${getRelativeTime(timestamp)}", fontSize = 13.sp, color = GrayText)
+                        Text(text = stringResource(R.string.posted_ago, getRelativeTime(timestamp)), fontSize = 13.sp, color = GrayText)
                         Spacer(modifier = Modifier.width(16.dp))
                         Icon(Icons.Default.LocationOn, contentDescription = null, tint = GrayText, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
@@ -264,7 +265,7 @@ fun DetailedPageScreen(
             // Seller Info
             item {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text(text = "Seller", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                    Text(text = stringResource(R.string.seller_label), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                     Spacer(modifier = Modifier.height(12.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
@@ -276,7 +277,7 @@ fun DetailedPageScreen(
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text(text = posterName, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                            Text(text = "Member since May 2026 • ⚡ Responds in 1 hr", fontSize = 12.sp, color = GrayText)
+                            Text(text = stringResource(R.string.member_since, "May 2026") + " • ⚡ Responds in 1 hr", fontSize = 12.sp, color = GrayText)
                         }
                     }
                 }
@@ -285,7 +286,7 @@ fun DetailedPageScreen(
             // Description
             item {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text(text = "Description", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                    Text(text = stringResource(R.string.description_label), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(text = description, fontSize = 14.sp, color = Color.DarkGray, lineHeight = 20.sp)
                 }
@@ -294,7 +295,7 @@ fun DetailedPageScreen(
             // Location Section with Map Tile
             item {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text(text = "Posted Location", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                    Text(text = stringResource(R.string.posted_location), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                     Spacer(modifier = Modifier.height(12.dp))
                     
                     val context = LocalContext.current
@@ -387,7 +388,7 @@ fun DetailedPageScreen(
                             mapIntent.setPackage("com.google.android.apps.maps")
                             context.startActivity(mapIntent)
                         }) {
-                            Text("View on Map", color = AquaBlue, fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.view_on_map), color = AquaBlue, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -396,66 +397,66 @@ fun DetailedPageScreen(
             // Details section
             item {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text(text = "Details", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                    Text(text = stringResource(R.string.details_label), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                     Spacer(modifier = Modifier.height(12.dp))
                     
                     when(category) {
                         ListingCategory.FISH -> {
-                            DetailRowItem("Fish Type", listingData["fishType"]?.toString() ?: "N/A")
-                            DetailRowItem("Size", "${listingData["sizeValue"] ?: ""} ${listingData["sizeType"] ?: ""}")
-                            DetailRowItem("Age", "${listingData["fishAge"] ?: ""} Months")
-                            DetailRowItem("Quantity", "${listingData["quantity"] ?: ""} ${listingData["unitType"] ?: ""}")
-                            DetailRowItem("Price", price)
+                            DetailRowItem(stringResource(R.string.fish_type_label), listingData["fishType"]?.toString() ?: "N/A")
+                            DetailRowItem(stringResource(R.string.size_label), "${listingData["sizeValue"] ?: ""} ${listingData["sizeType"] ?: ""}")
+                            DetailRowItem(stringResource(R.string.fish_age_label), "${listingData["fishAge"] ?: ""} Months")
+                            DetailRowItem(stringResource(R.string.quantity_label), "${listingData["quantity"] ?: ""} ${listingData["unitType"] ?: ""}")
+                            DetailRowItem(stringResource(R.string.price_label), price)
                         }
                         ListingCategory.PRAWNS -> {
-                            DetailRowItem("Hatchery Name", listingData["hatcheryName"]?.toString() ?: "N/A")
-                            DetailRowItem("Type of Prawn", listingData["prawnType"]?.toString() ?: "N/A")
-                            DetailRowItem("PL Days", listingData["plDays"]?.toString() ?: "N/A")
-                            DetailRowItem("Quantity", "${listingData["quantity"] ?: ""} ${listingData["unitType"] ?: ""}")
-                            DetailRowItem("Rate", "₹${listingData["rateValue"] ?: "N/A"}/${listingData["rateType"] ?: ""}")
+                            DetailRowItem(stringResource(R.string.hatchery_name_label), listingData["hatcheryName"]?.toString() ?: "N/A")
+                            DetailRowItem(stringResource(R.string.prawn_type_label), listingData["prawnType"]?.toString() ?: "N/A")
+                            DetailRowItem(stringResource(R.string.pl_days_label), listingData["plDays"]?.toString() ?: "N/A")
+                            DetailRowItem(stringResource(R.string.quantity_label), "${listingData["quantity"] ?: ""} ${listingData["unitType"] ?: ""}")
+                            DetailRowItem(stringResource(R.string.rate_label), "₹${listingData["rateValue"] ?: "N/A"}/${listingData["rateType"] ?: ""}")
                         }
                         ListingCategory.EQUIPMENTS -> {
-                            DetailRowItem("Equipment Type", listingData["equipmentType"]?.toString() ?: "N/A")
-                            DetailRowItem("Price", price)
+                            DetailRowItem(stringResource(R.string.equipment_type_label), listingData["equipmentType"]?.toString() ?: "N/A")
+                            DetailRowItem(stringResource(R.string.price_label), price)
                         }
                         ListingCategory.VEHICLES -> {
-                            DetailRowItem("Vehicle Name", listingData["vehicleName"]?.toString() ?: "N/A")
-                            DetailRowItem("Capacity", listingData["vehicleCapacity"]?.toString() ?: "N/A")
-                            DetailRowItem("Service Type", listingData["serviceType"]?.toString() ?: "N/A")
+                            DetailRowItem(stringResource(R.string.vehicle_name_label), listingData["vehicleName"]?.toString() ?: "N/A")
+                            DetailRowItem(stringResource(R.string.capacity_label), listingData["vehicleCapacity"]?.toString() ?: "N/A")
+                            DetailRowItem(stringResource(R.string.service_type_label), listingData["serviceType"]?.toString() ?: "N/A")
                         }
                         ListingCategory.FEED -> {
-                            DetailRowItem("Feed Name", listingData["feedName"]?.toString() ?: "N/A")
-                            DetailRowItem("Business Type", listingData["businessType"]?.toString() ?: "N/A")
-                            DetailRowItem("Rate per ton", "₹${listingData["ratePerTon"] ?: "N/A"}")
+                            DetailRowItem(stringResource(R.string.feed_name_label), listingData["feedName"]?.toString() ?: "N/A")
+                            DetailRowItem(stringResource(R.string.business_type_label), listingData["businessType"]?.toString() ?: "N/A")
+                            DetailRowItem(stringResource(R.string.rate_per_ton_label), "₹${listingData["ratePerTon"] ?: "N/A"}")
                         }
                         ListingCategory.SERVICES -> {
-                            DetailRowItem("Service Type", listingData["serviceType"]?.toString() ?: "N/A")
+                            DetailRowItem(stringResource(R.string.service_type_label), listingData["serviceType"]?.toString() ?: "N/A")
                             when(listingData["serviceType"]?.toString()) {
-                                "Bore Well" -> DetailRowItem("Bore Type", listingData["boreWellType"]?.toString() ?: "N/A")
+                                "Bore Well" -> DetailRowItem(stringResource(R.string.bore_type_label), listingData["boreWellType"]?.toString() ?: "N/A")
                                 "Live Fish Vehicles" -> {
-                                    DetailRowItem("Vehicle", listingData["vehicleName"]?.toString() ?: "N/A")
-                                    DetailRowItem("Capacity", listingData["vehicleCapacity"]?.toString() ?: "N/A")
+                                    DetailRowItem(stringResource(R.string.vehicle_name_label), listingData["vehicleName"]?.toString() ?: "N/A")
+                                    DetailRowItem(stringResource(R.string.capacity_label), listingData["vehicleCapacity"]?.toString() ?: "N/A")
                                 }
-                                "Nets" -> DetailRowItem("Net Type", listingData["netType"]?.toString() ?: "N/A")
+                                "Nets" -> DetailRowItem(stringResource(R.string.net_type_label), listingData["netType"]?.toString() ?: "N/A")
                             }
                         }
                         ListingCategory.TANKS -> {
-                            DetailRowItem("Tank Size", "${listingData["tankAcres"] ?: "N/A"} Acres")
-                            DetailRowItem("Est. Price/Acre", "₹${listingData["estPricePerAcre"] ?: "N/A"}")
-                            DetailRowItem("Village/Town", listingData["tankLocation"]?.toString() ?: "N/A")
+                            DetailRowItem(stringResource(R.string.tank_acres_label), "${listingData["tankAcres"] ?: "N/A"} Acres")
+                            DetailRowItem(stringResource(R.string.est_price_per_acre_label), "₹${listingData["estPricePerAcre"] ?: "N/A"}")
+                            DetailRowItem(stringResource(R.string.tank_location_label), listingData["tankLocation"]?.toString() ?: "N/A")
                         }
                         ListingCategory.JOBS -> {
-                            DetailRowItem("Job Type", listingData["jobType"]?.toString() ?: "N/A")
-                            DetailRowItem("Salary", "₹${listingData["salary"] ?: "N/A"}")
-                            DetailRowItem("Tank Acres", listingData["tankAcres"]?.toString() ?: "N/A")
-                            DetailRowItem("Work Location", listingData["tankLocation"]?.toString() ?: "N/A")
+                            DetailRowItem(stringResource(R.string.job_type_label), listingData["jobType"]?.toString() ?: "N/A")
+                            DetailRowItem(stringResource(R.string.salary_label), "₹${listingData["salary"] ?: "N/A"}")
+                            DetailRowItem(stringResource(R.string.tank_acres_label), listingData["tankAcres"]?.toString() ?: "N/A")
+                            DetailRowItem(stringResource(R.string.work_location_label), listingData["tankLocation"]?.toString() ?: "N/A")
                         }
                         else -> {
                             DetailRowItem("Category", categoryString)
-                            DetailRowItem("Price", price)
+                            DetailRowItem(stringResource(R.string.price_label), price)
                         }
                     }
-                    DetailRowItem("Posted Location", location)
+                    DetailRowItem(stringResource(R.string.posted_location), location)
                 }
             }
 
@@ -463,7 +464,7 @@ fun DetailedPageScreen(
             if (similarListings.isNotEmpty()) {
                 item {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text(text = "Similar Listings", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                        Text(text = stringResource(R.string.similar_listings), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                         Spacer(modifier = Modifier.height(12.dp))
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             items(items = similarListings) { data ->
@@ -471,10 +472,19 @@ fun DetailedPageScreen(
                                 val simImages = (data["images"] as? List<*>)?.filterIsInstance<String>()
                                 val isSimFav = favoriteIds.contains(simId)
 
+                                val categoryStr = data["category"]?.toString() ?: "Other"
+                                val priceLabel = when (categoryStr.uppercase()) {
+                                    "PRAWNS" -> "₹${data["rateValue"] ?: "N/A"}/${data["rateType"]?.toString()?.lowercase() ?: "paise"}"
+                                    "FEED" -> "₹${data["ratePerTon"] ?: "N/A"}/ton"
+                                    "JOBS" -> "₹${data["salary"] ?: "N/A"}"
+                                    "TANKS" -> "₹${data["estPricePerAcre"] ?: "N/A"}/acre"
+                                    else -> "₹${data["price"] ?: data["rateValue"] ?: "N/A"}"
+                                }
+
                                 MarketItem(
-                                    title = data["title"]?.toString() ?: "No Title",
-                                    price = "₹${data["price"] ?: data["rateValue"] ?: "N/A"}",
-                                    category = data["category"]?.toString() ?: "Other",
+                                    title = data["title"]?.toString()?.takeIf { it.isNotBlank() } ?: "No Title",
+                                    price = priceLabel,
+                                    category = categoryStr,
                                     location = data["location"]?.toString() ?: "Unknown",
                                     posterName = data["posterName"]?.toString() ?: "User",
                                     imageUrl = simImages?.firstOrNull(),

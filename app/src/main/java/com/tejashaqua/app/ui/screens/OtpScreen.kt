@@ -45,7 +45,9 @@ fun OtpScreen(
     onBackClick: () -> Unit
 ) {
     var otpValue by remember { mutableStateOf("") }
-    var timerSeconds by remember { mutableStateOf(24) }
+    var timerSeconds by remember { mutableIntStateOf(24) }
+    // Removed isAdminChecked state and isAdminNumber logic
+
     val context = LocalContext.current
     val scrollState = rememberScrollState()
 

@@ -3,10 +3,12 @@ package com.tejashaqua.app
 import android.app.Application
 import com.google.android.libraries.places.api.Places
 import com.google.firebase.FirebaseApp
+import com.tejashaqua.app.utils.LocaleHelper
 
 class TejashAquaApplication : Application() {
     override fun onCreate() {
         super.onCreate()
+        LocaleHelper.applySavedLocale(this)
         
         // Initialize Firebase
         FirebaseApp.initializeApp(this)

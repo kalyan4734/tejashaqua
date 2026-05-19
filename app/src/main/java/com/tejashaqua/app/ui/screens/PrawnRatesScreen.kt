@@ -20,15 +20,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.google.firebase.firestore.FirebaseFirestore
 import com.tejashaqua.app.ui.theme.AquaBlue
 import com.tejashaqua.app.ui.theme.GrayText
-
-data class PrawnRate(
-    val count: String,
-    val price: String,
-    val change: String,
-    val isUp: Boolean? = null
-)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,20 +30,29 @@ fun PrawnRatesScreen(onBackClick: () -> Unit) {
     var selectedMarket by remember { mutableStateOf("Bhimavaram") }
     val markets = listOf("Bhimavaram", "Nellore", "Kakinada", "Machilipatnam")
     var expanded by remember { mutableStateOf(false) }
+    val db = FirebaseFirestore.getInstance()
 
-    val rates = listOf(
-        PrawnRate("200", "₹175", "0"),
-        PrawnRate("100", "₹270", "0"),
-        PrawnRate("90", "₹282", "0"),
-        PrawnRate("80", "₹300", "0"),
-        PrawnRate("70", "₹330", "0"),
-        PrawnRate("60", "₹346", "0"),
-        PrawnRate("50", "₹365", "0"),
-        PrawnRate("45", "₹372", "0"),
-        PrawnRate("40", "₹400", "0"),
-        PrawnRate("35", "₹412", "0"),
-        PrawnRate("30", "₹515", "0")
-    )
+    val counts = listOf("200", "100", "90", "80", "70", "60", "50", "45", "40", "35", "30")
+    var prices by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
+    var lastUpdatedDate by remember { mutableStateOf("") }
+
+    LaunchedEffect(selectedMarket) {
+        db.collection("prawn_rates").document(selectedMarket).addSnapshotListener { doc, _ ->
+            if (doc != null && doc.exists()) {
+                val data = doc.get("rates") as? Map<*, *>
+                prices = data?.mapKeys { it.key.toString() }?.mapValues { it.value.toString() } ?: emptyMap()
+                
+                val ts = doc.getLong("lastUpdated")
+                if (ts != null) {
+                    val sdf = java.text.SimpleDateFormat("dd-MM-yyyy", java.util.Locale.getDefault())
+                    lastUpdatedDate = sdf.format(java.util.Date(ts))
+                }
+            } else {
+                prices = emptyMap()
+                lastUpdatedDate = ""
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -144,7 +147,7 @@ fun PrawnRatesScreen(onBackClick: () -> Unit) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.DateRange, null, tint = GrayText, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("19-02-2026 • Rates vary by seashore location", fontSize = 12.sp, color = GrayText)
+                    Text("${if (lastUpdatedDate.isNotEmpty()) lastUpdatedDate else "--"} • Rates vary by seashore location", fontSize = 12.sp, color = GrayText)
                 }
             }
 
@@ -171,7 +174,8 @@ fun PrawnRatesScreen(onBackClick: () -> Unit) {
                         }
 
                         // Rows
-                        rates.forEachIndexed { index, rate ->
+                        counts.forEachIndexed { index, count ->
+                            val price = prices[count] ?: "--"
                             val isEven = index % 2 == 0
                             Row(
                                 modifier = Modifier
@@ -180,11 +184,11 @@ fun PrawnRatesScreen(onBackClick: () -> Unit) {
                                     .padding(horizontal = 16.dp, vertical = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(rate.count, color = Color.Black, modifier = Modifier.weight(1f))
+                                Text(count, color = Color.Black, modifier = Modifier.weight(1f))
                                 Box(modifier = Modifier.width(1.dp).height(20.dp).background(Color.LightGray.copy(alpha = 0.5f)))
-                                Text(rate.price, color = AquaBlue, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f).padding(start = 16.dp))
+                                Text(if (price == "--") price else "₹$price", color = AquaBlue, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f).padding(start = 16.dp))
                             }
-                            if (index < rates.size - 1) {
+                            if (index < counts.size - 1) {
                                 HorizontalDivider(color = Color(0xFFEEEEEE))
                             }
                         }

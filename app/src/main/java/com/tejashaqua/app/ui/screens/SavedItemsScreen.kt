@@ -84,10 +84,20 @@ fun SavedItemsScreen(
                     items(savedItems) { data ->
                         val listingId = data["id"]?.toString() ?: ""
                         val images = (data["images"] as? List<*>)?.filterIsInstance<String>()
+                        
+                        val categoryStr = data["category"]?.toString() ?: "Other"
+                        val priceLabel = when (categoryStr.uppercase()) {
+                            "PRAWNS" -> "₹${data["rateValue"] ?: "N/A"}/${data["rateType"]?.toString()?.lowercase() ?: "paise"}"
+                            "FEED" -> "₹${data["ratePerTon"] ?: "N/A"}/ton"
+                            "JOBS" -> "₹${data["salary"] ?: "N/A"}"
+                            "TANKS" -> "₹${data["estPricePerAcre"] ?: "N/A"}/acre"
+                            else -> "₹${data["price"] ?: data["rateValue"] ?: "N/A"}"
+                        }
+
                         MarketItem(
-                            title = data["title"]?.toString() ?: "No Title",
-                            price = "₹${data["price"] ?: data["rateValue"] ?: "N/A"}",
-                            category = data["category"]?.toString() ?: "Other",
+                            title = data["title"]?.toString()?.takeIf { it.isNotBlank() } ?: "No Title",
+                            price = priceLabel,
+                            category = categoryStr,
                             location = data["location"]?.toString() ?: "Unknown",
                             posterName = data["posterName"]?.toString() ?: "User",
                             imageUrl = images?.firstOrNull(),

@@ -2,6 +2,7 @@ package com.tejashaqua.app.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -22,68 +23,123 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import androidx.compose.runtime.*
+import com.google.firebase.firestore.FirebaseFirestore
+import com.tejashaqua.app.data.model.AquaRate
+import com.tejashaqua.app.data.model.RateTrend
 import com.tejashaqua.app.R
 import com.tejashaqua.app.ui.theme.AquaBlue
 import com.tejashaqua.app.ui.theme.GrayText
-
-data class AquaRate(
-    val name: String,
-    val price: String,
-    val change: String,
-    val trend: RateTrend,
-    val icon: Int,
-    val iconBgColor: Color
-)
-
-enum class RateTrend {
-    UP, DOWN, FLAT
-}
+import com.tejashaqua.app.ui.components.RateGraphBottomSheet
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AquaRatesScreen(onBackClick: () -> Unit) {
-    val rates = listOf(
-        AquaRate("Rohu", "₹160/kg", "+₹5 (3%)", RateTrend.UP, R.drawable.fish, Color(0xFFFFF3E0)),
-        AquaRate("Katla", "₹180/kg", "-₹10 (5.9%)", RateTrend.DOWN, R.drawable.fish, Color(0xFFE0F2F1)),
-        AquaRate("Tilapia", "₹120/kg", "No Change", RateTrend.FLAT, R.drawable.fish, Color(0xFFE8EAF6)),
-        AquaRate("Pangasius", "₹95/kg", "+₹2 (2%)", RateTrend.UP, R.drawable.fish, Color(0xFFFCE4EC)),
-        AquaRate("Mrigal", "₹140/kg", "-₹5 (3.5%)", RateTrend.DOWN, R.drawable.fish, Color(0xFFE8F5E9)),
-        AquaRate("Grass Carp", "₹170/kg", "No Change", RateTrend.FLAT, R.drawable.fish, Color(0xFFE3F2FD)),
-        AquaRate("Common Carp", "₹130/kg", "+₹4 (3%)", RateTrend.UP, R.drawable.fish, Color(0xFFFFF9C4))
+    val db = FirebaseFirestore.getInstance()
+    var rates by remember { mutableStateOf<List<AquaRate>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+    
+    var showGraphSheet by remember { mutableStateOf(false) }
+    var selectedRateForGraph by remember { mutableStateOf<AquaRate?>(null) }
+
+    val fishTypes = listOf(
+        "Prawns", "Rohu", "Katla", "Karamosu", "Gaddi chepa", "Pangasius", 
+        "Roopchand", "Pandu gappa", "Tilapia", "Chitala", "Koramenu", 
+        "Valuga", "Engilayi", "Jalla", "Tuna", "Pulasa", "Crab", "Others"
     )
+
+    LaunchedEffect(Unit) {
+        db.collection("aqua_rates")
+            .addSnapshotListener { value, error ->
+                if (value != null) {
+                    val fetchedMap = value.documents.associateBy({ it.id }, { doc ->
+                        val price = doc.getString("price") ?: "--"
+                        val change = doc.getString("change") ?: "No Change"
+                        val trendStr = doc.getString("trend") ?: "FLAT"
+                        val trend = try { RateTrend.valueOf(trendStr) } catch (e: Exception) { RateTrend.FLAT }
+                        val isPrawn = doc.getBoolean("isPrawn") ?: (doc.id == "Prawns")
+                        val lastUpdated = doc.getLong("lastUpdated") ?: 0L
+                        
+                        AquaRate(doc.id, price, change, trend, isPrawn, lastUpdated)
+                    })
+
+                    // Merge with the fixed list of fish types
+                    rates = fishTypes.map { fish ->
+                        fetchedMap[fish] ?: AquaRate(fish, "--", "No Change", RateTrend.FLAT, isPrawn = fish == "Prawns")
+                    }
+                }
+                isLoading = false
+            }
+    }
 
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Today's Aqua Rates", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp) },
+                title = { 
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(stringResource(R.string.today_aqua_rates), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        val latestUpdate = rates.maxOfOrNull { it.lastUpdated } ?: 0L
+                        if (latestUpdate > 0) {
+                            val sdf = java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault())
+                            Text(
+                                text = "Last Updated: ${sdf.format(java.util.Date(latestUpdate))}",
+                                color = Color.White.copy(alpha = 0.8f),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Normal
+                            )
+                        }
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back), tint = Color.White)
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = AquaBlue)
             )
         }
     ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .background(Color(0xFFF8F9FA))
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            items(rates) { rate ->
-                RateItemCard(rate)
+        Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+            if (isLoading) {
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = AquaBlue)
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color(0xFFF8F9FA))
+                        .padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(top = 16.dp, bottom = 16.dp)
+                ) {
+                    items(rates) { rate ->
+                        RateItemCard(
+                            rate = rate,
+                            onClick = {
+                                selectedRateForGraph = rate
+                                showGraphSheet = true
+                            }
+                        )
+                    }
+                }
+            }
+
+            if (showGraphSheet && selectedRateForGraph != null) {
+                RateGraphBottomSheet(
+                    rate = selectedRateForGraph!!,
+                    onDismiss = { showGraphSheet = false }
+                )
             }
         }
     }
 }
 
 @Composable
-fun RateItemCard(rate: AquaRate) {
+fun RateItemCard(rate: AquaRate, onClick: () -> Unit) {
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
         shape = RoundedCornerShape(16.dp),
         border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEEEEEE)),
         color = Color.White,
@@ -108,13 +164,13 @@ fun RateItemCard(rate: AquaRate) {
             
             Column {
                 Text(
-                    text = rate.name,
+                    text = rate.getDisplayName(),
                     fontSize = 17.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.Black
                 )
                 Text(
-                    text = "Fresh Water Fish",
+                    text = stringResource(R.string.fresh_water_fish),
                     fontSize = 12.sp,
                     color = GrayText
                 )

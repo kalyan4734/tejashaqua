@@ -92,12 +92,21 @@ fun MyListingsScreen(
                     if (snapshot != null) {
                         listings = snapshot.documents.map { doc ->
                             val fullLocation = doc.getString("location") ?: ""
+                            val categoryStr = doc.getString("category") ?: "Other"
+                            val priceLabel = when (categoryStr.uppercase()) {
+                                "PRAWNS" -> "${doc.get("rateValue") ?: "N/A"}/${doc.getString("rateType")?.lowercase() ?: "paise"}"
+                                "FEED" -> "${doc.get("ratePerTon") ?: "N/A"}/ton"
+                                "JOBS" -> "${doc.get("salary") ?: "N/A"}"
+                                "TANKS" -> "${doc.get("estPricePerAcre") ?: "N/A"}/acre"
+                                else -> "${doc.get("price") ?: doc.get("rateValue") ?: "N/A"}"
+                            }
+
                             UserListing(
                                 id = doc.id,
-                                title = doc.getString("title") ?: "",
-                                category = doc.getString("category") ?: "FISH",
-                                price = doc.get("price")?.toString() ?: "",
-                                unit = doc.getString("unitType") ?: "kg",
+                                title = doc.getString("title")?.takeIf { it.isNotBlank() } ?: "No Title",
+                                category = categoryStr,
+                                price = priceLabel,
+                                unit = "", // Unit is now included in priceLabel
                                 location = fullLocation.split(",").firstOrNull()?.trim() ?: fullLocation,
                                 imageUrl = (doc.get("images") as? List<*>)?.filterIsInstance<String>()?.firstOrNull()
                             )
@@ -197,7 +206,7 @@ fun ListingCard(
                         Text(text = listing.category, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp), color = Color(0xFF3F51B5), fontSize = 10.sp, fontWeight = FontWeight.Medium)
                     }
                     Text(text = listing.title, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1, color = Color.Black)
-                    Text(text = "₹${listing.price}/${listing.unit}", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, color = Color.Black)
+                    Text(text = "₹${listing.price}", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, color = Color.Black)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Outlined.LocationOn, contentDescription = null, tint = GrayText, modifier = Modifier.size(14.dp))
                         Text(

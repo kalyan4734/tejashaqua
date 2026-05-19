@@ -115,7 +115,7 @@ fun ChatListScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp)
-                        .height(50.dp),
+                        .heightIn(min = 50.dp),
                     placeholder = { Text(stringResource(R.string.search_conversations), fontSize = 14.sp) },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = GrayText) },
                     colors = TextFieldDefaults.colors(

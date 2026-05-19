@@ -43,7 +43,13 @@ fun ProfileScreen(
     onMyListingsClick: () -> Unit,
     onSavedItemsClick: () -> Unit,
     onChatsClick: () -> Unit,
-    onLogoutClick: () -> Unit
+    onPrivacyPolicyClick: () -> Unit,
+    onTermsClick: () -> Unit,
+    onAboutClick: () -> Unit,
+    onLogoutClick: () -> Unit,
+    onChangeLanguageClick: () -> Unit,
+    isAdmin: Boolean = false,
+    onAdminClick: () -> Unit = {}
 ) {
     var showLogoutDialog by remember { mutableStateOf(false) }
     var listingCount by remember { mutableIntStateOf(0) }
@@ -246,11 +252,31 @@ fun ProfileScreen(
                     elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
                 ) {
                     Column {
-                        ProfileMenuItem(Icons.Default.Description, stringResource(R.string.privacy_policy), Color(0xFF009688), onClick = {})
+                        ProfileMenuItem(Icons.Default.Description, stringResource(R.string.privacy_policy), Color(0xFF009688), onClick = onPrivacyPolicyClick)
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = Color(0xFFF0F0F0))
-                        ProfileMenuItem(Icons.Default.Assignment, stringResource(R.string.terms_conditions), Color(0xFF9C27B0), onClick = {})
+                        ProfileMenuItem(Icons.Default.Assignment, stringResource(R.string.terms_conditions), Color(0xFF9C27B0), onClick = onTermsClick)
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = Color(0xFFF0F0F0))
-                        ProfileMenuItem(Icons.Default.Info, stringResource(R.string.about_app), Color(0xFF03A9F4), onClick = {})
+                        ProfileMenuItem(Icons.Default.Language, stringResource(R.string.change_language), Color(0xFFE91E63), onClick = onChangeLanguageClick)
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = Color(0xFFF0F0F0))
+                        ProfileMenuItem(Icons.Default.Info, stringResource(R.string.about_app), Color(0xFF03A9F4), onClick = onAboutClick)
+                    }
+                }
+            }
+
+            item {
+                if (isAdmin) {
+                    Card(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp).fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                    ) {
+                        ProfileMenuItem(
+                            icon = Icons.Default.AdminPanelSettings,
+                            label = "Admin Portal",
+                            iconTint = Color.Red,
+                            onClick = onAdminClick
+                        )
                     }
                 }
             }
@@ -308,8 +334,8 @@ fun ProfileHeader(userName: String, mobileNumber: String, profilePicUrl: String?
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = if (userName.isNotEmpty()) userName else "User", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                Text(text = if (mobileNumber.isNotEmpty()) "+91 $mobileNumber" else "Phone not available", color = Color.White.copy(alpha = 0.8f), fontSize = 14.sp)
+                Text(text = if (userName.isNotEmpty()) userName else stringResource(R.string.by_label, "User"), color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text(text = if (mobileNumber.isNotEmpty()) "+91 $mobileNumber" else stringResource(R.string.phone_not_available), color = Color.White.copy(alpha = 0.8f), fontSize = 14.sp)
             }
             IconButton(onClick = onEditClick) {
                 Icon(Icons.Default.Edit, contentDescription = "Edit Profile", tint = Color.White, modifier = Modifier.size(24.dp))

@@ -33,7 +33,11 @@ import com.tejashaqua.app.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LoginScreen(onSendOtp: (String) -> Unit) {
+fun LoginScreen(
+    onSendOtp: (String) -> Unit,
+    onPrivacyPolicyClick: () -> Unit,
+    onTermsClick: () -> Unit
+) {
     var mobileNumber by remember { mutableStateOf("") }
     var isError by remember { mutableStateOf(value = false) }
     val scrollState = rememberScrollState()
@@ -193,7 +197,7 @@ fun LoginScreen(onSendOtp: (String) -> Unit) {
                     tag = "TERMS",
                     styles = linkStyle,
                     linkInteractionListener = {
-                        // Handle Terms & Conditions click
+                        onTermsClick()
                     }
                 )
             ) {
@@ -209,7 +213,7 @@ fun LoginScreen(onSendOtp: (String) -> Unit) {
                     tag = "PRIVACY",
                     styles = linkStyle,
                     linkInteractionListener = {
-                        // Handle Privacy Policy click
+                        onPrivacyPolicyClick()
                     }
                 )
             ) {

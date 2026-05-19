@@ -18,8 +18,8 @@ sealed class AuthState {
     object Idle : AuthState()
     object Loading : AuthState()
     data class OtpSent(val verificationId: String) : AuthState()
-    data class Success(val userId: String, val userName: String, val mobileNumber: String, val joinedAt: Long) : AuthState()
-    data class RequireName(val phoneNumber: String) : AuthState()
+    data class Success(val userId: String, val userName: String, val mobileNumber: String, val joinedAt: Long, val isAdmin: Boolean = false) : AuthState()
+    data class RequireName(val phoneNumber: String, val isAdmin: Boolean = false) : AuthState()
     data class Error(val message: String) : AuthState()
 }
 
@@ -96,15 +96,17 @@ class AuthViewModel : ViewModel() {
         
         db.collection("users").document(userId).get()
             .addOnSuccessListener { document ->
+                val isAdmin = document.getBoolean("isAdmin") ?: false
+                
                 if (document.exists()) {
                     val name = document.getString("name") ?: "User"
                     val joinedAt = document.getLong("joinedAt") ?: System.currentTimeMillis()
                     val onboardingComplete = document.getBoolean("onboardingComplete") ?: false
                     
                     if (onboardingComplete) {
-                        _authState.value = AuthState.Success(userId, name, phoneNumber, joinedAt)
+                        _authState.value = AuthState.Success(userId, name, phoneNumber, joinedAt, isAdmin)
                     } else {
-                        _authState.value = AuthState.RequireName(phoneNumber)
+                        _authState.value = AuthState.RequireName(phoneNumber, isAdmin)
                     }
                 } else {
                     val now = System.currentTimeMillis()
@@ -114,10 +116,11 @@ class AuthViewModel : ViewModel() {
                         "name" to dummyName,
                         "phone" to phoneNumber,
                         "joinedAt" to now,
-                        "onboardingComplete" to false
+                        "onboardingComplete" to false,
+                        "isAdmin" to false // Default to false for new users
                     )
                     db.collection("users").document(userId).set(user)
-                    _authState.value = AuthState.RequireName(phoneNumber)
+                    _authState.value = AuthState.RequireName(phoneNumber, false)
                 }
             }
             .addOnFailureListener { e ->
@@ -132,6 +135,7 @@ class AuthViewModel : ViewModel() {
         
         db.collection("users").document(userId).get().addOnSuccessListener { doc ->
             val joinedAt = doc.getLong("joinedAt") ?: now
+            val isAdmin = doc.getBoolean("isAdmin") ?: false
             val updates = hashMapOf<String, Any>(
                 "name" to name,
                 "onboardingComplete" to true
@@ -139,7 +143,7 @@ class AuthViewModel : ViewModel() {
             
             db.collection("users").document(userId).update(updates)
                 .addOnSuccessListener {
-                    _authState.value = AuthState.Success(userId, name, phoneNumber, joinedAt)
+                    _authState.value = AuthState.Success(userId, name, phoneNumber, joinedAt, isAdmin)
                 }
                 .addOnFailureListener { e ->
                     _authState.value = AuthState.Error(e.localizedMessage ?: "Failed to save user info")
@@ -164,8 +168,9 @@ class AuthViewModel : ViewModel() {
                 val doc = db.collection("users").document(userId).get().await()
                 val phoneNumber = doc.getString("phone") ?: ""
                 val joinedAt = doc.getLong("joinedAt") ?: System.currentTimeMillis()
+                val isAdmin = doc.getBoolean("isAdmin") ?: false
                 
-                _authState.value = AuthState.Success(userId, name, phoneNumber, joinedAt)
+                _authState.value = AuthState.Success(userId, name, phoneNumber, joinedAt, isAdmin)
                 onSuccess()
             } catch (e: Exception) {
                 _authState.value = AuthState.Error(e.localizedMessage ?: "Failed to update profile")
@@ -193,7 +198,8 @@ class AuthViewModel : ViewModel() {
                 db.collection("users").document(userId).get().addOnSuccessListener { doc ->
                     val currentName = doc.getString("name") ?: "User"
                     val joinedAt = doc.getLong("joinedAt") ?: System.currentTimeMillis()
-                    _authState.value = AuthState.Success(userId, currentName, phoneNumber, joinedAt)
+                    val isAdmin = doc.getBoolean("isAdmin") ?: false
+                    _authState.value = AuthState.Success(userId, currentName, phoneNumber, joinedAt, isAdmin)
                 }
             }
     }

@@ -22,6 +22,8 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import com.tejashaqua.app.R
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
@@ -44,13 +46,31 @@ fun SelectLocationScreen(
     var selectedLatLng by remember { mutableStateOf<LatLng?>(null) }
     
     val searchResults by locationViewModel.searchResults.collectAsState()
+    val deviceLatLng by locationViewModel.currentLatLng.collectAsState()
+    val currentLocationName by locationViewModel.currentLocationName.collectAsState()
+    val currentSubLocation by locationViewModel.currentSubLocation.collectAsState()
+    
     val keyboardController = LocalSoftwareKeyboardController.current
     val context = LocalContext.current
 
     // Map State
-    val rajahmundry = LatLng(17.0005, 81.7729)
+    val defaultLocation = LatLng(17.0005, 81.7729) // Rajahmundry
     val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(rajahmundry, 12f)
+        position = CameraPosition.fromLatLngZoom(defaultLocation, 12f)
+    }
+
+    LaunchedEffect(Unit) {
+        locationViewModel.fetchCurrentLocation()
+    }
+
+    LaunchedEffect(deviceLatLng) {
+        deviceLatLng?.let { latLng ->
+            if (selectedLatLng == null) {
+                selectedLatLng = latLng
+                selectedLocation = currentLocationName to currentSubLocation
+                cameraPositionState.position = CameraPosition.fromLatLngZoom(latLng, 15f)
+            }
+        }
     }
 
     fun updateLocationFromLatLng(latLng: LatLng) {
@@ -60,12 +80,12 @@ fun SelectLocationScreen(
             val addresses = geocoder.getFromLocation(latLng.latitude, latLng.longitude, 1)
             if (addresses != null && addresses.isNotEmpty()) {
                 val address = addresses[0]
-                val loc = address.locality ?: address.subAdminArea ?: "Unknown Location"
+                val loc = address.locality ?: address.subAdminArea ?: context.getString(R.string.unknown_location)
                 val sub = address.getAddressLine(0) ?: ""
                 selectedLocation = loc to sub
             }
         } catch (e: Exception) {
-            selectedLocation = "Selected Point" to "${latLng.latitude}, ${latLng.longitude}"
+            selectedLocation = context.getString(R.string.selected_point) to "${latLng.latitude}, ${latLng.longitude}"
         }
     }
 
@@ -73,10 +93,10 @@ fun SelectLocationScreen(
         topBar = {
             Column(modifier = Modifier.background(AquaBlue)) {
                 CenterAlignedTopAppBar(
-                    title = { Text("Select Location", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp) },
+                    title = { Text(stringResource(R.string.select_location_title), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp) },
                     navigationIcon = {
                         IconButton(onClick = onBackClick) {
-                            Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                            Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.back), tint = Color.White)
                         }
                     },
                     colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = AquaBlue)
@@ -92,8 +112,8 @@ fun SelectLocationScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 8.dp)
-                            .height(54.dp),
-                        placeholder = { Text("Search city, area, or district...", fontSize = 14.sp) },
+                            .heightIn(min = 54.dp),
+                        placeholder = { Text(stringResource(R.string.search_location_placeholder), fontSize = 14.sp) },
                         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = GrayText) },
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = Color.White,
@@ -128,7 +148,7 @@ fun SelectLocationScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = AquaBlue),
                     enabled = selectedLocation != null
                 ) {
-                    Text("Confirm Location", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text(stringResource(R.string.confirm_location), fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 }
             }
         }
@@ -158,12 +178,12 @@ fun SelectLocationScreen(
                 Tab(
                     selected = selectedTabIndex == 0,
                     onClick = { selectedTabIndex = 0 },
-                    text = { Text("Search", fontWeight = FontWeight.Bold) }
+                    text = { Text(stringResource(R.string.search_tab), fontWeight = FontWeight.Bold) }
                 )
                 Tab(
                     selected = selectedTabIndex == 1,
                     onClick = { selectedTabIndex = 1 },
-                    text = { Text("Map", fontWeight = FontWeight.Bold) }
+                    text = { Text(stringResource(R.string.map_tab), fontWeight = FontWeight.Bold) }
                 )
             }
 
@@ -196,6 +216,7 @@ fun SelectLocationScreen(
                     GoogleMap(
                         modifier = Modifier.fillMaxSize(),
                         cameraPositionState = cameraPositionState,
+                        properties = MapProperties(isMyLocationEnabled = true),
                         onMapClick = { latLng ->
                             updateLocationFromLatLng(latLng)
                         }
@@ -203,7 +224,7 @@ fun SelectLocationScreen(
                         selectedLatLng?.let {
                             Marker(
                                 state = MarkerState(position = it),
-                                title = selectedLocation?.first ?: "Selected Location",
+                                title = selectedLocation?.first ?: stringResource(R.string.selected_location),
                                 snippet = selectedLocation?.second ?: ""
                             )
                         }

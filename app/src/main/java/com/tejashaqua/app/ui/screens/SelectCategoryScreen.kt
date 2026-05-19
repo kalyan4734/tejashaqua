@@ -22,6 +22,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
 import com.tejashaqua.app.ui.theme.AquaBlue
 import com.tejashaqua.app.ui.theme.VibrantBlue
 import com.tejashaqua.app.ui.theme.GrayText
@@ -43,33 +44,33 @@ fun SelectCategoryScreen(
 ) {
     val categories = listOf(
         CategoryItem(
-            "Prawn Hatchery",
-            "List PL stock, type & rates",
+            stringResource(R.string.prawn_hatchery),
+            stringResource(R.string.prawn_hatchery_desc),
             R.drawable.prawn,
             ListingCategory.PRAWNS
         ),
-        CategoryItem("Fish", "Sell live or harvested fish", R.drawable.fish, ListingCategory.FISH),
+        CategoryItem(stringResource(R.string.cat_fish), stringResource(R.string.fish_desc), R.drawable.fish, ListingCategory.FISH),
         CategoryItem(
-            "Equipments",
-            "Wires, aerators, motors",
+            stringResource(R.string.cat_equipments),
+            stringResource(R.string.equipments_desc),
             Icons.Default.Construction,
             ListingCategory.EQUIPMENTS
         ),
         CategoryItem(
-            "Fish Tank Lands",
-            "Lease or sell fish ponds",
+            stringResource(R.string.fish_tank_lands),
+            stringResource(R.string.fish_tank_lands_desc),
             Icons.Default.Landscape,
             ListingCategory.TANKS
         ),
         CategoryItem(
-            "Jobs",
-            "Hire or find aqua jobs",
+            stringResource(R.string.cat_jobs),
+            stringResource(R.string.jobs_desc),
             Icons.Default.Work,
             ListingCategory.JOBS
         ),
         CategoryItem(
-            "Services",
-            "Borewell, Vehicles, Nets, etc.",
+            stringResource(R.string.cat_services),
+            stringResource(R.string.services_desc),
             Icons.Default.MiscellaneousServices,
             ListingCategory.SERVICES
         )
@@ -80,7 +81,7 @@ fun SelectCategoryScreen(
             CenterAlignedTopAppBar(
                 title = {
                     Text(
-                        "What are you selling?",
+                        stringResource(R.string.select_category_title),
                         color = Color.White,
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp
@@ -90,7 +91,7 @@ fun SelectCategoryScreen(
                     IconButton(onClick = onBackClick) {
                         Icon(
                             Icons.Default.ArrowBack,
-                            contentDescription = "Back",
+                            contentDescription = stringResource(R.string.back),
                             tint = Color.White
                         )
                     }
@@ -107,7 +108,7 @@ fun SelectCategoryScreen(
                 .padding(16.dp)
         ) {
             Text(
-                text = "Select a category to start listing your product or service.",
+                text = stringResource(R.string.select_category_desc),
                 fontSize = 16.sp,
                 color = Color.Black,
                 modifier = Modifier.padding(bottom = 24.dp)
