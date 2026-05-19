@@ -132,11 +132,6 @@ fun DashboardScreen(
                         }
                     }
                     Icon(Icons.Default.Public, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Box {
-                        Icon(Icons.Default.Notifications, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
-                        Box(modifier = Modifier.size(8.dp).background(Color.Red, CircleShape).align(Alignment.TopEnd).offset(x = 1.dp, y = (-1).dp))
-                    }
                 }
             }
         },

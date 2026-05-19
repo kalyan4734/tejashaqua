@@ -3,6 +3,7 @@ package com.tejashaqua.app.utils
 import android.content.Context
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
+import androidx.core.content.edit
 import java.util.Locale
 
 object LocaleHelper {
@@ -11,7 +12,7 @@ object LocaleHelper {
 
     fun setLocale(context: Context, languageCode: String) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putString(KEY_LANGUAGE, languageCode).apply()
+        prefs.edit { putString(KEY_LANGUAGE, languageCode) }
         
         val appLocale: LocaleListCompat = LocaleListCompat.forLanguageTags(languageCode)
         AppCompatDelegate.setApplicationLocales(appLocale)
@@ -36,11 +37,14 @@ object LocaleHelper {
     }
 
     fun updateContextLocale(context: Context, languageCode: String) {
-        val locale = Locale(languageCode)
+        val locale = Locale.forLanguageTag(languageCode)
         Locale.setDefault(locale)
         val resources = context.resources
         val configuration = resources.configuration
         configuration.setLocale(locale)
+        configuration.setLayoutDirection(locale)
+        
+        @Suppress("DEPRECATION")
         resources.updateConfiguration(configuration, resources.displayMetrics)
     }
 }
