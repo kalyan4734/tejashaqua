@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -29,6 +30,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import com.tejashaqua.app.R
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -703,19 +705,19 @@ fun FishFields(
                 ListingDropdown(label = stringResource(R.string.size_label), value = sizeType, options = listOf("Inches", "Centimeters"), onSelectionChange = onSizeTypeChange)
             }
             Box(modifier = Modifier.weight(1f)) {
-                ListingTextField(label = stringResource(R.string.size_value_label), value = sizeValue, onValueChange = onSizeValueChange, isError = errors["sizeValue"] == true)
+                ListingTextField(label = stringResource(R.string.size_value_label), value = sizeValue, onValueChange = onSizeValueChange, isError = errors["sizeValue"] == true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
             }
         }
-        ListingTextField(label = stringResource(R.string.fish_age_label), value = fishAge, onValueChange = onFishAgeChange, isError = errors["fishAge"] == true)
+        ListingTextField(label = stringResource(R.string.fish_age_label), value = fishAge, onValueChange = onFishAgeChange, isError = errors["fishAge"] == true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(modifier = Modifier.weight(1f)) {
-                ListingTextField(label = stringResource(R.string.quantity_label), value = quantity, onValueChange = onQuantityChange, isError = errors["quantity"] == true)
+                ListingTextField(label = stringResource(R.string.quantity_label), value = quantity, onValueChange = onQuantityChange, isError = errors["quantity"] == true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
             }
             Box(modifier = Modifier.weight(1f)) {
                 ListingDropdown(label = stringResource(R.string.unit_label), value = unitType, options = listOf("Lakhs", "Thousands", "Kgs"), onSelectionChange = onUnitTypeChange)
             }
         }
-        ListingTextField(label = stringResource(R.string.price_label), value = price, onValueChange = onPriceChange, isError = errors["price"] == true)
+        ListingTextField(label = stringResource(R.string.price_label), value = price, onValueChange = onPriceChange, isError = errors["price"] == true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
     }
 }
 
@@ -735,18 +737,18 @@ fun PrawnFields(
         SearchableListingDropdown(label = "Type of Prawns", value = prawnType, options = listOf("Growth Line Plus", "Growth Line","Hard Line", "Hard Line Plus", "Sy Aqua", "Benchmark", "Cong", "Blue genetic"), onSelectionChange = onPrawnTypeChange, isError = errors["prawnType"] == true)
         ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true)
         ListingTextField(label = stringResource(R.string.hatchery_name_label), value = hatcheryName, onValueChange = onHatcheryNameChange, isError = errors["hatcheryName"] == true)
-        ListingTextField(label = stringResource(R.string.pl_days_label), value = plDays, onValueChange = onPlDaysChange, isError = errors["plDays"] == true)
+        ListingTextField(label = stringResource(R.string.pl_days_label), value = plDays, onValueChange = onPlDaysChange, isError = errors["plDays"] == true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(modifier = Modifier.weight(1f)) {
                 ListingDropdown(label = stringResource(R.string.rate_label), value = rateType, options = listOf("Paise", "Rupees"), onSelectionChange = onRateTypeChange)
             }
             Box(modifier = Modifier.weight(1f)) {
-                ListingTextField(label = stringResource(R.string.rate_label), value = rateValue, onValueChange = onRateValueChange, isError = errors["rateValue"] == true)
+                ListingTextField(label = stringResource(R.string.rate_label), value = rateValue, onValueChange = onRateValueChange, isError = errors["rateValue"] == true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(modifier = Modifier.weight(1f)) {
-                ListingTextField(label = stringResource(R.string.quantity_label), value = quantity, onValueChange = onQuantityChange, isError = errors["quantity"] == true)
+                ListingTextField(label = stringResource(R.string.quantity_label), value = quantity, onValueChange = onQuantityChange, isError = errors["quantity"] == true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
             }
             Box(modifier = Modifier.weight(1f)) {
                 ListingDropdown(label = stringResource(R.string.unit_label), value = unitType, options = listOf("Lakhs", "Thousands"), onSelectionChange = onUnitTypeChange)
@@ -765,7 +767,7 @@ fun EquipmentFields(
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         SearchableListingDropdown(label = "Equipment Type", value = equipmentType, options = listOf("Aerators", "Motors", "Pump Motors", "Bore Motors", "Generators", "Pump Engines", "Boats", "Electrical Wires", "Others"), onSelectionChange = onEquipmentTypeChange, isError = errors["equipmentType"] == true)
         ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true)
-        ListingTextField(label = stringResource(R.string.price_label), value = price, onValueChange = onPriceChange, isError = errors["price"] == true)
+        ListingTextField(label = stringResource(R.string.price_label), value = price, onValueChange = onPriceChange, isError = errors["price"] == true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
     }
 }
 
@@ -780,7 +782,7 @@ fun VehicleFields(
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         ListingDropdown(label = "Service Type", value = serviceType, options = listOf("Live Fish Vehicles", "Feed Transport"), onSelectionChange = onServiceTypeChange, isError = errors["serviceType"] == true)
         ListingTextField(label = stringResource(R.string.vehicle_name_label), value = vehicleName, onValueChange = onVehicleNameChange, isError = errors["vehicleName"] == true)
-        ListingTextField(label = stringResource(R.string.vehicle_capacity_label), value = vehicleCapacity, onValueChange = onVehicleCapacityChange, isError = errors["vehicleCapacity"] == true)
+        ListingTextField(label = stringResource(R.string.vehicle_capacity_label), value = vehicleCapacity, onValueChange = onVehicleCapacityChange, isError = errors["vehicleCapacity"] == true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
         ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true)
     }
 }
@@ -797,7 +799,7 @@ fun FeedFields(
         ListingDropdown(label = "Business Type", value = businessType, options = listOf("Fish Feed", "Shrimp Feed"), onSelectionChange = onBusinessTypeChange, isError = errors["businessType"] == true)
         ListingDropdown(label = "Feed Name", value = feedName, options = listOf("Godrej", "CP", "Avanti"), onSelectionChange = onFeedNameChange, isError = errors["feedName"] == true)
         ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true)
-        ListingTextField(label = stringResource(R.string.rate_per_ton_label), value = ratePerTon, onValueChange = onRatePerTonChange, isError = errors["ratePerTon"] == true)
+        ListingTextField(label = stringResource(R.string.rate_per_ton_label), value = ratePerTon, onValueChange = onRatePerTonChange, isError = errors["ratePerTon"] == true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
     }
 }
 
@@ -832,7 +834,7 @@ fun ServiceFields(
             }
             "Live Fish Vehicles" -> {
                 ListingTextField(label = stringResource(R.string.vehicle_name_label), value = vehicleName, onValueChange = onVehicleNameChange, isError = errors["vehicleName"] == true)
-                ListingTextField(label = stringResource(R.string.vehicle_capacity_label), value = vehicleCapacity, onValueChange = onVehicleCapacityChange, isError = errors["vehicleCapacity"] == true)
+                ListingTextField(label = stringResource(R.string.vehicle_capacity_label), value = vehicleCapacity, onValueChange = onVehicleCapacityChange, isError = errors["vehicleCapacity"] == true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
             }
             "Nets" -> {
                 SearchableListingDropdown(
@@ -860,10 +862,10 @@ fun TankFields(
         ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true)
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(modifier = Modifier.weight(1f)) {
-                ListingTextField(label = stringResource(R.string.tank_acres_label), value = tankAcres, onValueChange = onTankAcresChange, isError = errors["tankAcres"] == true)
+                ListingTextField(label = stringResource(R.string.tank_acres_label), value = tankAcres, onValueChange = onTankAcresChange, isError = errors["tankAcres"] == true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
             }
             Box(modifier = Modifier.weight(1f)) {
-                ListingTextField(label = stringResource(R.string.est_price_per_acre_label), value = estPricePerAcre, onValueChange = onEstPricePerAcreChange, isError = errors["estPricePerAcre"] == true)
+                ListingTextField(label = stringResource(R.string.est_price_per_acre_label), value = estPricePerAcre, onValueChange = onEstPricePerAcreChange, isError = errors["estPricePerAcre"] == true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
             }
         }
         ListingTextField(label = stringResource(R.string.tank_location_label), value = tankLocation, onValueChange = onTankLocationChange, isError = errors["tankLocation"] == true)
@@ -895,10 +897,10 @@ fun JobFields(
         ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true)
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(modifier = Modifier.weight(1f)) {
-                ListingTextField(label = stringResource(R.string.tank_acres_label), value = tankAcres, onValueChange = onTankAcresChange, isError = errors["tankAcres"] == true)
+                ListingTextField(label = stringResource(R.string.tank_acres_label), value = tankAcres, onValueChange = onTankAcresChange, isError = errors["tankAcres"] == true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
             }
             Box(modifier = Modifier.weight(1f)) {
-                ListingTextField(label = stringResource(R.string.salary_label), value = salary, onValueChange = onSalaryChange, isError = errors["salary"] == true)
+                ListingTextField(label = stringResource(R.string.salary_label), value = salary, onValueChange = onSalaryChange, isError = errors["salary"] == true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
             }
         }
         ListingTextField(label = stringResource(R.string.tank_location_label), value = tankLocation, onValueChange = onTankLocationChange, isError = errors["tankLocation"] == true)
@@ -906,7 +908,15 @@ fun JobFields(
 }
 
 @Composable
-fun ListingTextField(label: String, value: String, onValueChange: (String) -> Unit, minLines: Int = 1, isRequired: Boolean = true, isError: Boolean = false) {
+fun ListingTextField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    minLines: Int = 1,
+    isRequired: Boolean = true,
+    isError: Boolean = false,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default
+) {
     Column {
         Text(text = androidx.compose.ui.text.buildAnnotatedString {
             append(label)
@@ -922,6 +932,7 @@ fun ListingTextField(label: String, value: String, onValueChange: (String) -> Un
             shape = RoundedCornerShape(12.dp),
             minLines = minLines,
             isError = isError,
+            keyboardOptions = keyboardOptions,
             colors = OutlinedTextFieldDefaults.colors(
                 unfocusedBorderColor = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline,
                 focusedBorderColor = if (isError) MaterialTheme.colorScheme.error else AquaBlue,
