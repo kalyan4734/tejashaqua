@@ -32,17 +32,8 @@ import java.util.*
 fun AdminDashboardScreen(onBackClick: () -> Unit) {
     var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = listOf("Fish Rates", "Prawn Rates")
-    val context = LocalContext.current
-    val db = FirebaseFirestore.getInstance()
     
     var showDatePicker by remember { mutableStateOf(false) }
-
-    // Automatically populate data once when Admin Portal is opened
-    LaunchedEffect(Unit) {
-        populateSampleData(db) {
-            Toast.makeText(context, "Historical rates updated for last 7 days", Toast.LENGTH_SHORT).show()
-        }
-    }
 
     val datePickerState = rememberDatePickerState(
         initialSelectedDateMillis = System.currentTimeMillis()
@@ -107,79 +98,12 @@ fun AdminDashboardScreen(onBackClick: () -> Unit) {
     }
 }
 
-private fun populateSampleData(db: FirebaseFirestore, onComplete: () -> Unit) {
-    val fishTypes = mapOf(
-        "Rohu" to 145.0, "Katla" to 165.0, "Prawns" to 380.0, "Koramenu" to 550.0,
-        "Tilapia" to 110.0, "Pangasius" to 120.0, "Roopchand" to 135.0, "Karamosu" to 180.0
-    )
-    val markets = listOf("Bhimavaram", "Nellore", "Kakinada", "Machilipatnam")
-    val counts = listOf("100", "80", "60", "40", "30")
-    
-    val sdf = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
-    val cal = Calendar.getInstance()
-
-    for (i in 0..6) {
-        cal.time = Date()
-        cal.add(Calendar.DAY_OF_YEAR, -i)
-        val timestamp = cal.timeInMillis
-        val historyId = sdf.format(cal.time)
-
-        // Fill Fish Rates
-        fishTypes.forEach { (name, basePrice) ->
-            val randomVar = (Math.random() * 10 - 5).toInt()
-            val price = basePrice + randomVar
-            val trend = if (randomVar > 0) "UP" else if (randomVar < 0) "DOWN" else "FLAT"
-            val change = if (randomVar != 0) "${if (randomVar > 0) "+" else ""}₹${Math.abs(randomVar)}" else "No Change"
-
-            val data = mapOf(
-                "price" to "₹${price.toInt()}/kg",
-                "change" to change,
-                "trend" to trend,
-                "lastUpdated" to timestamp,
-                "isPrawn" to (name == "Prawns")
-            )
-
-            // Update current if today
-            if (i == 0) {
-                db.collection("aqua_rates").document(name).set(data)
-            }
-
-            // History for graph
-            val historyData = mapOf(
-                "price" to price,
-                "timestamp" to timestamp,
-                "displayPrice" to "₹${price.toInt()}/kg"
-            )
-            db.collection("aqua_rates").document(name).collection("history").document(historyId).set(historyData)
-        }
-
-        // Fill Prawn Markets
-        markets.forEach { market ->
-            val ratesMap = mutableMapOf<String, String>()
-            counts.forEach { count ->
-                val base = when(count) {
-                    "100" -> 220; "80" -> 280; "60" -> 350; "40" -> 450; "30" -> 550; else -> 200
-                }
-                val price = base + (Math.random() * 20 - 10).toInt()
-                ratesMap[count] = price.toString()
-            }
-            
-            val data = mapOf(
-                "rates" to ratesMap,
-                "lastUpdated" to timestamp
-            )
-            db.collection("prawn_rates").document(market).set(data)
-        }
-    }
-    onComplete()
-}
-
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FishRatesAdmin(selectedDate: Long) {
     val db = FirebaseFirestore.getInstance()
     var rates by remember { mutableStateOf<List<AquaRate>>(emptyList()) }
+    var previousRates by remember { mutableStateOf<Map<String, Double>>(emptyMap()) }
     val context = LocalContext.current
 
     val fishTypes = listOf(
@@ -188,7 +112,30 @@ fun FishRatesAdmin(selectedDate: Long) {
         "Valuga", "Engilayi", "Jalla", "Tuna", "Pulasa", "Crab", "Others"
     )
 
-    LaunchedEffect(Unit) {
+    // Fetch current rates and previous day rates
+    LaunchedEffect(selectedDate) {
+        // Fetch previous day history for auto-calculation
+        val prevCal = Calendar.getInstance().apply {
+            time = Date(selectedDate)
+            add(Calendar.DAY_OF_YEAR, -1)
+        }
+        val prevId = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(prevCal.time)
+        
+        val prevMap = mutableMapOf<String, Double>()
+        fishTypes.forEach { type ->
+            db.collection("aqua_rates").document(type).collection("history").document(prevId).get()
+                .addOnSuccessListener { doc ->
+                    if (doc.exists()) {
+                        prevMap[type] = doc.getDouble("price") ?: 0.0
+                    } else {
+                        prevMap[type] = 0.0 // No prev data
+                    }
+                    if (prevMap.size == fishTypes.size) {
+                        previousRates = prevMap.toMap()
+                    }
+                }
+        }
+
         db.collection("aqua_rates").get().addOnSuccessListener { snapshot ->
             val fetched = snapshot.documents.associateBy({ it.id }, { doc ->
                 val price = doc.getString("price") ?: ""
@@ -204,9 +151,29 @@ fun FishRatesAdmin(selectedDate: Long) {
 
     LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         items(rates) { rate ->
-            var price by remember(rate.price) { mutableStateOf(rate.price) }
-            var change by remember(rate.change) { mutableStateOf(rate.change) }
-            var trend by remember(rate.trend) { mutableStateOf(rate.trend) }
+            var priceText by remember(rate.price) { mutableStateOf(rate.price) }
+            var changeText by remember(rate.change) { mutableStateOf(rate.change) }
+            var trendState by remember(rate.trend) { mutableStateOf(rate.trend) }
+
+            // Auto-calculate change and trend when price changes
+            LaunchedEffect(priceText) {
+                val prevPrice = previousRates[rate.name] ?: 0.0
+                val currentPrice = priceText.split("-").first().filter { it.isDigit() || it == '.' }.toDoubleOrNull() ?: 0.0
+                
+                if (prevPrice > 0 && currentPrice > 0) {
+                    val diff = (currentPrice - prevPrice).toInt()
+                    trendState = when {
+                        diff > 0 -> RateTrend.UP
+                        diff < 0 -> RateTrend.DOWN
+                        else -> RateTrend.FLAT
+                    }
+                    changeText = when {
+                        diff > 0 -> "+₹$diff"
+                        diff < 0 -> "-₹${Math.abs(diff)}"
+                        else -> "No Change"
+                    }
+                }
+            }
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -218,36 +185,20 @@ fun FishRatesAdmin(selectedDate: Long) {
                     Spacer(modifier = Modifier.height(12.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         OutlinedTextField(
-                            value = price,
-                            onValueChange = { price = it },
+                            value = priceText,
+                            onValueChange = { priceText = it },
                             label = { Text("Price (e.g. ₹160/kg)") },
-                            modifier = Modifier.weight(1f)
-                        )
-                        OutlinedTextField(
-                            value = change,
-                            onValueChange = { change = it },
-                            label = { Text("Change (e.g. +₹5)") },
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
                     Spacer(modifier = Modifier.height(12.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Trend: ", fontSize = 14.sp)
-                        RateTrend.entries.forEach { t ->
-                            FilterChip(
-                                selected = trend == t,
-                                onClick = { trend = t },
-                                label = { Text(t.name) },
-                                modifier = Modifier.padding(horizontal = 4.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.weight(1f))
+                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
                         Button(
                             onClick = {
                                 val data = mapOf(
-                                    "price" to price,
-                                    "change" to change,
-                                    "trend" to trend.name,
+                                    "price" to priceText,
+                                    "change" to changeText,
+                                    "trend" to trendState.name,
                                     "isPrawn" to rate.isPrawn,
                                     "lastUpdated" to selectedDate
                                 )
@@ -256,19 +207,18 @@ fun FishRatesAdmin(selectedDate: Long) {
                                     .addOnSuccessListener { 
                                         // Save to history for the graph
                                         val historyId = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date(selectedDate))
-                                        // Extract first number for range prices (e.g. "280-1000" -> 280)
-                                        val cleanPrice = price.split("-").first().filter { it.isDigit() || it == '.' }
+                                        val cleanPrice = priceText.split("-").first().filter { it.isDigit() || it == '.' }
                                         val priceVal = cleanPrice.toDoubleOrNull() ?: 0.0
                                         if (priceVal > 0) {
                                             val historyData = mapOf(
                                                 "price" to priceVal,
                                                 "timestamp" to selectedDate,
-                                                "displayPrice" to price
+                                                "displayPrice" to priceText
                                             )
                                             db.collection("aqua_rates").document(rate.name)
                                                 .collection("history").document(historyId).set(historyData)
                                         }
-                                        Toast.makeText(context, "${rate.name} updated for ${SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date(selectedDate))}", Toast.LENGTH_SHORT).show() 
+                                        Toast.makeText(context, "${rate.name} updated", Toast.LENGTH_SHORT).show()
                                     }
                             }
                         ) {

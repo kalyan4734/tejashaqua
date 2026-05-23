@@ -55,6 +55,7 @@
     <string name="saved_items">సేవ్ చేసిన వస్తువులు</string>
     <string name="chats">చాట్‌లు</string>
     <string name="about_app">యాప్ గురించి</string>
+    <string name="rate_us">మాకు రేటింగ్ ఇవ్వండి</string>
     <string name="logout">లాగ్ అవుట్</string>
     <string name="cancel">రద్దు చేయండి</string>
     <string name="logout_confirm">మీరు తేజశ్ ఆక్వా నుండి లాగ్ అవుట్ చేయాలనుకుంటున్నారా?</string>
@@ -72,6 +73,7 @@
     <string name="type_message">సందేశాన్ని టైప్ చేయండి…</string>
     <string name="is_available">ఇది అందుబాటులో ఉందా?</string>
     <string name="best_price">ఉత్తమ ధర?</string>
+    <string name="initial_chat_message">నమస్తే %1$s, మీ ప్రకటన %2$s పై నాకు ఆసక్తి ఉంది. నా పేరు %3$s, మా ఊరు %4$s, దయచేసి నన్ను %5$s వద్ద సంప్రదించండి.</string>
     <string name="recently"> ఇటీవల</string>
     <!-- Edit Listing -->
     <string name="edit_listing">జాబితాను సవరించండి</string>
@@ -154,6 +156,8 @@
     <string name="cat_services">సేవలు</string>
     <string name="cat_tanks">ట్యాంకులు</string>
     <string name="cat_jobs">ఉద్యోగాలు</string>
+    <string name="cat_business">వ్యాపారం</string>
+    <string name="business_desc">ఫీడ్, మెడిసిన్ మొదలైనవి</string>
     <!-- Select Category -->
     <string name="select_category_title">మీరు ఏమి విక్రయిస్తున్నారు?</string>
     <string name="select_category_desc">మీ ఉత్పత్తి లేదా సేవను జాబితా చేయడం ప్రారంభించడానికి ఒక వర్గాన్ని ఎంచుకోండి.</string>
@@ -175,6 +179,7 @@
     <string name="desc_capacity_prefix">సామర్థ్యం: %s</string>
     <string name="desc_hatchery_prefix">హేచరీ: %s</string>
     <string name="desc_tank_acres_prefix">ట్యాంక్: %s ఎకరాలు</string>
+    <string name="limit_reached_error">మీరు గరిష్టంగా 2 పోస్ట్‌లను మాత్రమే చేయగలరు. కొత్త పోస్ట్ చేయడానికి పాత దానిని తొలగించండి.</string>
 
     <string name="about_app_desc">తేజశ్ ఆక్వా ఆక్వాకల్చర్ పరిశ్రమ కోసం భారతదేశపు అగ్రగామి మార్కెట్‌ప్లేస్. ఆక్వా రంగంలో వ్యాపారాన్ని మరియు వృద్ధిని సులభతరం చేయడానికి మేము రైతులను, హేచరీలను మరియు సరఫరాదారులను కలుపుతాము.</string>
     <string name="app_version">యాప్ వెర్షన్</string>

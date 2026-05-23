@@ -1,6 +1,7 @@
 package com.tejashaqua.app
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -35,6 +36,11 @@ import com.tejashaqua.app.ui.theme.TejashAquaTheme
 import com.tejashaqua.app.utils.LocaleHelper
 
 class MainActivity : ComponentActivity() {
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent) // Update current intent to the new one
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         LocaleHelper.applySavedLocale(this)
@@ -61,6 +67,57 @@ class MainActivity : ComponentActivity() {
                 var isAdmin by remember { mutableStateOf(false) }
 
                 val isLanguageSelected = remember { mutableStateOf(LocaleHelper.getSelectedLanguage(context) != null) }
+
+                var selectedCategory by remember { mutableStateOf(ListingCategory.FISH) }
+                var isEditMode by remember { mutableStateOf(false) }
+                var selectedListingId by remember { mutableStateOf<String?>(null) }
+                var selectedListingData by remember { mutableStateOf<Map<String, Any>?>(null) }
+                var detailedPageSource by remember { mutableStateOf("dashboard") }
+                var chatSourceScreen by remember { mutableStateOf("detailed_page") }
+                var shouldSendInitialChatMessage by remember { mutableStateOf(false) }
+                
+                val fetchingLocText = stringResource(R.string.fetching_location)
+                var currentLocationName by remember { mutableStateOf(fetchingLocText) }
+                var currentSubLocation by remember { mutableStateOf("") }
+                
+                // Track where the location picker was opened from
+                var locationPickerSource by remember { mutableStateOf("dashboard") } 
+                var pickedListingLocation by remember { mutableStateOf<Pair<String, LatLng?>?>(null) }
+
+                // Handle Notification Click Navigation
+                LaunchedEffect(intent, userId) {
+                    val type = intent.getStringExtra("type")
+                    if (type == "chat" && userId.isNotEmpty()) {
+                        val chatId = intent.getStringExtra("chatId") ?: ""
+                        
+                        if (chatId.isNotEmpty()) {
+                            FirebaseFirestore.getInstance().collection("chats").document(chatId).get()
+                                .addOnSuccessListener { doc ->
+                                    if (doc.exists()) {
+                                        val data = doc.data ?: return@addOnSuccessListener
+                                        val isBuying = data["buyerId"] == userId
+                                        
+                                        val updatedData = data.toMutableMap()
+                                        updatedData["id"] = data["listingId"] ?: ""
+                                        updatedData["posterName"] = if (isBuying) data["sellerName"] ?: "Seller" else data["buyerName"] ?: "User"
+                                        updatedData["userId"] = if (isBuying) data["sellerId"] ?: "" else data["buyerId"] ?: ""
+                                        updatedData["title"] = data["listingTitle"] ?: ""
+                                        updatedData["listingLocation"] = data["listingLocation"] ?: ""
+                                        updatedData["listingPrice"] = data["listingPrice"] ?: ""
+                                        
+                                        selectedListingData = updatedData
+                                        chatSourceScreen = "dashboard"
+                                        shouldSendInitialChatMessage = false
+                                        currentScreen = "chat"
+                                        
+                                        // Clear intent data to prevent re-navigation on recomposition/activity restart
+                                        intent.removeExtra("type")
+                                        intent.removeExtra("chatId")
+                                    }
+                                }
+                        }
+                    }
+                }
 
                 LaunchedEffect(Unit) {
                     FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
@@ -97,21 +154,6 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                 }
-                
-                var selectedCategory by remember { mutableStateOf(ListingCategory.FISH) }
-                var isEditMode by remember { mutableStateOf(false) }
-                var selectedListingId by remember { mutableStateOf<String?>(null) }
-                var selectedListingData by remember { mutableStateOf<Map<String, Any>?>(null) }
-                var chatSourceScreen by remember { mutableStateOf("detailed_page") }
-                var shouldSendInitialChatMessage by remember { mutableStateOf(false) }
-                
-                val fetchingLocText = stringResource(R.string.fetching_location)
-                var currentLocationName by remember { mutableStateOf(fetchingLocText) }
-                var currentSubLocation by remember { mutableStateOf("") }
-                
-                // Track where the location picker was opened from
-                var locationPickerSource by remember { mutableStateOf("dashboard") } 
-                var pickedListingLocation by remember { mutableStateOf<Pair<String, LatLng?>?>(null) }
 
                 BackHandler(enabled = currentScreen != "dashboard" && currentScreen != "login" && currentScreen != "splash") {
                     when (currentScreen) {
@@ -130,7 +172,7 @@ class MainActivity : ComponentActivity() {
                         "my_listings" -> currentScreen = "profile"
                         "saved_items" -> currentScreen = "profile"
                         "prawn_rates" -> currentScreen = "dashboard"
-                        "detailed_page" -> currentScreen = "dashboard"
+                        "detailed_page" -> currentScreen = detailedPageSource
                         "chat" -> currentScreen = chatSourceScreen
                         "chat_list" -> currentScreen = "profile"
                         "admin_dashboard" -> currentScreen = "dashboard"
@@ -183,6 +225,15 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
+                LaunchedEffect(isAdmin) {
+                    if (isAdmin) {
+                        FirebaseMessaging.getInstance().subscribeToTopic("admins")
+                            .addOnSuccessListener { android.util.Log.d("FCM", "Subscribed to admins topic") }
+                    } else {
+                        FirebaseMessaging.getInstance().unsubscribeFromTopic("admins")
+                    }
+                }
+
                 LaunchedEffect(authState) {
                     when (val state = authState) {
                         is AuthState.OtpSent -> {
@@ -194,6 +245,16 @@ class MainActivity : ComponentActivity() {
                             userId = state.userId
                             joinedAt = state.joinedAt
                             isAdmin = state.isAdmin
+                            
+                            // Subscribe to personal topic for chat notifications
+                            FirebaseMessaging.getInstance().subscribeToTopic("user_$userId")
+                                .addOnCompleteListener { task ->
+                                    if (task.isSuccessful) {
+                                        android.util.Log.d("FCM", "Subscribed to personal topic: user_$userId")
+                                    } else {
+                                        android.util.Log.e("FCM", "Failed to subscribe to personal topic", task.exception)
+                                    }
+                                }
                             
                             if (currentScreen == "otp" || currentScreen == "splash" || currentScreen == "login") {
                                 currentScreen = if (isAdmin) "admin_dashboard" else "dashboard"
@@ -290,7 +351,7 @@ class MainActivity : ComponentActivity() {
                             onPrawnsClick = { currentScreen = "prawn_rates" },
                             onItemClick = { data ->
                                 selectedListingData = data
-                                chatSourceScreen = "dashboard"
+                                detailedPageSource = "dashboard"
                                 currentScreen = "detailed_page"
                             },
                             onChatListClick = { data ->
@@ -329,7 +390,7 @@ class MainActivity : ComponentActivity() {
                             DetailedPageScreen(
                                 listingData = data,
                                 currentUserId = userId,
-                                onBackClick = { currentScreen = chatSourceScreen },
+                                onBackClick = { currentScreen = detailedPageSource },
                                 onChatClick = { updatedData ->
                                     selectedListingData = updatedData
                                     chatSourceScreen = "detailed_page"
@@ -472,7 +533,7 @@ class MainActivity : ComponentActivity() {
                             onBackClick = { currentScreen = "profile" },
                             onItemClick = { data ->
                                 selectedListingData = data
-                                chatSourceScreen = "saved_items"
+                                detailedPageSource = "saved_items"
                                 currentScreen = "detailed_page"
                             }
                         )

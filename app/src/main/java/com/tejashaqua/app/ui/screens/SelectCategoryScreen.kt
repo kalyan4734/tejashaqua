@@ -73,6 +73,12 @@ fun SelectCategoryScreen(
             stringResource(R.string.services_desc),
             Icons.Default.MiscellaneousServices,
             ListingCategory.SERVICES
+        ),
+        CategoryItem(
+            stringResource(R.string.cat_business),
+            stringResource(R.string.business_desc),
+            Icons.Default.Storefront,
+            ListingCategory.BUSINESS
         )
     )
 

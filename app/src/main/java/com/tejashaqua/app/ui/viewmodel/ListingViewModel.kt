@@ -6,6 +6,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
+import com.tejashaqua.app.R
 import com.tejashaqua.app.utils.NotificationUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -25,10 +26,27 @@ class ListingViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             _postState.value = PostState.Loading
             try {
+                val userId = data["userId"]?.toString() ?: ""
+                val existingListingId = data["id"] as? String
+                
+                // Enforce 2-listing limit for new posts
+                if (existingListingId == null && userId.isNotEmpty()) {
+                    val userListings = db.collection("listings")
+                        .whereEqualTo("userId", userId)
+                        .get()
+                        .await()
+                    
+                    if (userListings.size() >= 2) {
+                        val message = getApplication<Application>().getString(R.string.limit_reached_error)
+                        _postState.value = PostState.Error(message)
+                        return@launch
+                    }
+                }
+
                 val uploadedUrls = uploadImages(newBitmaps)
                 val finalUrls = existingUrls + uploadedUrls
                 
-                val listingId = data["id"] as? String ?: db.collection("listings").document().id
+                val listingId = existingListingId ?: db.collection("listings").document().id
                 val title = data["title"]?.toString() ?: "Listing"
                 val finalData = data.toMutableMap()
                 finalData["id"] = listingId

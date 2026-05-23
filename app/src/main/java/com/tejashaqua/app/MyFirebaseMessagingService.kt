@@ -14,42 +14,38 @@ import com.google.firebase.messaging.RemoteMessage
 class MyFirebaseMessagingService : FirebaseMessagingService() {
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
-        // Handle FCM messages here.
+        android.util.Log.d("FCM", "Message received: ${remoteMessage.notification?.title}")
         
-        // 1. Handle notification payload
-        remoteMessage.notification?.let {
-            sendNotification(it.title ?: "New Listing", it.body ?: "A new ad has been posted!")
-        }
+        val title = remoteMessage.notification?.title ?: remoteMessage.data["title"] ?: "Tejash Aqua"
+        val body = remoteMessage.notification?.body ?: remoteMessage.data["body"] ?: ""
         
-        // 2. Handle data payload (useful for custom server triggers)
-        if (remoteMessage.data.isNotEmpty()) {
-            val title = remoteMessage.data["title"] ?: "New Listing"
-            val body = remoteMessage.data["body"] ?: "A new ad has been posted!"
-            sendNotification(title, body)
-        }
+        sendNotification(title, body, remoteMessage.data)
     }
 
     override fun onNewToken(token: String) {
-        // If you want to send messages to this application instance or
-        // manage this apps subscriptions on the server side, send the
-        // FCM registration token to your app server.
+        android.util.Log.d("FCM", "New token: $token")
     }
 
-    private fun sendNotification(title: String, messageBody: String) {
-        val intent = Intent(this, MainActivity::class.java)
-        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+    private fun sendNotification(title: String, messageBody: String, data: Map<String, String> = emptyMap()) {
+        val intent = Intent(this, MainActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            data.forEach { (key, value) ->
+                putExtra(key, value)
+            }
+        }
         val pendingIntent = PendingIntent.getActivity(
-            this, 0, intent,
+            this, System.currentTimeMillis().toInt(), intent,
             PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val channelId = "new_listing_channel"
+        val channelId = "general_notifications"
         val defaultSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
         val notificationBuilder = NotificationCompat.Builder(this, channelId)
-            .setSmallIcon(R.drawable.app_logo) // Ensure this exists or use a generic one
+            .setSmallIcon(R.mipmap.ic_launcher) // Using mipmap for better compatibility
             .setContentTitle(title)
             .setContentText(messageBody)
             .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setSound(defaultSoundUri)
             .setContentIntent(pendingIntent)
 
@@ -58,12 +54,19 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 channelId,
-                "New Ad Notifications",
+                "General Notifications",
                 NotificationManager.IMPORTANCE_HIGH
-            )
+            ).apply {
+                description = "Notifications for listings and rates"
+                enableLights(true)
+                lightColor = android.graphics.Color.BLUE
+                enableVibration(true)
+            }
             notificationManager.createNotificationChannel(channel)
         }
 
-        notificationManager.notify(0, notificationBuilder.build())
+        // Use a unique ID for each notification so they don't overwrite
+        val notificationId = System.currentTimeMillis().toInt()
+        notificationManager.notify(notificationId, notificationBuilder.build())
     }
 }

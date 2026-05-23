@@ -324,7 +324,7 @@ fun DashboardScreen(
 
 @Composable
 fun CategoryFilterRow(selected: String, onSelect: (String) -> Unit) {
-    val categories = listOf("All", "FISH", "PRAWNS", "EQUIPMENTS", "VEHICLES", "FEED", "SERVICES", "TANKS")
+    val categories = listOf("All", "FISH", "PRAWNS", "EQUIPMENTS", "VEHICLES", "FEED", "SERVICES", "TANKS", "BUSINESS")
     
     LazyRow(
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
@@ -340,6 +340,7 @@ fun CategoryFilterRow(selected: String, onSelect: (String) -> Unit) {
                 "FEED" -> stringResource(R.string.cat_feed)
                 "SERVICES" -> stringResource(R.string.cat_services)
                 "TANKS" -> stringResource(R.string.cat_tanks)
+                "BUSINESS" -> stringResource(R.string.cat_business)
                 else -> category
             }
             
@@ -494,6 +495,7 @@ fun MarketplaceSection(currentUserId: String, searchText: String, categoryFilter
                             val priceLabel = when (categoryStr.uppercase()) {
                                 "PRAWNS" -> "₹${data["rateValue"] ?: "N/A"}/${data["rateType"]?.toString()?.lowercase() ?: "paise"}"
                                 "FEED" -> "₹${data["ratePerTon"] ?: "N/A"}/ton"
+                                "BUSINESS" -> if (data["businessSubCategory"] == "Feed") "₹${data["ratePerTon"] ?: "N/A"}/ton" else "₹${data["price"] ?: data["rateValue"] ?: "N/A"}"
                                 "JOBS" -> "₹${data["salary"] ?: "N/A"}"
                                 "TANKS" -> "₹${data["estPricePerAcre"] ?: "N/A"}/acre"
                                 else -> "₹${data["price"] ?: data["rateValue"] ?: "N/A"}"
@@ -665,9 +667,7 @@ fun AquaRatesSection(onSeeAllClick: () -> Unit, onRateClick: (AquaRate) -> Unit)
     var isLoading by remember { mutableStateOf(true) }
 
     val fishTypes = listOf(
-        "Prawns", "Rohu", "Katla", "Karamosu", "Gaddi chepa", "Pangasius", 
-        "Roopchand", "Pandu gappa", "Tilapia", "Chitala", "Koramenu", 
-        "Valuga", "Engilayi", "Jalla", "Tuna", "Pulasa", "Crab", "Others"
+        "Prawns", "Rohu", "Pangasius", "Roopchand"
     )
 
     LaunchedEffect(Unit) {

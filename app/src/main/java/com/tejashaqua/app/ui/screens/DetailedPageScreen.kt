@@ -26,6 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.core.net.toUri
 import coil.compose.AsyncImage
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -56,7 +57,6 @@ fun DetailedPageScreen(
     val categoryString = listingData["category"]?.toString() ?: "Other"
     val category = try { ListingCategory.valueOf(categoryString.uppercase()) } catch (e: Exception) { null }
     val fullLocation = listingData["location"]?.toString() ?: "Unknown"
-    // Use the first part of the address (Locality) as the main location
     val location = fullLocation.split(",").firstOrNull()?.trim() ?: fullLocation
     val description = listingData["description"]?.toString() ?: "No description provided."
     val posterName = listingData["posterName"]?.toString() ?: "User"
@@ -122,6 +122,15 @@ fun DetailedPageScreen(
     }
 
     val pagerState = rememberPagerState { if (images.isEmpty()) 1 else images.size }
+    var showFullScreenPager by remember { mutableStateOf(false) }
+
+    if (showFullScreenPager && images.isNotEmpty()) {
+        FullScreenImageDialog(
+            images = images,
+            initialPage = pagerState.currentPage,
+            onDismiss = { showFullScreenPager = false }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -174,9 +183,9 @@ fun DetailedPageScreen(
                 .padding(innerPadding)
                 .background(Color.White)
         ) {
-            // Main Image
+            // 1. Main Image
             item {
-                Box(modifier = Modifier.fillMaxWidth().height(250.dp).background(Color(0xFFF5F5F5))) {
+                Box(modifier = Modifier.fillMaxWidth().height(250.dp).background(Color(0xFFF5F5F5)).clickable { if (images.isNotEmpty()) showFullScreenPager = true }) {
                     if (images.isNotEmpty()) {
                         HorizontalPager(
                             state = pagerState,
@@ -219,7 +228,7 @@ fun DetailedPageScreen(
                 }
             }
 
-            // Header Info
+            // 2. Header Info
             item {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Surface(color = Color(0xFFE8EAF6), shape = RoundedCornerShape(4.dp)) {
@@ -243,6 +252,7 @@ fun DetailedPageScreen(
                             "₹$rate/$unit"
                         }
                         ListingCategory.FEED -> "₹${listingData["ratePerTon"] ?: "N/A"}/ton"
+                        ListingCategory.BUSINESS -> if (listingData["businessSubCategory"] == "Feed") "₹${listingData["ratePerTon"] ?: "N/A"}/ton" else price
                         ListingCategory.JOBS -> "₹${listingData["salary"] ?: "N/A"}"
                         else -> price
                     }
@@ -262,7 +272,92 @@ fun DetailedPageScreen(
                 }
             }
 
-            // Seller Info
+            // 3. Description
+            item {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(text = stringResource(R.string.description_label), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(text = description, fontSize = 14.sp, color = Color.DarkGray, lineHeight = 20.sp)
+                }
+            }
+
+            // 4. Details section
+            item {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(text = stringResource(R.string.details_label), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    when(category) {
+                        ListingCategory.FISH -> {
+                            DetailRowItem(stringResource(R.string.fish_type_label), listingData["fishType"]?.toString() ?: "N/A")
+                            DetailRowItem(stringResource(R.string.size_label), "${listingData["sizeValue"] ?: ""} ${listingData["sizeType"] ?: ""}")
+                            DetailRowItem(stringResource(R.string.fish_age_label), "${listingData["fishAge"] ?: ""} Months")
+                            DetailRowItem(stringResource(R.string.quantity_label), "${listingData["quantity"] ?: ""} ${listingData["unitType"] ?: ""}")
+                            DetailRowItem(stringResource(R.string.price_label), price)
+                        }
+                        ListingCategory.PRAWNS -> {
+                            DetailRowItem(stringResource(R.string.hatchery_name_label), listingData["hatcheryName"]?.toString() ?: "N/A")
+                            DetailRowItem(stringResource(R.string.prawn_type_label), listingData["prawnType"]?.toString() ?: "N/A")
+                            DetailRowItem(stringResource(R.string.pl_days_label), listingData["plDays"]?.toString() ?: "N/A")
+                            DetailRowItem(stringResource(R.string.quantity_label), "${listingData["quantity"] ?: ""} ${listingData["unitType"] ?: ""}")
+                            DetailRowItem(stringResource(R.string.rate_label), "₹${listingData["rateValue"] ?: "N/A"}/${listingData["rateType"] ?: ""}")
+                        }
+                        ListingCategory.EQUIPMENTS -> {
+                            DetailRowItem(stringResource(R.string.equipment_type_label), listingData["equipmentType"]?.toString() ?: "N/A")
+                            DetailRowItem(stringResource(R.string.price_label), price)
+                        }
+                        ListingCategory.VEHICLES -> {
+                            DetailRowItem(stringResource(R.string.vehicle_name_label), listingData["vehicleName"]?.toString() ?: "N/A")
+                            DetailRowItem(stringResource(R.string.capacity_label), listingData["vehicleCapacity"]?.toString() ?: "N/A")
+                            DetailRowItem(stringResource(R.string.service_type_label), listingData["serviceType"]?.toString() ?: "N/A")
+                        }
+                        ListingCategory.FEED -> {
+                            DetailRowItem(stringResource(R.string.feed_name_label), listingData["feedName"]?.toString() ?: "N/A")
+                            DetailRowItem(stringResource(R.string.business_type_label), listingData["businessType"]?.toString() ?: "N/A")
+                            DetailRowItem(stringResource(R.string.rate_per_ton_label), "₹${listingData["ratePerTon"] ?: "N/A"}")
+                        }
+                        ListingCategory.BUSINESS -> {
+                            DetailRowItem("Business Category", listingData["businessSubCategory"]?.toString() ?: "N/A")
+                            DetailRowItem("Type", listingData["businessType"]?.toString() ?: "N/A")
+                            if (listingData["businessSubCategory"] == "Feed") {
+                                DetailRowItem(stringResource(R.string.feed_name_label), listingData["feedName"]?.toString() ?: "N/A")
+                                DetailRowItem(stringResource(R.string.rate_per_ton_label), "₹${listingData["ratePerTon"] ?: "N/A"}")
+                            } else if (listingData["businessSubCategory"] == "Medicine") {
+                                DetailRowItem("Medicine Name", listingData["medicineName"]?.toString() ?: "N/A")
+                            }
+                        }
+                        ListingCategory.SERVICES -> {
+                            DetailRowItem(stringResource(R.string.service_type_label), listingData["serviceType"]?.toString() ?: "N/A")
+                            when(listingData["serviceType"]?.toString()) {
+                                "Bore Well" -> DetailRowItem(stringResource(R.string.bore_type_label), listingData["boreWellType"]?.toString() ?: "N/A")
+                                "Live Fish Vehicles" -> {
+                                    DetailRowItem(stringResource(R.string.vehicle_name_label), listingData["vehicleName"]?.toString() ?: "N/A")
+                                    DetailRowItem(stringResource(R.string.capacity_label), listingData["vehicleCapacity"]?.toString() ?: "N/A")
+                                }
+                                "Nets" -> DetailRowItem(stringResource(R.string.net_type_label), listingData["netType"]?.toString() ?: "N/A")
+                            }
+                        }
+                        ListingCategory.TANKS -> {
+                            DetailRowItem(stringResource(R.string.tank_acres_label), "${listingData["tankAcres"] ?: "N/A"} Acres")
+                            DetailRowItem(stringResource(R.string.est_price_per_acre_label), "₹${listingData["estPricePerAcre"] ?: "N/A"}")
+                            DetailRowItem(stringResource(R.string.tank_location_label), listingData["tankLocation"]?.toString() ?: "N/A")
+                        }
+                        ListingCategory.JOBS -> {
+                            DetailRowItem(stringResource(R.string.job_type_label), listingData["jobType"]?.toString() ?: "N/A")
+                            DetailRowItem(stringResource(R.string.salary_label), "₹${listingData["salary"] ?: "N/A"}")
+                            DetailRowItem(stringResource(R.string.tank_acres_label), listingData["tankAcres"]?.toString() ?: "N/A")
+                            DetailRowItem(stringResource(R.string.work_location_label), listingData["tankLocation"]?.toString() ?: "N/A")
+                        }
+                        else -> {
+                            DetailRowItem("Category", categoryString)
+                            DetailRowItem(stringResource(R.string.price_label), price)
+                        }
+                    }
+                    DetailRowItem(stringResource(R.string.posted_location), location)
+                }
+            }
+
+            // 5. Seller Info
             item {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(text = stringResource(R.string.seller_label), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
@@ -283,27 +378,16 @@ fun DetailedPageScreen(
                 }
             }
 
-            // Description
-            item {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(text = stringResource(R.string.description_label), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(text = description, fontSize = 14.sp, color = Color.DarkGray, lineHeight = 20.sp)
-                }
-            }
-
-            // Location Section with Map Tile
+            // 6. Location Section with Map Tile
             item {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(text = stringResource(R.string.posted_location), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                     Spacer(modifier = Modifier.height(12.dp))
                     
                     val context = LocalContext.current
-                    // Safely extract coordinates as Numbers to handle Double/Float variations from Firestore
                     var lat by remember { mutableStateOf((listingData["lat"] as? Number)?.toDouble()) }
                     var lng by remember { mutableStateOf((listingData["lng"] as? Number)?.toDouble()) }
                     
-                    // Default to Rajahmundry if absolutely no coordinates are found
                     val finalLat = lat ?: 17.0005
                     val finalLng = lng ?: 81.7729
                     val position = LatLng(finalLat, finalLng)
@@ -312,7 +396,6 @@ fun DetailedPageScreen(
                         this.position = CameraPosition.fromLatLngZoom(position, 13f)
                     }
 
-                    // Fallback: If coordinates are missing, try to find them using the location name
                     LaunchedEffect(fullLocation) {
                         if (lat == null || lng == null) {
                             try {
@@ -329,7 +412,6 @@ fun DetailedPageScreen(
                         }
                     }
 
-                    // Force camera update when coordinates change (e.g. navigating to a different listing or Geocoder result)
                     LaunchedEffect(lat, lng) {
                         if (lat != null && lng != null) {
                             cameraPositionState.move(CameraUpdateFactory.newLatLngZoom(LatLng(lat!!, lng!!), 13f))
@@ -394,73 +476,7 @@ fun DetailedPageScreen(
                 }
             }
 
-            // Details section
-            item {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(text = stringResource(R.string.details_label), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
-                    Spacer(modifier = Modifier.height(12.dp))
-                    
-                    when(category) {
-                        ListingCategory.FISH -> {
-                            DetailRowItem(stringResource(R.string.fish_type_label), listingData["fishType"]?.toString() ?: "N/A")
-                            DetailRowItem(stringResource(R.string.size_label), "${listingData["sizeValue"] ?: ""} ${listingData["sizeType"] ?: ""}")
-                            DetailRowItem(stringResource(R.string.fish_age_label), "${listingData["fishAge"] ?: ""} Months")
-                            DetailRowItem(stringResource(R.string.quantity_label), "${listingData["quantity"] ?: ""} ${listingData["unitType"] ?: ""}")
-                            DetailRowItem(stringResource(R.string.price_label), price)
-                        }
-                        ListingCategory.PRAWNS -> {
-                            DetailRowItem(stringResource(R.string.hatchery_name_label), listingData["hatcheryName"]?.toString() ?: "N/A")
-                            DetailRowItem(stringResource(R.string.prawn_type_label), listingData["prawnType"]?.toString() ?: "N/A")
-                            DetailRowItem(stringResource(R.string.pl_days_label), listingData["plDays"]?.toString() ?: "N/A")
-                            DetailRowItem(stringResource(R.string.quantity_label), "${listingData["quantity"] ?: ""} ${listingData["unitType"] ?: ""}")
-                            DetailRowItem(stringResource(R.string.rate_label), "₹${listingData["rateValue"] ?: "N/A"}/${listingData["rateType"] ?: ""}")
-                        }
-                        ListingCategory.EQUIPMENTS -> {
-                            DetailRowItem(stringResource(R.string.equipment_type_label), listingData["equipmentType"]?.toString() ?: "N/A")
-                            DetailRowItem(stringResource(R.string.price_label), price)
-                        }
-                        ListingCategory.VEHICLES -> {
-                            DetailRowItem(stringResource(R.string.vehicle_name_label), listingData["vehicleName"]?.toString() ?: "N/A")
-                            DetailRowItem(stringResource(R.string.capacity_label), listingData["vehicleCapacity"]?.toString() ?: "N/A")
-                            DetailRowItem(stringResource(R.string.service_type_label), listingData["serviceType"]?.toString() ?: "N/A")
-                        }
-                        ListingCategory.FEED -> {
-                            DetailRowItem(stringResource(R.string.feed_name_label), listingData["feedName"]?.toString() ?: "N/A")
-                            DetailRowItem(stringResource(R.string.business_type_label), listingData["businessType"]?.toString() ?: "N/A")
-                            DetailRowItem(stringResource(R.string.rate_per_ton_label), "₹${listingData["ratePerTon"] ?: "N/A"}")
-                        }
-                        ListingCategory.SERVICES -> {
-                            DetailRowItem(stringResource(R.string.service_type_label), listingData["serviceType"]?.toString() ?: "N/A")
-                            when(listingData["serviceType"]?.toString()) {
-                                "Bore Well" -> DetailRowItem(stringResource(R.string.bore_type_label), listingData["boreWellType"]?.toString() ?: "N/A")
-                                "Live Fish Vehicles" -> {
-                                    DetailRowItem(stringResource(R.string.vehicle_name_label), listingData["vehicleName"]?.toString() ?: "N/A")
-                                    DetailRowItem(stringResource(R.string.capacity_label), listingData["vehicleCapacity"]?.toString() ?: "N/A")
-                                }
-                                "Nets" -> DetailRowItem(stringResource(R.string.net_type_label), listingData["netType"]?.toString() ?: "N/A")
-                            }
-                        }
-                        ListingCategory.TANKS -> {
-                            DetailRowItem(stringResource(R.string.tank_acres_label), "${listingData["tankAcres"] ?: "N/A"} Acres")
-                            DetailRowItem(stringResource(R.string.est_price_per_acre_label), "₹${listingData["estPricePerAcre"] ?: "N/A"}")
-                            DetailRowItem(stringResource(R.string.tank_location_label), listingData["tankLocation"]?.toString() ?: "N/A")
-                        }
-                        ListingCategory.JOBS -> {
-                            DetailRowItem(stringResource(R.string.job_type_label), listingData["jobType"]?.toString() ?: "N/A")
-                            DetailRowItem(stringResource(R.string.salary_label), "₹${listingData["salary"] ?: "N/A"}")
-                            DetailRowItem(stringResource(R.string.tank_acres_label), listingData["tankAcres"]?.toString() ?: "N/A")
-                            DetailRowItem(stringResource(R.string.work_location_label), listingData["tankLocation"]?.toString() ?: "N/A")
-                        }
-                        else -> {
-                            DetailRowItem("Category", categoryString)
-                            DetailRowItem(stringResource(R.string.price_label), price)
-                        }
-                    }
-                    DetailRowItem(stringResource(R.string.posted_location), location)
-                }
-            }
-
-            // Similar Listings
+            // 7. Similar Listings
             if (similarListings.isNotEmpty()) {
                 item {
                     Column(modifier = Modifier.padding(16.dp)) {
@@ -499,6 +515,48 @@ fun DetailedPageScreen(
             }
 
             item { Spacer(modifier = Modifier.height(80.dp)) }
+        }
+    }
+}
+
+@Composable
+fun FullScreenImageDialog(
+    images: List<*>,
+    initialPage: Int,
+    onDismiss: () -> Unit
+) {
+    val fullScreenPagerState = rememberPagerState(initialPage = initialPage) { images.size }
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+            HorizontalPager(
+                state = fullScreenPagerState,
+                modifier = Modifier.fillMaxSize()
+            ) { page ->
+                AsyncImage(
+                    model = images[page]?.toString() ?: "",
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Fit
+                )
+            }
+            
+            IconButton(
+                onClick = onDismiss,
+                modifier = Modifier.align(Alignment.TopEnd).padding(16.dp)
+            ) {
+                Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
+            }
+            
+            if (images.size > 1) {
+                Text(
+                    text = "${fullScreenPagerState.currentPage + 1}/${images.size}",
+                    color = Color.White,
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(24.dp)
+                )
+            }
         }
     }
 }

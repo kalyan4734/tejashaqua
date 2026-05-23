@@ -96,6 +96,7 @@ fun MyListingsScreen(
                             val priceLabel = when (categoryStr.uppercase()) {
                                 "PRAWNS" -> "${doc.get("rateValue") ?: "N/A"}/${doc.getString("rateType")?.lowercase() ?: "paise"}"
                                 "FEED" -> "${doc.get("ratePerTon") ?: "N/A"}/ton"
+                                "BUSINESS" -> if (doc.getString("businessSubCategory") == "Feed") "${doc.get("ratePerTon") ?: "N/A"}/ton" else "${doc.get("price") ?: doc.get("rateValue") ?: "N/A"}"
                                 "JOBS" -> "${doc.get("salary") ?: "N/A"}"
                                 "TANKS" -> "${doc.get("estPricePerAcre") ?: "N/A"}/acre"
                                 else -> "${doc.get("price") ?: doc.get("rateValue") ?: "N/A"}"

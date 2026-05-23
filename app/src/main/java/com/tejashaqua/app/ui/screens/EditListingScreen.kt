@@ -5,11 +5,7 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.launch
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -89,10 +85,13 @@ fun EditListingScreen(
     var vehicleName by remember { mutableStateOf("") }
     var vehicleCapacity by remember { mutableStateOf("") }
     var businessType by remember { mutableStateOf("") }
+    var businessSubCategory by remember { mutableStateOf("") } // Feed or Medicine
     var feedName by remember { mutableStateOf("") }
+    var medicineName by remember { mutableStateOf("") }
     var ratePerTon by remember { mutableStateOf("") }
     var boreWellType by remember { mutableStateOf("") }
     var tankAcres by remember { mutableStateOf("") }
+    var tankType by remember { mutableStateOf("") } // Lease/Sell
     var estPricePerAcre by remember { mutableStateOf("") }
     var tankLocation by remember { mutableStateOf("") }
     var jobType by remember { mutableStateOf("") }
@@ -113,6 +112,69 @@ fun EditListingScreen(
         if (bitmap != null) {
             selectedPhotos = selectedPhotos + bitmap
         }
+    }
+
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            selectedPhotos = selectedPhotos + uri.toString()
+        }
+    }
+
+    val storagePermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            galleryLauncher.launch("image/*")
+        } else {
+            Toast.makeText(context, "Storage permission is required to select photos", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    var showPhotoOptions by remember { mutableStateOf(false) }
+
+    if (showPhotoOptions) {
+        AlertDialog(
+            onDismissRequest = { showPhotoOptions = false },
+            title = { Text("Choose Photo Source") },
+            text = {
+                Column {
+                    ListItem(
+                        headlineContent = { Text("Camera") },
+                        leadingContent = { Icon(Icons.Default.PhotoCamera, contentDescription = null) },
+                        modifier = Modifier.clickable {
+                            showPhotoOptions = false
+                            cameraLauncher.launch()
+                        }
+                    )
+                    ListItem(
+                        headlineContent = { Text("Gallery") },
+                        leadingContent = { Icon(Icons.Default.PhotoLibrary, contentDescription = null) },
+                        modifier = Modifier.clickable {
+                            showPhotoOptions = false
+                            val permission = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                                android.Manifest.permission.READ_MEDIA_IMAGES
+                            } else {
+                                android.Manifest.permission.READ_EXTERNAL_STORAGE
+                            }
+                            
+                            if (androidx.core.content.ContextCompat.checkSelfPermission(context, permission) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                                galleryLauncher.launch("image/*")
+                            } else {
+                                storagePermissionLauncher.launch(permission)
+                            }
+                        }
+                    )
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showPhotoOptions = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     // Sync location if it changes from outside (via picker)
@@ -205,6 +267,13 @@ fun EditListingScreen(
                                 feedName = doc.getString("feedName") ?: ""
                                 ratePerTon = doc.getString("ratePerTon") ?: ""
                             }
+                            ListingCategory.BUSINESS -> {
+                                businessSubCategory = doc.getString("businessSubCategory") ?: ""
+                                businessType = doc.getString("businessType") ?: ""
+                                feedName = doc.getString("feedName") ?: ""
+                                medicineName = doc.getString("medicineName") ?: ""
+                                ratePerTon = doc.getString("ratePerTon") ?: ""
+                            }
                             ListingCategory.SERVICES -> {
                                 selectedServiceType = doc.getString("serviceType") ?: ""
                                 boreWellType = doc.getString("boreWellType") ?: ""
@@ -214,6 +283,7 @@ fun EditListingScreen(
                             }
                             ListingCategory.TANKS -> {
                                 tankAcres = doc.getString("tankAcres") ?: ""
+                                tankType = doc.getString("tankType") ?: ""
                                 estPricePerAcre = doc.getString("estPricePerAcre") ?: ""
                                 tankLocation = doc.getString("tankLocation") ?: ""
                             }
@@ -311,6 +381,19 @@ fun EditListingScreen(
                                 if (title.isBlank()) errors["title"] = true
                                 if (ratePerTon.isBlank()) errors["ratePerTon"] = true
                             }
+                            ListingCategory.BUSINESS -> {
+                                if (businessSubCategory.isBlank()) errors["businessSubCategory"] = true
+                                if (businessSubCategory == "Feed") {
+                                    if (businessType.isBlank()) errors["businessType"] = true
+                                    if (feedName.isBlank()) errors["feedName"] = true
+                                    if (title.isBlank()) errors["title"] = true
+                                    if (ratePerTon.isBlank()) errors["ratePerTon"] = true
+                                } else if (businessSubCategory == "Medicine") {
+                                    if (businessType.isBlank()) errors["businessType"] = true
+                                    if (medicineName.isBlank()) errors["medicineName"] = true
+                                    if (title.isBlank()) errors["title"] = true
+                                }
+                            }
                             ListingCategory.SERVICES -> {
                                 if (selectedServiceType.isBlank()) errors["serviceType"] = true
                                 if (selectedServiceType == "Bore Well" && boreWellType.isBlank()) errors["boreWellType"] = true
@@ -322,6 +405,7 @@ fun EditListingScreen(
                                 if (title.isBlank()) errors["title"] = true
                             }
                             ListingCategory.TANKS -> {
+                                if (tankType.isBlank()) errors["tankType"] = true
                                 if (title.isBlank()) errors["title"] = true
                                 if (tankAcres.isBlank()) errors["tankAcres"] = true
                                 if (estPricePerAcre.isBlank()) errors["estPricePerAcre"] = true
@@ -346,7 +430,9 @@ fun EditListingScreen(
                                     context, category, title, price, fishType, sizeValue, sizeType,
                                     quantity, unitType, prawnType, hatcheryName, rateValue, rateType,
                                     equipmentType, vehicleName, vehicleCapacity, feedName, ratePerTon,
-                                    tankAcres, tankLocation, jobType, salary, selectedServiceType
+                                    businessType, medicineName, businessSubCategory,
+                                    tankAcres, tankLocation, jobType, salary, selectedServiceType,
+                                    tankType
                                 )
                             } else {
                                 description
@@ -356,8 +442,10 @@ fun EditListingScreen(
                                 listingId, category, title, finalDescription, price, location, latLng, userMobileNumber,
                                 userName, selectedServiceType, fishType, sizeType, sizeValue, fishAge, quantity,
                                 unitType, prawnType, hatcheryName, rateType, rateValue, plDays, equipmentType, 
-                                vehicleName, vehicleCapacity, businessType, feedName, ratePerTon, boreWellType, 
-                                tankAcres, estPricePerAcre, tankLocation, jobType, salary, netType, userId
+                                vehicleName, vehicleCapacity, businessType, feedName, ratePerTon, 
+                                medicineName, businessSubCategory,
+                                boreWellType, tankAcres, estPricePerAcre, tankLocation, jobType, salary, netType, 
+                                tankType, userId
                             )
                             
                             val newBitmaps = selectedPhotos.filterIsInstance<Bitmap>()
@@ -471,6 +559,7 @@ fun EditListingScreen(
                         )
                         ListingCategory.TANKS -> TankFields(
                             title, { title = it },
+                            tankType, { tankType = it },
                             tankAcres, { tankAcres = it },
                             estPricePerAcre, { estPricePerAcre = it },
                             tankLocation, { tankLocation = it },
@@ -484,6 +573,15 @@ fun EditListingScreen(
                             title, { title = it },
                             errors = fieldErrors
                         )
+                        ListingCategory.BUSINESS -> BusinessFields(
+                            businessSubCategory, { businessSubCategory = it },
+                            businessType, { businessType = it },
+                            feedName, { feedName = it },
+                            medicineName, { medicineName = it },
+                            title, { title = it },
+                            ratePerTon, { ratePerTon = it },
+                            errors = fieldErrors
+                        )
                     }
                 }
 
@@ -495,7 +593,7 @@ fun EditListingScreen(
                     item {
                         PhotoSection(
                             photos = selectedPhotos,
-                            onAddPhoto = { cameraLauncher.launch() },
+                            onAddPhoto = { showPhotoOptions = true },
                             onRemovePhoto = { index -> 
                                 selectedPhotos = selectedPhotos.toMutableList().apply { removeAt(index) }
                                 if (selectedPhotos.isNotEmpty()) photoError = false
@@ -532,7 +630,10 @@ fun PhotoSection(
             append(" *")
         }, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onBackground)
         Spacer(modifier = Modifier.height(12.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
             photos.forEachIndexed { index, photo ->
                 Box(
                     modifier = Modifier
@@ -563,7 +664,7 @@ fun PhotoSection(
                     }
                 }
             }
-            if (photos.size < 3) {
+            if (photos.size < 5) {
                 Box(
                     modifier = Modifier
                         .size(100.dp)
@@ -606,6 +707,8 @@ private fun buildListingMap(
     businessType: String,
     feedName: String,
     ratePerTon: String,
+    medicineName: String,
+    businessSubCategory: String,
     boreWellType: String,
     tankAcres: String,
     estPricePerAcre: String,
@@ -613,6 +716,7 @@ private fun buildListingMap(
     jobType: String,
     salary: String,
     netType: String,
+    tankType: String,
     userId: String
 ): Map<String, Any> {
     val data = mutableMapOf<String, Any>()
@@ -663,6 +767,13 @@ private fun buildListingMap(
             data["feedName"] = feedName
             data["ratePerTon"] = ratePerTon
         }
+        ListingCategory.BUSINESS -> {
+            data["businessSubCategory"] = businessSubCategory
+            data["businessType"] = businessType
+            data["feedName"] = feedName
+            data["medicineName"] = medicineName
+            data["ratePerTon"] = ratePerTon
+        }
         ListingCategory.SERVICES -> {
             data["serviceType"] = serviceType
             data["boreWellType"] = boreWellType
@@ -672,6 +783,7 @@ private fun buildListingMap(
         }
         ListingCategory.TANKS -> {
             data["tankAcres"] = tankAcres
+            data["tankType"] = tankType
             data["estPricePerAcre"] = estPricePerAcre
             data["tankLocation"] = tankLocation
         }
@@ -734,16 +846,16 @@ fun PrawnFields(
     errors: Map<String, Boolean> = emptyMap()
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        SearchableListingDropdown(label = "Type of Prawns", value = prawnType, options = listOf("Growth Line Plus", "Growth Line","Hard Line", "Hard Line Plus", "Sy Aqua", "Benchmark", "Cong", "Blue genetic"), onSelectionChange = onPrawnTypeChange, isError = errors["prawnType"] == true)
+        SearchableListingDropdown(label = "Type of Prawns", value = prawnType, options = listOf("Growth Line Plus", "Growth Line","Hard Line", "Hard Line Plus", "Sy Aqua", "Benchmark", "Cong", "Blue genetic", "Others"), onSelectionChange = onPrawnTypeChange, isError = errors["prawnType"] == true)
         ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true)
         ListingTextField(label = stringResource(R.string.hatchery_name_label), value = hatcheryName, onValueChange = onHatcheryNameChange, isError = errors["hatcheryName"] == true)
         ListingTextField(label = stringResource(R.string.pl_days_label), value = plDays, onValueChange = onPlDaysChange, isError = errors["plDays"] == true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(modifier = Modifier.weight(1f)) {
-                ListingDropdown(label = stringResource(R.string.rate_label), value = rateType, options = listOf("Paise", "Rupees"), onSelectionChange = onRateTypeChange)
+                ListingTextField(label = stringResource(R.string.rate_label), value = rateValue, onValueChange = onRateValueChange, isError = errors["rateValue"] == true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
             }
             Box(modifier = Modifier.weight(1f)) {
-                ListingTextField(label = stringResource(R.string.rate_label), value = rateValue, onValueChange = onRateValueChange, isError = errors["rateValue"] == true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+                ListingDropdown(label = "Unit", value = rateType, options = listOf("Paise", "Rupees"), onSelectionChange = onRateTypeChange)
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -788,6 +900,95 @@ fun VehicleFields(
 }
 
 @Composable
+fun BusinessFields(
+    businessSubCategory: String, onBusinessSubCategoryChange: (String) -> Unit,
+    businessType: String, onBusinessTypeChange: (String) -> Unit,
+    feedName: String, onFeedNameChange: (String) -> Unit,
+    medicineName: String, onMedicineNameChange: (String) -> Unit,
+    title: String, onTitleChange: (String) -> Unit,
+    ratePerTon: String, onRatePerTonChange: (String) -> Unit,
+    errors: Map<String, Boolean> = emptyMap()
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        ListingDropdown(
+            label = "Business Category",
+            value = businessSubCategory,
+            options = listOf("Feed", "Medicine"),
+            onSelectionChange = {
+                onBusinessSubCategoryChange(it)
+                onBusinessTypeChange("")
+                onFeedNameChange("")
+                onMedicineNameChange("")
+            },
+            isError = errors["businessSubCategory"] == true
+        )
+
+        if (businessSubCategory == "Feed") {
+            ListingDropdown(
+                label = "Feed Category",
+                value = businessType,
+                options = listOf("Fish Feed", "Prawn Feed"),
+                onSelectionChange = onBusinessTypeChange,
+                isError = errors["businessType"] == true
+            )
+
+            if (businessType == "Fish Feed") {
+                SearchableListingDropdown(
+                    label = "Feed Name",
+                    value = feedName,
+                    options = listOf("Rice bran", "Fine rice bran", "Pellets", "Others"),
+                    onSelectionChange = onFeedNameChange,
+                    isError = errors["feedName"] == true
+                )
+            } else if (businessType == "Prawn Feed") {
+                ListingTextField(
+                    label = "Feed Name",
+                    value = feedName,
+                    onValueChange = onFeedNameChange,
+                    isError = errors["feedName"] == true
+                )
+            }
+
+            ListingTextField(
+                label = stringResource(R.string.title_label),
+                value = title,
+                onValueChange = onTitleChange,
+                isError = errors["title"] == true
+            )
+            ListingTextField(
+                label = stringResource(R.string.rate_per_ton_label),
+                value = ratePerTon,
+                onValueChange = onRatePerTonChange,
+                isError = errors["ratePerTon"] == true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+            )
+        } else if (businessSubCategory == "Medicine") {
+            ListingDropdown(
+                label = "Medicine Category",
+                value = businessType,
+                options = listOf("Fish Medicine", "Prawn Medicine"),
+                onSelectionChange = onBusinessTypeChange,
+                isError = errors["businessType"] == true
+            )
+
+            ListingTextField(
+                label = "Medicine Name",
+                value = medicineName,
+                onValueChange = onMedicineNameChange,
+                isError = errors["medicineName"] == true
+            )
+
+            ListingTextField(
+                label = stringResource(R.string.title_label),
+                value = title,
+                onValueChange = onTitleChange,
+                isError = errors["title"] == true
+            )
+        }
+    }
+}
+
+@Composable
 fun FeedFields(
     businessType: String, onBusinessTypeChange: (String) -> Unit,
     feedName: String, onFeedNameChange: (String) -> Unit,
@@ -817,7 +1018,7 @@ fun ServiceFields(
         SearchableListingDropdown(
             label = "Service Type",
             value = serviceType,
-            options = listOf("Bore Well", "Live Fish Vehicles", "Nets"),
+            options = listOf("Bore Well", "Live Fish Vehicles", "Nets", "Others"),
             onSelectionChange = onServiceTypeChange,
             isError = errors["serviceType"] == true
         )
@@ -853,12 +1054,14 @@ fun ServiceFields(
 @Composable
 fun TankFields(
     title: String, onTitleChange: (String) -> Unit,
+    tankType: String, onTankTypeChange: (String) -> Unit,
     tankAcres: String, onTankAcresChange: (String) -> Unit,
     estPricePerAcre: String, onEstPricePerAcreChange: (String) -> Unit,
     tankLocation: String, onTankLocationChange: (String) -> Unit,
     errors: Map<String, Boolean> = emptyMap()
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        ListingDropdown(label = "Type", value = tankType, options = listOf("Lease", "Sell"), onSelectionChange = onTankTypeChange, isError = errors["tankType"] == true)
         ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true)
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(modifier = Modifier.weight(1f)) {
@@ -886,8 +1089,8 @@ fun JobFields(
             label = "Job Type",
             value = jobType,
             options = listOf(
-                "Watch man on fish tank (For Feeding fish)",
-                "Supervisor on fish tank (For Maintenance)",
+                "Watch man on pond(for feeding)",
+                "supervisor on pond(for maintenance)",
                 "Electrician",
                 "Technician"
             ),
@@ -1173,11 +1376,15 @@ private fun generateDefaultDescription(
     vehicleCapacity: String,
     feedName: String,
     ratePerTon: String,
+    businessType: String,
+    medicineName: String,
+    businessSubCategory: String,
     tankAcres: String,
     tankLocation: String,
     jobType: String,
     salary: String,
-    serviceType: String
+    serviceType: String,
+    tankType: String
 ): String {
     val parts = mutableListOf<String>()
 
@@ -1212,11 +1419,20 @@ private fun generateDefaultDescription(
             if (title.isNotEmpty()) parts.add(title)
             if (ratePerTon.isNotEmpty()) parts.add(context.getString(R.string.desc_rate_prefix, "$ratePerTon/ton"))
         }
+        ListingCategory.BUSINESS -> {
+            if (businessSubCategory.isNotEmpty()) parts.add(businessSubCategory)
+            if (businessType.isNotEmpty()) parts.add(businessType)
+            if (businessSubCategory == "Feed" && feedName.isNotEmpty()) parts.add(feedName)
+            if (businessSubCategory == "Medicine" && medicineName.isNotEmpty()) parts.add(medicineName)
+            if (title.isNotEmpty()) parts.add(title)
+            if (ratePerTon.isNotEmpty()) parts.add(context.getString(R.string.desc_rate_prefix, "$ratePerTon/ton"))
+        }
         ListingCategory.SERVICES -> {
             if (serviceType.isNotEmpty()) parts.add(serviceType)
             if (title.isNotEmpty()) parts.add(title)
         }
         ListingCategory.TANKS -> {
+            if (tankType.isNotEmpty()) parts.add(tankType)
             if (title.isNotEmpty()) parts.add(title)
             if (tankAcres.isNotEmpty()) parts.add(context.getString(R.string.desc_tank_acres_prefix, tankAcres))
             if (tankLocation.isNotEmpty()) parts.add(tankLocation)

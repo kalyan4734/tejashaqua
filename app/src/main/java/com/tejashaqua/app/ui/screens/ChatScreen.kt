@@ -55,9 +55,31 @@ fun ChatScreen(
     val db = FirebaseFirestore.getInstance()
     var listingDetails by remember { mutableStateOf(listingData) }
     
+    // Update listingDetails if parent passes new listingData
+    LaunchedEffect(listingData) {
+        listingDetails = listingDetails + listingData
+    }
+    
     val title = listingDetails["title"]?.toString() ?: listingDetails["listingTitle"]?.toString() ?: "No Title"
-    val priceValue = listingDetails["price"] ?: listingDetails["rateValue"] ?: listingDetails["listingPrice"] ?: "N/A"
-    val price = "₹$priceValue/kg"
+    val rawPrice = listingDetails["price"] ?: listingDetails["listingPrice"] ?: listingDetails["rateValue"] ?: ""
+    val priceValue = rawPrice.toString().ifBlank { "N/A" }
+    
+    val categoryStr = listingDetails["category"]?.toString() ?: ""
+    val price = when {
+        categoryStr.uppercase() == "FEED" || (listingDetails["businessSubCategory"] == "Feed") -> {
+            if (priceValue == "N/A") priceValue else "₹$priceValue/ton"
+        }
+        categoryStr.uppercase() == "JOBS" -> {
+            if (priceValue == "N/A") priceValue else "₹$priceValue"
+        }
+        categoryStr.uppercase() == "PRAWNS" -> {
+            val unit = listingDetails["rateType"]?.toString()?.lowercase() ?: "paise"
+            if (priceValue == "N/A") priceValue else "₹$priceValue/$unit"
+        }
+        else -> {
+            if (priceValue == "N/A") priceValue else "₹$priceValue"
+        }
+    }
     val fullLocation = listingDetails["location"]?.toString() ?: listingDetails["listingLocation"]?.toString() ?: "Unknown"
     val location = fullLocation.split(",").firstOrNull()?.trim() ?: fullLocation
     
@@ -72,7 +94,7 @@ fun ChatScreen(
 
     // Fetch full listing details if missing (e.g. when coming from ChatList)
     LaunchedEffect(listingId) {
-        if (listingId.isNotEmpty() && (images.isEmpty() || listingDetails["price"] == null)) {
+        if (listingId.isNotEmpty()) {
             db.collection("listings").document(listingId).get().addOnSuccessListener { doc ->
                 if (doc.exists()) {
                     val data = doc.data
@@ -120,6 +142,8 @@ fun ChatScreen(
             "listingPrice" to priceValue,
             "listingLocation" to fullLocation,
             "listingImage" to (images.firstOrNull()?.toString() ?: ""),
+            "rateType" to (listingDetails["rateType"]?.toString() ?: ""),
+            "category" to categoryStr,
             "sellerId" to sellerId,
             "sellerName" to sellerNameLabel,
             "buyerId" to buyerId,
@@ -139,6 +163,7 @@ fun ChatScreen(
     }
 
     // Load messages from Firestore
+    val context = LocalContext.current
     LaunchedEffect(chatRoomId) {
         // Clear unread count for current user
         db.collection("chats").document(chatRoomId).update("unreadCounts.$currentUserId", 0)
@@ -161,14 +186,15 @@ fun ChatScreen(
                     val messages = snapshot.documents.mapNotNull { doc ->
                         val text = doc.getString("text") ?: ""
                         val senderId = doc.getString("senderId") ?: ""
-                        ChatMessage(text, senderId == currentUserId)
+                        val time = doc.getLong("timestamp") ?: System.currentTimeMillis()
+                        ChatMessage(text, senderId == currentUserId, time)
                     }
 
                     // Logic to send initial message only if requested and chat is empty
                     if (sendInitialMessage && !initialMessageSent && messages.isEmpty() && currentUserId.isNotEmpty() && currentUserId != sellerUserId) {
                         initialMessageSent = true
                         val city = currentUserLocation.split(",").firstOrNull()?.trim() ?: currentUserLocation
-                        val defaultMsg = "Hi $sellerName, I'm interested in your listing: $title. My name is $currentUserName from $city, please call me at $currentUserPhone."
+                        val defaultMsg = context.getString(R.string.initial_chat_message, sellerName, title, currentUserName, city, currentUserPhone)
                         sendMessage(defaultMsg)
                     }
 
@@ -339,12 +365,12 @@ fun ChatScreen(
                 state = listState,
                 modifier = Modifier
                     .weight(1f)
-                    .padding(horizontal = 16.dp),
-                contentPadding = PaddingValues(vertical = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                    .background(Color(0xFFF8F9FA)),
+                contentPadding = PaddingValues(12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(chatMessages) { msg ->
-                    ChatBubble(msg)
+                    ChatBubble(msg, if (!msg.isFromMe) sellerName else currentUserName)
                 }
             }
         }
@@ -352,32 +378,51 @@ fun ChatScreen(
 }
 
 @Composable
-fun ChatBubble(message: ChatMessage) {
-    Box(
+fun ChatBubble(message: ChatMessage, senderName: String) {
+    val timeFormat = remember { java.text.SimpleDateFormat("hh:mm a", java.util.Locale.getDefault()) }
+    val timeString = timeFormat.format(java.util.Date(message.timestamp))
+
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        contentAlignment = if (message.isFromMe) Alignment.CenterEnd else Alignment.CenterStart
+        horizontalAlignment = if (message.isFromMe) Alignment.End else Alignment.Start
     ) {
-        Surface(
-            color = if (message.isFromMe) AquaBlue else Color(0xFFF5F7FB),
-            shape = RoundedCornerShape(
-                topStart = 16.dp,
-                topEnd = 16.dp,
-                bottomStart = if (message.isFromMe) 16.dp else 0.dp,
-                bottomEnd = if (message.isFromMe) 0.dp else 16.dp
-            ),
-            modifier = Modifier.widthIn(max = 280.dp)
+        Row(
+            verticalAlignment = Alignment.Bottom,
+            horizontalArrangement = if (message.isFromMe) Arrangement.End else Arrangement.Start,
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Text(
-                text = message.text,
-                modifier = Modifier.padding(12.dp),
-                color = if (message.isFromMe) Color.White else Color.Black,
-                fontSize = 14.sp
-            )
+            Surface(
+                color = if (message.isFromMe) AquaBlue else Color.White,
+                shape = RoundedCornerShape(
+                    topStart = 12.dp,
+                    topEnd = 12.dp,
+                    bottomStart = if (message.isFromMe) 12.dp else 4.dp,
+                    bottomEnd = if (message.isFromMe) 4.dp else 12.dp
+                ),
+                shadowElevation = 0.5.dp,
+                modifier = Modifier.widthIn(max = 240.dp)
+            ) {
+                Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) {
+                    Text(
+                        text = message.text,
+                        color = if (message.isFromMe) Color.White else Color.Black,
+                        fontSize = 13.sp,
+                        lineHeight = 18.sp
+                    )
+                    Text(
+                        text = timeString,
+                        fontSize = 8.sp,
+                        color = if (message.isFromMe) Color.White.copy(alpha = 0.7f) else GrayText,
+                        modifier = Modifier.align(Alignment.End).padding(top = 1.dp)
+                    )
+                }
+            }
         }
     }
 }
 
 data class ChatMessage(
     val text: String,
-    val isFromMe: Boolean
+    val isFromMe: Boolean,
+    val timestamp: Long
 )

@@ -55,6 +55,7 @@
     <string name="saved_items">Saved Items</string>
     <string name="chats">Chats</string>
     <string name="about_app">About App</string>
+    <string name="rate_us">Rate us on Play Store</string>
     <string name="logout">Logout</string>
     <string name="cancel">Cancel</string>
     <string name="logout_confirm">Are you sure you want to logout from Tejash Aqua?</string>
@@ -72,6 +73,7 @@
     <string name="type_message">Type a message…</string>
     <string name="is_available">Is this available?</string>
     <string name="best_price">Best Price?</string>
+    <string name="initial_chat_message">Hi %1$s, I\'m interested in your listing: %2$s. My name is %3$s from %4$s, please call me at %5$s.</string>
     <string name="recently"> Recently</string>
     <!-- Edit Listing -->
     <string name="edit_listing">Edit Listing</string>
@@ -80,7 +82,7 @@
     <string name="post_listing">Post Listing</string>
     <string name="description_label">Description</string>
     <string name="location_label">Location</string>
-    <string name="photos_label">Photos (up to 3)</string>
+    <string name="photos_label">Photos (up to 5)</string>
     <string name="change_btn">Change</string>
     <string name="delete_listing_title">Delete Listing</string>
     <string name="delete_listing_confirm">Are you sure you want to delete this listing? This action cannot be undone.</string>
@@ -154,6 +156,8 @@
     <string name="cat_services">Services</string>
     <string name="cat_tanks">Tanks</string>
     <string name="cat_jobs">Jobs</string>
+    <string name="cat_business">Business</string>
+    <string name="business_desc">Feed, Medicine, etc.</string>
     <!-- Select Category -->
     <string name="select_category_title">What are you selling?</string>
     <string name="select_category_desc">Select a category to start listing your product or service.</string>
@@ -161,7 +165,7 @@
     <string name="prawn_hatchery_desc">List PL stock, type &amp; rates</string>
     <string name="fish_desc">Sell live or harvested fish</string>
     <string name="equipments_desc">Wires, aerators, motors</string>
-    <string name="fish_tank_lands">Fish Tank Lands</string>
+    <string name="fish_tank_lands">Pond Properties</string>
     <string name="fish_tank_lands_desc">Lease or sell fish ponds</string>
     <string name="jobs_desc">Hire or find aqua jobs</string>
     <string name="services_desc">Borewell, Vehicles, Nets, etc.</string>
@@ -175,6 +179,7 @@
     <string name="desc_capacity_prefix">Capacity: %s</string>
     <string name="desc_hatchery_prefix">Hatchery: %s</string>
     <string name="desc_tank_acres_prefix">Tank: %s Acres</string>
+    <string name="limit_reached_error">You can only post up to 2 listings. Please delete an existing one to add a new listing.</string>
 
     <string name="about_app_desc">Tejash Aqua is India\'s leading marketplace for the aquaculture industry. We connect farmers, hatcheries, and suppliers to facilitate trade and growth in the aqua sector.</string>
     <string name="app_version">App Version</string>
