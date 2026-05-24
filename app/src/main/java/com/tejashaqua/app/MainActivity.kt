@@ -9,31 +9,54 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.android.gms.maps.model.LatLng
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.messaging.FirebaseMessaging
 import com.tejashaqua.app.data.model.ListingCategory
 import com.tejashaqua.app.ui.components.LoadingOverlay
+import com.tejashaqua.app.ui.screens.AboutAppScreen
+import com.tejashaqua.app.ui.screens.AdminDashboardScreen
+import com.tejashaqua.app.ui.screens.AquaRatesScreen
+import com.tejashaqua.app.ui.screens.ChatListScreen
+import com.tejashaqua.app.ui.screens.ChatScreen
+import com.tejashaqua.app.ui.screens.DashboardScreen
+import com.tejashaqua.app.ui.screens.DetailedPageScreen
+import com.tejashaqua.app.ui.screens.EditListingScreen
+import com.tejashaqua.app.ui.screens.EditProfileScreen
+import com.tejashaqua.app.ui.screens.ForceUpdateScreen
+import com.tejashaqua.app.ui.screens.LanguageSelectionScreen
+import com.tejashaqua.app.ui.screens.LegalConstants
+import com.tejashaqua.app.ui.screens.LegalScreen
+import com.tejashaqua.app.ui.screens.LoginScreen
+import com.tejashaqua.app.ui.screens.MyListingsScreen
+import com.tejashaqua.app.ui.screens.OtpScreen
+import com.tejashaqua.app.ui.screens.PrawnRatesScreen
+import com.tejashaqua.app.ui.screens.ProfileScreen
+import com.tejashaqua.app.ui.screens.SavedItemsScreen
+import com.tejashaqua.app.ui.screens.SelectCategoryScreen
+import com.tejashaqua.app.ui.screens.SelectLocationScreen
+import com.tejashaqua.app.ui.screens.SplashScreen
+import com.tejashaqua.app.ui.theme.TejashAquaTheme
 import com.tejashaqua.app.ui.viewmodel.AuthState
 import com.tejashaqua.app.ui.viewmodel.AuthViewModel
 import com.tejashaqua.app.ui.viewmodel.LocationSearchViewModel
-import com.tejashaqua.app.ui.screens.*
-import com.tejashaqua.app.ui.theme.TejashAquaTheme
 import com.tejashaqua.app.utils.LocaleHelper
 
 class MainActivity : AppCompatActivity() {
@@ -71,7 +94,8 @@ class MainActivity : AppCompatActivity() {
                 var joinedAt by remember { mutableLongStateOf(0L) }
                 var isAdmin by remember { mutableStateOf(false) }
 
-                val isLanguageSelected = remember { mutableStateOf(LocaleHelper.getSelectedLanguage(context) != null) }
+                val isLanguageSelected =
+                    remember { mutableStateOf(LocaleHelper.getSelectedLanguage(context) != null) }
 
                 var selectedCategory by remember { mutableStateOf(ListingCategory.FISH) }
                 var isEditMode by remember { mutableStateOf(false) }
@@ -80,13 +104,13 @@ class MainActivity : AppCompatActivity() {
                 var detailedPageSource by remember { mutableStateOf("dashboard") }
                 var chatSourceScreen by remember { mutableStateOf("detailed_page") }
                 var shouldSendInitialChatMessage by remember { mutableStateOf(false) }
-                
+
                 val fetchingLocText = stringResource(R.string.fetching_location)
                 var currentLocationName by remember { mutableStateOf(fetchingLocText) }
                 var currentSubLocation by remember { mutableStateOf("") }
-                
+
                 // Track where the location picker was opened from
-                var locationPickerSource by remember { mutableStateOf("dashboard") } 
+                var locationPickerSource by remember { mutableStateOf("dashboard") }
                 var pickedListingLocation by remember { mutableStateOf<Pair<String, LatLng?>?>(null) }
 
                 // Handle Notification Click Navigation
@@ -94,27 +118,30 @@ class MainActivity : AppCompatActivity() {
                     val type = intent.getStringExtra("type")
                     if (type == "chat" && userId.isNotEmpty()) {
                         val chatId = intent.getStringExtra("chatId") ?: ""
-                        
+
                         if (chatId.isNotEmpty()) {
-                            FirebaseFirestore.getInstance().collection("chats").document(chatId).get()
-                                .addOnSuccessListener { doc ->
+                            FirebaseFirestore.getInstance().collection("chats").document(chatId)
+                                .get().addOnSuccessListener { doc ->
                                     if (doc.exists()) {
                                         val data = doc.data ?: return@addOnSuccessListener
                                         val isBuying = data["buyerId"] == userId
-                                        
+
                                         val updatedData = data.toMutableMap()
                                         updatedData["id"] = data["listingId"] ?: ""
-                                        updatedData["posterName"] = if (isBuying) data["sellerName"] ?: "Seller" else data["buyerName"] ?: "User"
-                                        updatedData["userId"] = if (isBuying) data["sellerId"] ?: "" else data["buyerId"] ?: ""
+                                        updatedData["posterName"] = if (isBuying) data["sellerName"]
+                                            ?: "Seller" else data["buyerName"] ?: "User"
+                                        updatedData["userId"] = if (isBuying) data["sellerId"]
+                                            ?: "" else data["buyerId"] ?: ""
                                         updatedData["title"] = data["listingTitle"] ?: ""
-                                        updatedData["listingLocation"] = data["listingLocation"] ?: ""
+                                        updatedData["listingLocation"] =
+                                            data["listingLocation"] ?: ""
                                         updatedData["listingPrice"] = data["listingPrice"] ?: ""
-                                        
+
                                         selectedListingData = updatedData
                                         chatSourceScreen = "dashboard"
                                         shouldSendInitialChatMessage = false
                                         currentScreen = "chat"
-                                        
+
                                         // Clear intent data to prevent re-navigation on recomposition/activity restart
                                         intent.removeExtra("type")
                                         intent.removeExtra("chatId")
@@ -137,18 +164,21 @@ class MainActivity : AppCompatActivity() {
                                 val minVersion = document.getLong("min_version_code") ?: 0L
                                 val url = document.getString("update_url") ?: ""
                                 if (url.isNotEmpty()) updateUrl = url
-                                
+
                                 val remoteVersionName = document.getString("app_version")
                                 if (remoteVersionName != null) appVersion = remoteVersionName
 
                                 try {
-                                    val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
-                                    val currentVersion = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                                        packageInfo.longVersionCode
-                                    } else {
-                                        @Suppress("DEPRECATION")
-                                        packageInfo.versionCode.toLong()
-                                    }
+                                    val packageInfo = context.packageManager.getPackageInfo(
+                                        context.packageName,
+                                        0
+                                    )
+                                    val currentVersion =
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                                            packageInfo.longVersionCode
+                                        } else {
+                                            @Suppress("DEPRECATION") packageInfo.versionCode.toLong()
+                                        }
 
                                     if (currentVersion < minVersion) {
                                         needsUpdate = true
@@ -166,11 +196,13 @@ class MainActivity : AppCompatActivity() {
                             authViewModel.resetState()
                             currentScreen = "login"
                         }
+
                         "aqua_rates" -> currentScreen = "dashboard"
                         "select_category" -> currentScreen = "dashboard"
                         "edit_listing" -> {
                             currentScreen = if (isEditMode) "my_listings" else "select_category"
                         }
+
                         "profile" -> currentScreen = "dashboard"
                         "edit_profile" -> currentScreen = "profile"
                         "about_app" -> currentScreen = "profile"
@@ -182,14 +214,20 @@ class MainActivity : AppCompatActivity() {
                         "chat_list" -> currentScreen = "profile"
                         "admin_dashboard" -> currentScreen = "dashboard"
                         "privacy_policy" -> {
-                            currentScreen = if (authViewModel.authState.value is AuthState.Success) "profile" else "login"
+                            currentScreen =
+                                if (authViewModel.authState.value is AuthState.Success) "profile" else "login"
                         }
+
                         "terms_conditions" -> {
-                            currentScreen = if (authViewModel.authState.value is AuthState.Success) "profile" else "login"
+                            currentScreen =
+                                if (authViewModel.authState.value is AuthState.Success) "profile" else "login"
                         }
+
                         "select_location" -> {
-                            currentScreen = if (locationPickerSource == "listing") "edit_listing" else "dashboard"
+                            currentScreen =
+                                if (locationPickerSource == "listing") "edit_listing" else "dashboard"
                         }
+
                         "language_selection" -> {
                             if (languageSelectionSource == "profile") {
                                 currentScreen = "profile"
@@ -204,8 +242,10 @@ class MainActivity : AppCompatActivity() {
                 val permissionLauncher = rememberLauncherForActivityResult(
                     ActivityResultContracts.RequestMultiplePermissions()
                 ) { permissions ->
-                    val isGranted = permissions.getOrDefault(Manifest.permission.ACCESS_FINE_LOCATION, false) ||
-                            permissions.getOrDefault(Manifest.permission.ACCESS_COARSE_LOCATION, false)
+                    val isGranted = permissions.getOrDefault(
+                        Manifest.permission.ACCESS_FINE_LOCATION,
+                        false
+                    ) || permissions.getOrDefault(Manifest.permission.ACCESS_COARSE_LOCATION, false)
                     if (isGranted) {
                         locationViewModel.fetchCurrentLocation()
                     }
@@ -224,6 +264,7 @@ class MainActivity : AppCompatActivity() {
                             }
                             permissionLauncher.launch(permissions.toTypedArray())
                         }
+
                         "otp" -> {
                             // SMS permissions removed as we moved to SmsRetriever API
                         }
@@ -233,7 +274,12 @@ class MainActivity : AppCompatActivity() {
                 LaunchedEffect(isAdmin) {
                     if (isAdmin) {
                         FirebaseMessaging.getInstance().subscribeToTopic("admins")
-                            .addOnSuccessListener { android.util.Log.d("FCM", "Subscribed to admins topic") }
+                            .addOnSuccessListener {
+                                android.util.Log.d(
+                                    "FCM",
+                                    "Subscribed to admins topic"
+                                )
+                            }
                     } else {
                         FirebaseMessaging.getInstance().unsubscribeFromTopic("admins")
                     }
@@ -244,40 +290,52 @@ class MainActivity : AppCompatActivity() {
                         is AuthState.OtpSent -> {
                             currentScreen = "otp"
                         }
+
                         is AuthState.Success -> {
                             userName = state.userName
                             mobileNumber = state.mobileNumber
                             userId = state.userId
                             joinedAt = state.joinedAt
                             isAdmin = state.isAdmin
-                            
+
                             // Subscribe to personal topic for chat notifications
                             FirebaseMessaging.getInstance().subscribeToTopic("user_$userId")
                                 .addOnCompleteListener { task ->
                                     if (task.isSuccessful) {
-                                        android.util.Log.d("FCM", "Subscribed to personal topic: user_$userId")
+                                        android.util.Log.d(
+                                            "FCM",
+                                            "Subscribed to personal topic: user_$userId"
+                                        )
                                     } else {
-                                        android.util.Log.e("FCM", "Failed to subscribe to personal topic", task.exception)
+                                        android.util.Log.e(
+                                            "FCM",
+                                            "Failed to subscribe to personal topic",
+                                            task.exception
+                                        )
                                     }
                                 }
-                            
+
                             if (currentScreen == "otp" || currentScreen == "splash" || currentScreen == "login") {
                                 currentScreen = if (isAdmin) "admin_dashboard" else "dashboard"
                             }
                         }
+
                         is AuthState.RequireName -> {
                             mobileNumber = state.phoneNumber
                             isAdmin = state.isAdmin
                             currentScreen = "dashboard"
                         }
+
                         is AuthState.Error -> {
                             Toast.makeText(context, state.message, Toast.LENGTH_SHORT).show()
                         }
+
                         AuthState.Idle -> {
                             if (currentScreen != "splash" && currentScreen != "login") {
                                 currentScreen = "login"
                             }
                         }
+
                         else -> {}
                     }
                 }
@@ -287,7 +345,7 @@ class MainActivity : AppCompatActivity() {
                         ForceUpdateScreen(updateUrl = updateUrl)
                     } else {
                         when (currentScreen) {
-                            "splash" -> SplashScreen(onTimeout = { 
+                            "splash" -> SplashScreen(onTimeout = {
                                 if (!isLanguageSelected.value) {
                                     languageSelectionSource = "splash"
                                     currentScreen = "language_selection"
@@ -297,6 +355,7 @@ class MainActivity : AppCompatActivity() {
                                     currentScreen = "login"
                                 }
                             })
+
                             "language_selection" -> LanguageSelectionScreen(
                                 onLanguageSelected = {
                                     isLanguageSelected.value = true
@@ -307,150 +366,150 @@ class MainActivity : AppCompatActivity() {
                                     } else {
                                         currentScreen = "login"
                                     }
-                                },
-                                onBackClick = if (languageSelectionSource == "profile") {
+                                }, onBackClick = if (languageSelectionSource == "profile") {
                                     { currentScreen = "profile" }
-                                } else null
-                            )
-                        "login" -> LoginScreen(
-                            onSendOtp = { number ->
+                                } else null)
+
+                            "login" -> LoginScreen(onSendOtp = { number ->
                                 mobileNumber = number
                                 authViewModel.sendOtp(number, this@MainActivity)
-                            },
-                            onPrivacyPolicyClick = {
+                            }, onPrivacyPolicyClick = {
                                 currentScreen = "privacy_policy"
-                            },
-                            onTermsClick = {
+                            }, onTermsClick = {
                                 currentScreen = "terms_conditions"
-                            }
-                        )
-                        "otp" -> OtpScreen(
-                            mobileNumber = mobileNumber,
-                            onVerifyClick = { otp ->
+                            })
+
+                            "otp" -> OtpScreen(mobileNumber = mobileNumber, onVerifyClick = { otp ->
                                 authViewModel.verifyOtp(otp)
-                            },
-                            onResendClick = {
+                            }, onResendClick = {
                                 authViewModel.sendOtp(mobileNumber, this@MainActivity)
-                            },
-                            onBackClick = {
+                            }, onBackClick = {
                                 authViewModel.resetState()
                                 currentScreen = "login"
-                            }
-                        )
-                        "dashboard" -> DashboardScreen(
-                            currentUserId = userId,
-                            locationName = currentLocationName,
-                            subLocation = currentSubLocation,
-                            onSeeAllRatesClick = { currentScreen = "aqua_rates" },
-                            onAddClick = { 
-                                isEditMode = false
-                                selectedListingId = null
-                                pickedListingLocation = null
-                                currentScreen = "select_category" 
-                            },
-                            onProfileClick = { currentScreen = "profile" },
-                            onLocationClick = { 
-                                locationPickerSource = "dashboard"
-                                currentScreen = "select_location" 
-                            },
-                            onPrawnsClick = { currentScreen = "prawn_rates" },
-                            onItemClick = { data ->
-                                selectedListingData = data
-                                detailedPageSource = "dashboard"
-                                currentScreen = "detailed_page"
-                            },
-                            onChatListClick = { data ->
-                                val isBuying = data["buyerId"] == userId
-                                val updatedData = data.toMutableMap()
-                                updatedData["id"] = data["listingId"] ?: ""
-                                updatedData["posterName"] = if (isBuying) data["sellerName"] ?: "Seller" else data["buyerName"] ?: "User"
-                                updatedData["userId"] = if (isBuying) data["sellerId"] ?: "" else data["buyerId"] ?: ""
-                                updatedData["title"] = data["listingTitle"] ?: ""
+                            })
 
-                                // Only set price if listingPrice is not null/empty
-                                data["listingPrice"]?.toString()?.takeIf { it.isNotBlank() }?.let {
-                                    updatedData["price"] = it
-                                }
-
-                                updatedData["location"] = data["listingLocation"] ?: ""
-                                val img = data["listingImage"]?.toString() ?: ""
-                                if (img.isNotEmpty()) {
-                                    updatedData["images"] = listOf(img)
-                                }
-                                
-                                selectedListingData = updatedData
-                                chatSourceScreen = "dashboard"
-                                shouldSendInitialChatMessage = false
-                                currentScreen = "chat"
-                            },
-                            onLocationFetched = { name, sub ->
-                                currentLocationName = name
-                                currentSubLocation = sub
-                            },
-                            showNameSheetInitial = authState is AuthState.RequireName,
-                            onNameSave = { name ->
-                                authViewModel.saveUserName(name)
-                            },
-                            onNameSkip = {
-                                authViewModel.skipOnboarding()
-                            },
-                            locationViewModel = locationViewModel
-                        )
-                        "detailed_page" -> selectedListingData?.let { data ->
-                            DetailedPageScreen(
-                                listingData = data,
+                            "dashboard" -> DashboardScreen(
                                 currentUserId = userId,
-                                onBackClick = { currentScreen = detailedPageSource },
-                                onChatClick = { updatedData ->
+                                locationName = currentLocationName,
+                                subLocation = currentSubLocation,
+                                onSeeAllRatesClick = { currentScreen = "aqua_rates" },
+                                onAddClick = {
+                                    isEditMode = false
+                                    selectedListingId = null
+                                    pickedListingLocation = null
+                                    currentScreen = "select_category"
+                                },
+                                onProfileClick = { currentScreen = "profile" },
+                                onLocationClick = {
+                                    locationPickerSource = "dashboard"
+                                    currentScreen = "select_location"
+                                },
+                                onPrawnsClick = { currentScreen = "prawn_rates" },
+                                onItemClick = { data ->
+                                    selectedListingData = data
+                                    detailedPageSource = "dashboard"
+                                    currentScreen = "detailed_page"
+                                },
+                                onChatListClick = { data ->
+                                    val isBuying = data["buyerId"] == userId
+                                    val updatedData = data.toMutableMap()
+                                    updatedData["id"] = data["listingId"] ?: ""
+                                    updatedData["posterName"] = if (isBuying) data["sellerName"]
+                                        ?: "Seller" else data["buyerName"] ?: "User"
+                                    updatedData["userId"] =
+                                        if (isBuying) data["sellerId"] ?: "" else data["buyerId"]
+                                            ?: ""
+                                    updatedData["title"] = data["listingTitle"] ?: ""
+
+                                    // Only set price if listingPrice is not null/empty
+                                    data["listingPrice"]?.toString()?.takeIf { it.isNotBlank() }
+                                        ?.let {
+                                            updatedData["price"] = it
+                                        }
+
+                                    updatedData["location"] = data["listingLocation"] ?: ""
+                                    val img = data["listingImage"]?.toString() ?: ""
+                                    if (img.isNotEmpty()) {
+                                        updatedData["images"] = listOf(img)
+                                    }
+
                                     selectedListingData = updatedData
-                                    chatSourceScreen = "detailed_page"
-                                    shouldSendInitialChatMessage = true
+                                    chatSourceScreen = "dashboard"
+                                    shouldSendInitialChatMessage = false
                                     currentScreen = "chat"
-                                }
+                                },
+                                onLocationFetched = { name, sub ->
+                                    currentLocationName = name
+                                    currentSubLocation = sub
+                                },
+                                showNameSheetInitial = authState is AuthState.RequireName,
+                                onNameSave = { name ->
+                                    authViewModel.saveUserName(name)
+                                },
+                                onNameSkip = {
+                                    authViewModel.skipOnboarding()
+                                },
+                                locationViewModel = locationViewModel
                             )
-                        }
-                        "chat" -> selectedListingData?.let { data ->
-                            ChatScreen(
-                                sellerName = data["posterName"]?.toString() ?: "Seller",
-                                sellerUserId = data["userId"]?.toString() ?: "",
-                                listingId = data["id"]?.toString() ?: "",
-                                listingData = data,
-                                currentUserId = userId,
-                                currentUserName = userName,
-                                currentUserPhone = mobileNumber,
-                                currentUserLocation = currentLocationName,
-                                onBackClick = { currentScreen = chatSourceScreen },
-                                sendInitialMessage = shouldSendInitialChatMessage
-                            )
-                        }
-                        "chat_list" -> ChatListScreen(
-                            currentUserId = userId,
-                            onBackClick = { currentScreen = "profile" },
-                            onChatClick = { data ->
-                                val isBuying = data["buyerId"] == userId
-                                val updatedData = data.toMutableMap()
-                                updatedData["id"] = data["listingId"] ?: ""
-                                updatedData["posterName"] = if (isBuying) data["sellerName"] ?: "Seller" else data["buyerName"] ?: "User"
-                                updatedData["userId"] = if (isBuying) data["sellerId"] ?: "" else data["buyerId"] ?: ""
-                                updatedData["title"] = data["listingTitle"] ?: ""
-                                updatedData["price"] = data["listingPrice"] ?: ""
-                                updatedData["location"] = data["listingLocation"] ?: ""
-                                val img = data["listingImage"]?.toString() ?: ""
-                                if (img.isNotEmpty()) {
-                                    updatedData["images"] = listOf(img)
-                                }
-                                
-                                selectedListingData = updatedData
-                                chatSourceScreen = "chat_list"
-                                shouldSendInitialChatMessage = false
-                                currentScreen = "chat"
+
+                            "detailed_page" -> selectedListingData?.let { data ->
+                                DetailedPageScreen(
+                                    listingData = data,
+                                    currentUserId = userId,
+                                    onBackClick = { currentScreen = detailedPageSource },
+                                    onChatClick = { updatedData ->
+                                        selectedListingData = updatedData
+                                        chatSourceScreen = "detailed_page"
+                                        shouldSendInitialChatMessage = true
+                                        currentScreen = "chat"
+                                    })
                             }
-                        )
-                        "select_location" -> SelectLocationScreen(
-                            onBackClick = { 
-                                currentScreen = if (locationPickerSource == "listing") "edit_listing" else "dashboard" 
-                            },
-                            onLocationConfirm = { name, sub, latLng ->
+
+                            "chat" -> selectedListingData?.let { data ->
+                                ChatScreen(
+                                    sellerName = data["posterName"]?.toString() ?: "Seller",
+                                    sellerUserId = data["userId"]?.toString() ?: "",
+                                    listingId = data["id"]?.toString() ?: "",
+                                    listingData = data,
+                                    currentUserId = userId,
+                                    currentUserName = userName,
+                                    currentUserPhone = mobileNumber,
+                                    currentUserLocation = currentLocationName,
+                                    onBackClick = { currentScreen = chatSourceScreen },
+                                    sendInitialMessage = shouldSendInitialChatMessage
+                                )
+                            }
+
+                            "chat_list" -> ChatListScreen(
+                                currentUserId = userId,
+                                onBackClick = { currentScreen = "profile" },
+                                onChatClick = { data ->
+                                    val isBuying = data["buyerId"] == userId
+                                    val updatedData = data.toMutableMap()
+                                    updatedData["id"] = data["listingId"] ?: ""
+                                    updatedData["posterName"] = if (isBuying) data["sellerName"]
+                                        ?: "Seller" else data["buyerName"] ?: "User"
+                                    updatedData["userId"] =
+                                        if (isBuying) data["sellerId"] ?: "" else data["buyerId"]
+                                            ?: ""
+                                    updatedData["title"] = data["listingTitle"] ?: ""
+                                    updatedData["price"] = data["listingPrice"] ?: ""
+                                    updatedData["location"] = data["listingLocation"] ?: ""
+                                    val img = data["listingImage"]?.toString() ?: ""
+                                    if (img.isNotEmpty()) {
+                                        updatedData["images"] = listOf(img)
+                                    }
+
+                                    selectedListingData = updatedData
+                                    chatSourceScreen = "chat_list"
+                                    shouldSendInitialChatMessage = false
+                                    currentScreen = "chat"
+                                })
+
+                            "select_location" -> SelectLocationScreen(onBackClick = {
+                                currentScreen =
+                                    if (locationPickerSource == "listing") "edit_listing" else "dashboard"
+                            }, onLocationConfirm = { name, sub, latLng ->
                                 if (locationPickerSource == "listing") {
                                     pickedListingLocation = "$name, $sub" to latLng
                                     currentScreen = "edit_listing"
@@ -459,127 +518,135 @@ class MainActivity : AppCompatActivity() {
                                     currentSubLocation = sub
                                     currentScreen = "dashboard"
                                 }
-                            }
-                        )
-                        "aqua_rates" -> AquaRatesScreen(
-                            onBackClick = { currentScreen = "dashboard" }
-                        )
-                        "prawn_rates" -> PrawnRatesScreen(
-                            onBackClick = { currentScreen = "dashboard" }
-                        )
-                        "select_category" -> SelectCategoryScreen(
-                            onBackClick = { currentScreen = "dashboard" },
-                            onCategorySelect = { category ->
-                                selectedCategory = category
-                                isEditMode = false
-                                selectedListingId = null
-                                currentScreen = "edit_listing"
-                            }
-                        )
-                        "edit_listing" -> EditListingScreen(
-                            category = selectedCategory,
-                            isEditMode = isEditMode,
-                            listingId = selectedListingId,
-                            userName = userName,
-                            userMobileNumber = mobileNumber,
-                            initialLocation = pickedListingLocation?.first ?: if (currentSubLocation.isNotEmpty()) "$currentLocationName, $currentSubLocation" else currentLocationName,
-                            initialLatLng = pickedListingLocation?.second,
-                            onBackClick = {
-                                currentScreen = if (isEditMode) "my_listings" else "select_category"
-                            },
-                            onPostClick = { currentScreen = "dashboard" },
-                            onDeleteClick = { currentScreen = "dashboard" },
-                            onLocationChangeClick = {
-                                locationPickerSource = "listing"
-                                currentScreen = "select_location"
-                            },
-                            joinedAt = joinedAt,
-                            userId = userId
-                        )
-                        "privacy_policy" -> LegalScreen(
-                            title = stringResource(R.string.privacy_policy),
-                            content = LegalConstants.PRIVACY_POLICY,
-                            onBackClick = {
-                                currentScreen = if (authState is AuthState.Success) "profile" else "login"
-                            }
-                        )
-                        "terms_conditions" -> LegalScreen(
-                            title = stringResource(R.string.terms_conditions),
-                            content = LegalConstants.TERMS_CONDITIONS,
-                            onBackClick = {
-                                currentScreen = if (authState is AuthState.Success) "profile" else "login"
-                            }
-                        )
-                        "profile" -> ProfileScreen(
-                            userName = userName,
-                            mobileNumber = mobileNumber,
-                            onBackClick = { currentScreen = "dashboard" },
-                            onEditClick = { currentScreen = "edit_profile" },
-                            onMyListingsClick = { currentScreen = "my_listings" },
-                            onSavedItemsClick = { currentScreen = "saved_items" },
-                            onChatsClick = { currentScreen = "chat_list" },
-                            onPrivacyPolicyClick = {
-                                currentScreen = "privacy_policy"
-                            },
-                            onTermsClick = {
-                                currentScreen = "terms_conditions"
-                            },
-                            onAboutClick = { currentScreen = "about_app" },
-                            onLogoutClick = { 
-                                authViewModel.logout()
-                            },
-                            onChangeLanguageClick = {
-                                languageSelectionSource = "profile"
-                                currentScreen = "language_selection"
-                            },
-                            isAdmin = isAdmin,
-                            onAdminClick = { currentScreen = "admin_dashboard" }
-                        )
-                        "about_app" -> AboutAppScreen(
-                            versionName = appVersion,
-                            onBackClick = { currentScreen = "profile" }
-                        )
-                        "saved_items" -> SavedItemsScreen(
-                            onBackClick = { currentScreen = "profile" },
-                            onItemClick = { data ->
+                            })
+
+                            "aqua_rates" -> AquaRatesScreen(
+                                onBackClick = { currentScreen = "dashboard" })
+
+                            "prawn_rates" -> PrawnRatesScreen(
+                                onBackClick = { currentScreen = "dashboard" })
+
+                            "select_category" -> SelectCategoryScreen(
+                                onBackClick = {
+                                    currentScreen = "dashboard"
+                                },
+                                onCategorySelect = { category ->
+                                    selectedCategory = category
+                                    isEditMode = false
+                                    selectedListingId = null
+                                    currentScreen = "edit_listing"
+                                })
+
+                            "edit_listing" -> EditListingScreen(
+                                category = selectedCategory,
+                                isEditMode = isEditMode,
+                                listingId = selectedListingId,
+                                userName = userName,
+                                userMobileNumber = mobileNumber,
+                                initialLocation = pickedListingLocation?.first
+                                    ?: if (currentSubLocation.isNotEmpty()) "$currentLocationName, $currentSubLocation" else currentLocationName,
+                                initialLatLng = pickedListingLocation?.second,
+                                onBackClick = {
+                                    currentScreen =
+                                        if (isEditMode) "my_listings" else "select_category"
+                                },
+                                onPostClick = { currentScreen = "dashboard" },
+                                onDeleteClick = { currentScreen = "dashboard" },
+                                onLocationChangeClick = {
+                                    locationPickerSource = "listing"
+                                    currentScreen = "select_location"
+                                },
+                                joinedAt = joinedAt,
+                                userId = userId
+                            )
+
+                            "privacy_policy" -> LegalScreen(
+                                title = stringResource(R.string.privacy_policy),
+                                content = LegalConstants.PRIVACY_POLICY,
+                                onBackClick = {
+                                    currentScreen =
+                                        if (authState is AuthState.Success) "profile" else "login"
+                                })
+
+                            "terms_conditions" -> LegalScreen(
+                                title = stringResource(R.string.terms_conditions),
+                                content = LegalConstants.TERMS_CONDITIONS,
+                                onBackClick = {
+                                    currentScreen =
+                                        if (authState is AuthState.Success) "profile" else "login"
+                                })
+
+                            "profile" -> ProfileScreen(
+                                userName = userName,
+                                mobileNumber = mobileNumber,
+                                onBackClick = { currentScreen = "dashboard" },
+                                onEditClick = { currentScreen = "edit_profile" },
+                                onMyListingsClick = { currentScreen = "my_listings" },
+                                onSavedItemsClick = { currentScreen = "saved_items" },
+                                onChatsClick = { currentScreen = "chat_list" },
+                                onPrivacyPolicyClick = {
+                                    currentScreen = "privacy_policy"
+                                },
+                                onTermsClick = {
+                                    currentScreen = "terms_conditions"
+                                },
+                                onAboutClick = { currentScreen = "about_app" },
+                                onLogoutClick = {
+                                    authViewModel.logout()
+                                },
+                                onChangeLanguageClick = {
+                                    languageSelectionSource = "profile"
+                                    currentScreen = "language_selection"
+                                },
+                                isAdmin = isAdmin,
+                                onAdminClick = { currentScreen = "admin_dashboard" })
+
+                            "about_app" -> AboutAppScreen(
+                                versionName = appVersion,
+                                onBackClick = { currentScreen = "profile" })
+
+                            "saved_items" -> SavedItemsScreen(onBackClick = {
+                                currentScreen = "profile"
+                            }, onItemClick = { data ->
                                 selectedListingData = data
                                 detailedPageSource = "saved_items"
                                 currentScreen = "detailed_page"
-                            }
-                        )
-                        "edit_profile" -> EditProfileScreen(
-                            currentName = userName,
-                            currentPhone = mobileNumber,
-                            onBackClick = { currentScreen = "profile" },
-                            onProfileUpdated = { newName ->
-                                userName = newName
-                            }
-                        )
-                        "my_listings" -> MyListingsScreen(
-                            onBackClick = { currentScreen = "profile" },
-                            onEditClick = { listingId, categoryStr ->
-                                selectedListingId = listingId
-                                isEditMode = true
-                                pickedListingLocation = null
-                                selectedCategory = try {
-                                    ListingCategory.valueOf(categoryStr)
-                                } catch (_: Exception) {
-                                    ListingCategory.FISH
-                                }
-                                currentScreen = "edit_listing"
-                            }
-                        )
-                        "admin_dashboard" -> AdminDashboardScreen(
-                            onBackClick = { currentScreen = "dashboard" }
-                        )
-                    }
+                            })
 
-                    if (authState is AuthState.Loading) {
-                        LoadingOverlay(stringResource(R.string.signing_in))
+                            "edit_profile" -> EditProfileScreen(
+                                currentName = userName,
+                                currentPhone = mobileNumber,
+                                onBackClick = { currentScreen = "profile" },
+                                onProfileUpdated = { newName ->
+                                    userName = newName
+                                })
+
+                            "my_listings" -> MyListingsScreen(
+                                onBackClick = {
+                                    currentScreen = "profile"
+                                },
+                                onEditClick = { listingId, categoryStr ->
+                                    selectedListingId = listingId
+                                    isEditMode = true
+                                    pickedListingLocation = null
+                                    selectedCategory = try {
+                                        ListingCategory.valueOf(categoryStr)
+                                    } catch (_: Exception) {
+                                        ListingCategory.FISH
+                                    }
+                                    currentScreen = "edit_listing"
+                                })
+
+                            "admin_dashboard" -> AdminDashboardScreen(
+                                onBackClick = { currentScreen = "dashboard" })
+                        }
+
+                        if (authState is AuthState.Loading) {
+                            LoadingOverlay(stringResource(R.string.signing_in))
+                        }
                     }
                 }
             }
         }
     }
-}
 }
