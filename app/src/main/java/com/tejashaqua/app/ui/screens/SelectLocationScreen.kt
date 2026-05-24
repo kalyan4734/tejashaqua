@@ -23,6 +23,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.intl.LocaleList
+import androidx.compose.foundation.text.KeyboardOptions
 import com.tejashaqua.app.R
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.android.gms.maps.model.CameraPosition
@@ -31,6 +33,7 @@ import com.google.maps.android.compose.*
 import com.tejashaqua.app.ui.viewmodel.LocationSearchViewModel
 import com.tejashaqua.app.ui.theme.AquaBlue
 import com.tejashaqua.app.ui.theme.GrayText
+import com.tejashaqua.app.utils.LocaleHelper
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -52,6 +55,10 @@ fun SelectLocationScreen(
     
     val keyboardController = LocalSoftwareKeyboardController.current
     val context = LocalContext.current
+    val currentLang = LocaleHelper.getSelectedLanguage(context) ?: "en"
+    val keyboardOptions = KeyboardOptions(
+        hintLocales = if (currentLang == "te") LocaleList("te") else null
+    )
 
     // Map State
     val defaultLocation = LatLng(17.0005, 81.7729) // Rajahmundry
@@ -76,7 +83,9 @@ fun SelectLocationScreen(
     fun updateLocationFromLatLng(latLng: LatLng) {
         selectedLatLng = latLng
         try {
-            val geocoder = Geocoder(context, Locale.getDefault())
+            val lang = LocaleHelper.getSelectedLanguage(context) ?: "en"
+            val locale = Locale.forLanguageTag(lang)
+            val geocoder = Geocoder(context, locale)
             val addresses = geocoder.getFromLocation(latLng.latitude, latLng.longitude, 1)
             if (addresses != null && addresses.isNotEmpty()) {
                 val address = addresses[0]
@@ -95,7 +104,10 @@ fun SelectLocationScreen(
                 CenterAlignedTopAppBar(
                     title = { Text(stringResource(R.string.select_location_title), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp) },
                     navigationIcon = {
-                        IconButton(onClick = onBackClick) {
+                        IconButton(onClick = {
+                            keyboardController?.hide()
+                            onBackClick()
+                        }) {
                             Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.back), tint = Color.White)
                         }
                     },
@@ -122,7 +134,8 @@ fun SelectLocationScreen(
                             unfocusedIndicatorColor = Color.Transparent,
                         ),
                         shape = RoundedCornerShape(12.dp),
-                        singleLine = true
+                        singleLine = true,
+                        keyboardOptions = keyboardOptions
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                 }
@@ -137,6 +150,7 @@ fun SelectLocationScreen(
             ) {
                 Button(
                     onClick = { 
+                        keyboardController?.hide()
                         selectedLocation?.let { (loc, sub) ->
                             onLocationConfirm(loc, sub, selectedLatLng)
                         }
@@ -177,12 +191,18 @@ fun SelectLocationScreen(
             ) {
                 Tab(
                     selected = selectedTabIndex == 0,
-                    onClick = { selectedTabIndex = 0 },
+                    onClick = { 
+                        keyboardController?.hide()
+                        selectedTabIndex = 0 
+                    },
                     text = { Text(stringResource(R.string.search_tab), fontWeight = FontWeight.Bold) }
                 )
                 Tab(
                     selected = selectedTabIndex == 1,
-                    onClick = { selectedTabIndex = 1 },
+                    onClick = { 
+                        keyboardController?.hide()
+                        selectedTabIndex = 1 
+                    },
                     text = { Text(stringResource(R.string.map_tab), fontWeight = FontWeight.Bold) }
                 )
             }

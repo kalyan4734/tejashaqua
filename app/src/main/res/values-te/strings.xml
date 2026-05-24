@@ -52,7 +52,7 @@
     <!-- Profile -->
     <string name="my_profile">నా ప్రొఫైల్</string>
     <string name="my_listings">నా జాబితాలు</string>
-    <string name="saved_items">సేవ్ చేసిన వస్తువులు</string>
+    <string name="saved_items">మెచ్చినవి</string>
     <string name="chats">చాట్‌లు</string>
     <string name="about_app">యాప్ గురించి</string>
     <string name="rate_us">మాకు రేటింగ్ ఇవ్వండి</string>
@@ -203,4 +203,88 @@
     <string name="fish_pulasa">పులస</string>
     <string name="fish_crab">పీత (Crab)</string>
     <string name="fish_others">ఇతరాలు</string>
+
+    <!-- Units -->
+    <string name="unit_inches">అంగుళాలు</string>
+    <string name="unit_cms">సెంటీమీటర్లు</string>
+    <string name="unit_lakhs">లక్షలు</string>
+    <string name="unit_thousands">వేలు</string>
+    <string name="unit_kgs">కిలోలు (Kgs)</string>
+    <string name="unit_paise">పైసలు</string>
+    <string name="unit_rupees">రూపాయలు</string>
+
+    <!-- Prawn Types -->
+    <string name="prawn_growth_line_plus">గ్రోత్ లైన్ ప్లస్</string>
+    <string name="prawn_growth_line">గ్రోత్ లైన్</string>
+    <string name="prawn_hard_line">హార్డ్ లైన్</string>
+    <string name="prawn_hard_line_plus">హార్డ్ లైన్ ప్లస్</string>
+    <string name="prawn_sy_aqua">సై ఆక్వా (Sy Aqua)</string>
+    <string name="prawn_benchmark">బెంచ్ మార్క్</string>
+    <string name="prawn_cong">కాంగ్</string>
+    <string name="prawn_blue_genetic">బ్లూ జెనెటిక్</string>
+
+    <!-- Equipment Types -->
+    <string name="equip_aerators">ఏరేటర్లు</string>
+    <string name="equip_motors">మోటార్లు</string>
+    <string name="equip_pump_motors">పంప్ మోటార్లు</string>
+    <string name="equip_bore_motors">బోర్ మోటార్లు</string>
+    <string name="equip_generators">జనరేటర్లు</string>
+    <string name="equip_pump_engines">పంప్ ఇంజన్లు</string>
+    <string name="equip_boats">పడవలు</string>
+    <string name="equip_wires">ఎలక్ట్రికల్ వైర్లు</string>
+
+    <!-- Service Types -->
+    <string name="service_live_fish_vehicles">లైవ్ ఫిష్ వెహికల్స్</string>
+    <string name="service_feed_transport">మేత రవాణా</string>
+    <string name="service_bore_well">బోర్ వెల్</string>
+    <string name="service_nets">వలలు</string>
+
+    <!-- Business Categories -->
+    <string name="biz_fish_feed">చేపల మేత</string>
+    <string name="biz_prawn_feed">రొయ్యల మేత</string>
+    <string name="biz_fish_med">చేపల మందులు</string>
+    <string name="biz_prawn_med">రొయ్యల మందులు</string>
+
+    <!-- Feed Types -->
+    <string name="feed_rice_bran">తవుడు</string>
+    <string name="feed_fine_rice_bran">సన్న తవుడు</string>
+    <string name="feed_pellets">పెల్లెట్స్</string>
+
+    <!-- Bore & Net Types -->
+    <string name="bore_drill">డ్రిల్ బోర్</string>
+    <string name="bore_hand">హ్యాండ్ బోర్</string>
+    <string name="net_harvest">హార్వెస్ట్ వల</string>
+    <string name="net_hand">చేతి వల</string>
+
+    <!-- Tank Types -->
+    <string name="tank_lease">లీజు</string>
+    <string name="tank_sell">అమ్మకం</string>
+
+    <!-- Job Types -->
+    <string name="job_watchman">చెరువు వద్ద కాపలాదారు (మేత వేయడానికి)</string>
+    <string name="job_supervisor">చెరువు పర్యవేక్షకుడు</string>
+    <string name="job_electrician">ఎలక్ట్రీషియన్</string>
+    <string name="job_technician">టెక్నీషియన్</string>
+
+    <string name="choose_photo_source">ఫోటో మూలాన్ని ఎంచుకోండి</string>
+    <string name="camera">కెమెరా</string>
+    <string name="gallery">గ్యాలరీ</string>
+    <string name="fill_mandatory_fields">దయచేసి ఎరుపు రంగులో ఉన్న అన్ని తప్పనిసరి ఫీల్డ్‌లను పూరించండి</string>
+    <string name="storage_permission_required">ఫోటోలను ఎంచుకోవడానికి స్టోరేజ్ అనుమతి అవసరం</string>
+    <string name="edit_profile">ప్రొఫైల్‌ను సవరించండి</string>
+    <string name="user_name_label">వినియోగదారు పేరు</string>
+    <string name="phone_number_label">ఫోన్ నంబర్</string>
+    <string name="profile_updated">ప్రొఫైల్ నవీకరించబడింది</string>
+    <string name="update_profile">ప్రొఫైల్‌ను అప్‌డేట్ చేయండి</string>
+    <string name="updating_profile">ప్రొఫైల్‌ను అప్‌డేట్ చేస్తోంది…</string>
+    <string name="no_title">శీర్షిక లేదు</string>
+    <string name="not_available_short">సమాచారం లేదు</string>
+    <string name="coming_soon">త్వరలో వస్తుంది</string>
+    <string name="loading_marketplace">మార్కెట్‌ప్లేస్‌ను లోడ్ చేస్తోంది…</string>
+    <string name="version_label">వెర్షన్ %s</string>
+    <string name="contact_us">మమ్మల్ని సంప్రదించండి</string>
+    <string name="website">వెబ్‌సైట్</string>
+    <string name="all_rights_reserved">© 2024 తేజశ్ ఆక్వా. అన్ని హక్కులు ప్రత్యేకించబడ్డాయి.</string>
+    <string name="choose_language">మీ భాషను ఎంచుకోండి</string>
+    <string name="signing_in">మిమ్మల్ని లాగిన్ చేస్తోంది…</string>
 </resources>

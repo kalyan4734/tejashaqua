@@ -25,6 +25,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.intl.LocaleList
+import com.tejashaqua.app.utils.LocaleHelper
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -74,6 +77,7 @@ fun DashboardScreen(
 
     val fetchedName by locationViewModel.currentLocationName.collectAsState()
     val fetchedSub by locationViewModel.currentSubLocation.collectAsState()
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     val fetchingLocText = stringResource(R.string.fetching_location)
     
@@ -82,7 +86,7 @@ fun DashboardScreen(
     }
 
     LaunchedEffect(fetchedName, fetchedSub) {
-        if (fetchedName != fetchingLocText) {
+        if (fetchedName.isNotBlank() && fetchedName != fetchingLocText) {
             onLocationFetched(fetchedName, fetchedSub)
         }
     }
@@ -103,7 +107,10 @@ fun DashboardScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { onLocationClick() }
+                        .clickable { 
+                            keyboardController?.hide()
+                            onLocationClick() 
+                        }
                 ) {
                     Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
                     Spacer(modifier = Modifier.width(8.dp))
@@ -138,17 +145,26 @@ fun DashboardScreen(
                 NavigationBarItem(
                     icon = { Icon(Icons.Default.Home, stringResource(R.string.home)) },
                     selected = selectedItem == 0,
-                    onClick = { selectedItem = 0 },
+                    onClick = { 
+                        keyboardController?.hide()
+                        selectedItem = 0 
+                    },
                     colors = NavigationBarItemDefaults.colors(selectedIconColor = AquaBlue, unselectedIconColor = GrayText)
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Default.Search, stringResource(R.string.search_tab)) },
                     selected = selectedItem == 1,
-                    onClick = { selectedItem = 1 },
+                    onClick = { 
+                        keyboardController?.hide()
+                        selectedItem = 1 
+                    },
                     colors = NavigationBarItemDefaults.colors(selectedIconColor = AquaBlue, unselectedIconColor = GrayText)
                 )
                 FloatingActionButton(
-                    onClick = onAddClick,
+                    onClick = {
+                        keyboardController?.hide()
+                        onAddClick()
+                    },
                     containerColor = AquaBlue,
                     contentColor = Color.White,
                     shape = CircleShape,
@@ -159,13 +175,17 @@ fun DashboardScreen(
                 NavigationBarItem(
                     icon = { Icon(Icons.Default.Chat, stringResource(R.string.chats)) },
                     selected = selectedItem == 2,
-                    onClick = { selectedItem = 2 },
+                    onClick = { 
+                        keyboardController?.hide()
+                        selectedItem = 2 
+                    },
                     colors = NavigationBarItemDefaults.colors(selectedIconColor = AquaBlue, unselectedIconColor = GrayText)
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Default.Person, stringResource(R.string.profile)) },
                     selected = selectedItem == 3,
                     onClick = { 
+                        keyboardController?.hide()
                         selectedItem = 3
                         onProfileClick()
                     },
@@ -250,7 +270,7 @@ fun DashboardScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                if (selectedItem == 2) stringResource(R.string.news) else "Coming Soon",
+                                if (selectedItem == 2) stringResource(R.string.news) else stringResource(R.string.coming_soon),
                                 color = GrayText
                             )
                         }
@@ -363,6 +383,13 @@ fun SearchHeader(
     onProductSearchChange: (String) -> Unit
 ) {
     val focusManager = LocalFocusManager.current
+    val context = LocalContext.current
+    val currentLang = LocaleHelper.getSelectedLanguage(context) ?: "en"
+    val keyboardOptions = KeyboardOptions(
+        imeAction = ImeAction.Search,
+        hintLocales = if (currentLang == "te") LocaleList("te") else null
+    )
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -394,7 +421,7 @@ fun SearchHeader(
             ),
             shape = RoundedCornerShape(25.dp),
             singleLine = true,
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            keyboardOptions = keyboardOptions,
             keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() })
         )
     }
@@ -470,7 +497,7 @@ fun MarketplaceSection(currentUserId: String, searchText: String, categoryFilter
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         CircularProgressIndicator(color = AquaBlue, modifier = Modifier.size(32.dp))
                         Spacer(modifier = Modifier.height(12.dp))
-                        Text("Loading marketplace...", color = GrayText, fontSize = 14.sp)
+                        Text(stringResource(R.string.loading_marketplace), color = GrayText, fontSize = 14.sp)
                     }
                 }
             }

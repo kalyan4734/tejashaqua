@@ -16,6 +16,9 @@ object LocaleHelper {
         
         val appLocale: LocaleListCompat = LocaleListCompat.forLanguageTags(languageCode)
         AppCompatDelegate.setApplicationLocales(appLocale)
+        
+        // Also update application context locale explicitly
+        updateContextLocale(context.applicationContext, languageCode)
     }
 
     fun getSelectedLanguage(context: Context): String? {
@@ -46,5 +49,17 @@ object LocaleHelper {
         
         @Suppress("DEPRECATION")
         resources.updateConfiguration(configuration, resources.displayMetrics)
+    }
+
+    fun wrapContext(context: Context): Context {
+        val languageCode = getSelectedLanguage(context) ?: return context
+        val locale = Locale.forLanguageTag(languageCode)
+        Locale.setDefault(locale)
+        
+        val configuration = context.resources.configuration
+        configuration.setLocale(locale)
+        configuration.setLayoutDirection(locale)
+        
+        return context.createConfigurationContext(configuration)
     }
 }

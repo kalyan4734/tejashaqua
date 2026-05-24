@@ -39,6 +39,10 @@ import com.tejashaqua.app.data.model.ListingCategory
 import com.tejashaqua.app.ui.components.LoadingOverlay
 import com.tejashaqua.app.ui.theme.AquaBlue
 import com.tejashaqua.app.ui.viewmodel.ListingViewModel
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.intl.LocaleList
+import java.util.Locale
+import com.tejashaqua.app.utils.LocaleHelper
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -133,25 +137,32 @@ fun EditListingScreen(
     }
 
     var showPhotoOptions by remember { mutableStateOf(false) }
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val currentLang = LocaleHelper.getSelectedLanguage(context) ?: "en"
+    val keyboardOptionsBase = KeyboardOptions(
+        hintLocales = if (currentLang == "te") LocaleList("te") else null
+    )
 
     if (showPhotoOptions) {
         AlertDialog(
             onDismissRequest = { showPhotoOptions = false },
-            title = { Text("Choose Photo Source") },
+            title = { Text(stringResource(R.string.choose_photo_source)) },
             text = {
                 Column {
                     ListItem(
-                        headlineContent = { Text("Camera") },
+                        headlineContent = { Text(stringResource(R.string.camera)) },
                         leadingContent = { Icon(Icons.Default.PhotoCamera, contentDescription = null) },
                         modifier = Modifier.clickable {
+                            keyboardController?.hide()
                             showPhotoOptions = false
                             cameraLauncher.launch()
                         }
                     )
                     ListItem(
-                        headlineContent = { Text("Gallery") },
+                        headlineContent = { Text(stringResource(R.string.gallery)) },
                         leadingContent = { Icon(Icons.Default.PhotoLibrary, contentDescription = null) },
                         modifier = Modifier.clickable {
+                            keyboardController?.hide()
                             showPhotoOptions = false
                             val permission = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
                                 android.Manifest.permission.READ_MEDIA_IMAGES
@@ -170,8 +181,11 @@ fun EditListingScreen(
             },
             confirmButton = {},
             dismissButton = {
-                TextButton(onClick = { showPhotoOptions = false }) {
-                    Text("Cancel")
+                TextButton(onClick = { 
+                    keyboardController?.hide()
+                    showPhotoOptions = false 
+                }) {
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -318,7 +332,19 @@ fun EditListingScreen(
         }
     }
 
-    val screenTitle = if (isEditMode) stringResource(R.string.edit_listing) else category.name.lowercase().replaceFirstChar { it.uppercase() }
+    val screenTitle = if (isEditMode) stringResource(R.string.edit_listing) else {
+        when(category) {
+            ListingCategory.FISH -> stringResource(R.string.cat_fish)
+            ListingCategory.PRAWNS -> stringResource(R.string.cat_prawns)
+            ListingCategory.EQUIPMENTS -> stringResource(R.string.cat_equipments)
+            ListingCategory.VEHICLES -> stringResource(R.string.cat_vehicles)
+            ListingCategory.FEED -> stringResource(R.string.cat_feed)
+            ListingCategory.BUSINESS -> stringResource(R.string.cat_business)
+            ListingCategory.SERVICES -> stringResource(R.string.cat_services)
+            ListingCategory.TANKS -> stringResource(R.string.cat_tanks)
+            ListingCategory.JOBS -> stringResource(R.string.cat_jobs)
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
@@ -326,7 +352,10 @@ fun EditListingScreen(
                 CenterAlignedTopAppBar(
                     title = { Text(screenTitle, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp) },
                     navigationIcon = {
-                        IconButton(onClick = onBackClick) {
+                        IconButton(onClick = {
+                            keyboardController?.hide()
+                            onBackClick()
+                        }) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
                         }
                     },
@@ -341,6 +370,7 @@ fun EditListingScreen(
                 ) {
                     val fetchingText = stringResource(R.string.fetching_location)
                     val onActionClick = {
+                        keyboardController?.hide()
                         // Validation logic with detailed error tracking
                         val errors = mutableMapOf<String, Boolean>()
                         
@@ -423,7 +453,7 @@ fun EditListingScreen(
                         fieldErrors = errors
 
                         if (errors.isNotEmpty() || photoError) {
-                            Toast.makeText(context, "Please fill all mandatory fields highlighted in red", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, context.getString(R.string.fill_mandatory_fields), Toast.LENGTH_SHORT).show()
                         } else {
                             val finalDescription = if (description.isBlank()) {
                                 generateDefaultDescription(
@@ -461,7 +491,10 @@ fun EditListingScreen(
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             OutlinedButton(
-                                onClick = { showDeleteDialog = true },
+                                onClick = { 
+                                    keyboardController?.hide()
+                                    showDeleteDialog = true 
+                                },
                                 modifier = Modifier.weight(1f).height(56.dp),
                                 shape = RoundedCornerShape(12.dp),
                                 border = BorderStroke(1.dp, Color(0xFFF44336)),
@@ -515,7 +548,8 @@ fun EditListingScreen(
                             quantity, { quantity = it },
                             unitType, { unitType = it },
                             price, { price = it },
-                            errors = fieldErrors
+                            errors = fieldErrors,
+                            keyboardOptions = keyboardOptionsBase
                         )
                         ListingCategory.PRAWNS -> PrawnFields(
                             prawnType, { prawnType = it },
@@ -526,27 +560,31 @@ fun EditListingScreen(
                             quantity, { quantity = it },
                             unitType, { unitType = it },
                             title, { title = it },
-                            errors = fieldErrors
+                            errors = fieldErrors,
+                            keyboardOptions = keyboardOptionsBase
                         )
                         ListingCategory.EQUIPMENTS -> EquipmentFields(
                             equipmentType, { equipmentType = it },
                             title, { title = it },
                             price, { price = it },
-                            errors = fieldErrors
+                            errors = fieldErrors,
+                            keyboardOptions = keyboardOptionsBase
                         )
                         ListingCategory.VEHICLES -> VehicleFields(
                             selectedServiceType, { selectedServiceType = it },
                             vehicleName, { vehicleName = it },
                             vehicleCapacity, { vehicleCapacity = it },
                             title, { title = it },
-                            errors = fieldErrors
+                            errors = fieldErrors,
+                            keyboardOptions = keyboardOptionsBase
                         )
                         ListingCategory.FEED -> FeedFields(
                             businessType, { businessType = it },
                             feedName, { feedName = it },
                             title, { title = it },
                             ratePerTon, { ratePerTon = it },
-                            errors = fieldErrors
+                            errors = fieldErrors,
+                            keyboardOptions = keyboardOptionsBase
                         )
                         ListingCategory.SERVICES -> ServiceFields(
                             selectedServiceType, { selectedServiceType = it },
@@ -555,7 +593,8 @@ fun EditListingScreen(
                             vehicleCapacity, { vehicleCapacity = it },
                             netType, { netType = it },
                             title, { title = it },
-                            errors = fieldErrors
+                            errors = fieldErrors,
+                            keyboardOptions = keyboardOptionsBase
                         )
                         ListingCategory.TANKS -> TankFields(
                             title, { title = it },
@@ -563,7 +602,8 @@ fun EditListingScreen(
                             tankAcres, { tankAcres = it },
                             estPricePerAcre, { estPricePerAcre = it },
                             tankLocation, { tankLocation = it },
-                            errors = fieldErrors
+                            errors = fieldErrors,
+                            keyboardOptions = keyboardOptionsBase
                         )
                         ListingCategory.JOBS -> JobFields(
                             jobType, { jobType = it },
@@ -571,7 +611,8 @@ fun EditListingScreen(
                             tankLocation, { tankLocation = it },
                             salary, { salary = it },
                             title, { title = it },
-                            errors = fieldErrors
+                            errors = fieldErrors,
+                            keyboardOptions = keyboardOptionsBase
                         )
                         ListingCategory.BUSINESS -> BusinessFields(
                             businessSubCategory, { businessSubCategory = it },
@@ -580,21 +621,33 @@ fun EditListingScreen(
                             medicineName, { medicineName = it },
                             title, { title = it },
                             ratePerTon, { ratePerTon = it },
-                            errors = fieldErrors
+                            errors = fieldErrors,
+                            keyboardOptions = keyboardOptionsBase
                         )
                     }
                 }
 
                 item {
-                    ListingTextField(label = stringResource(R.string.description_label), value = description, onValueChange = { description = it }, minLines = 3, isRequired = false)
+                    ListingTextField(
+                        label = stringResource(R.string.description_label), 
+                        value = description, 
+                        onValueChange = { description = it }, 
+                        minLines = 3, 
+                        isRequired = false,
+                        keyboardOptions = keyboardOptionsBase
+                    )
                 }
 
                 if (category != ListingCategory.JOBS) {
                     item {
                         PhotoSection(
                             photos = selectedPhotos,
-                            onAddPhoto = { showPhotoOptions = true },
+                            onAddPhoto = { 
+                                keyboardController?.hide()
+                                showPhotoOptions = true 
+                            },
                             onRemovePhoto = { index -> 
+                                keyboardController?.hide()
                                 selectedPhotos = selectedPhotos.toMutableList().apply { removeAt(index) }
                                 if (selectedPhotos.isNotEmpty()) photoError = false
                             },
@@ -604,7 +657,10 @@ fun EditListingScreen(
                 }
 
                 item {
-                    LocationSection(location, onClick = onLocationChangeClick, isError = fieldErrors["location"] == true)
+                    LocationSection(location, onClick = {
+                        keyboardController?.hide()
+                        onLocationChangeClick()
+                    }, isError = fieldErrors["location"] == true)
                 }
 
                 item { Spacer(modifier = Modifier.height(20.dp)) }
@@ -807,29 +863,46 @@ fun FishFields(
     quantity: String, onQuantityChange: (String) -> Unit,
     unitType: String, onUnitTypeChange: (String) -> Unit,
     price: String, onPriceChange: (String) -> Unit,
-    errors: Map<String, Boolean> = emptyMap()
+    errors: Map<String, Boolean> = emptyMap(),
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        SearchableListingDropdown(label = "Fish Type", value = fishType, options = listOf("Rohu", "Katla", "Karamosu", "Gaddi chepa", "Pangasius", "Roopchand", "Pandu gappa", "Tilapia", "Chitala", "Koramenu", "Valuga", "Engilayi", "Jalla", "Tuna", "Pulasa", "Crab", "Others"), onSelectionChange = onFishTypeChange, isError = errors["fishType"] == true)
-        ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true)
+        SearchableListingDropdown(
+            label = stringResource(R.string.fish_type_label), 
+            value = fishType, 
+            options = listOf(
+                stringResource(R.string.fish_rohu), stringResource(R.string.fish_katla), 
+                stringResource(R.string.fish_karamosu), stringResource(R.string.fish_gaddi_chepa), 
+                stringResource(R.string.fish_pangasius), stringResource(R.string.fish_roopchand), 
+                stringResource(R.string.fish_pandu_gappa), stringResource(R.string.fish_tilapia), 
+                stringResource(R.string.fish_chitala), stringResource(R.string.fish_koramenu), 
+                stringResource(R.string.fish_valuga), stringResource(R.string.fish_engilayi), 
+                stringResource(R.string.fish_jalla), stringResource(R.string.fish_tuna), 
+                stringResource(R.string.fish_pulasa), stringResource(R.string.fish_crab), 
+                stringResource(R.string.fish_others)
+            ), 
+            onSelectionChange = onFishTypeChange, 
+            isError = errors["fishType"] == true
+        )
+        ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true, keyboardOptions = keyboardOptions)
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(modifier = Modifier.weight(1f)) {
-                ListingDropdown(label = stringResource(R.string.size_label), value = sizeType, options = listOf("Inches", "Centimeters"), onSelectionChange = onSizeTypeChange)
+                ListingDropdown(label = stringResource(R.string.size_label), value = sizeType, options = listOf(stringResource(R.string.unit_inches), stringResource(R.string.unit_cms)), onSelectionChange = onSizeTypeChange)
             }
             Box(modifier = Modifier.weight(1f)) {
-                ListingTextField(label = stringResource(R.string.size_value_label), value = sizeValue, onValueChange = onSizeValueChange, isError = errors["sizeValue"] == true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+                ListingTextField(label = stringResource(R.string.size_value_label), value = sizeValue, onValueChange = onSizeValueChange, isError = errors["sizeValue"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Decimal))
             }
         }
-        ListingTextField(label = stringResource(R.string.fish_age_label), value = fishAge, onValueChange = onFishAgeChange, isError = errors["fishAge"] == true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+        ListingTextField(label = stringResource(R.string.fish_age_label), value = fishAge, onValueChange = onFishAgeChange, isError = errors["fishAge"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(modifier = Modifier.weight(1f)) {
-                ListingTextField(label = stringResource(R.string.quantity_label), value = quantity, onValueChange = onQuantityChange, isError = errors["quantity"] == true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+                ListingTextField(label = stringResource(R.string.quantity_label), value = quantity, onValueChange = onQuantityChange, isError = errors["quantity"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number))
             }
             Box(modifier = Modifier.weight(1f)) {
-                ListingDropdown(label = stringResource(R.string.unit_label), value = unitType, options = listOf("Lakhs", "Thousands", "Kgs"), onSelectionChange = onUnitTypeChange)
+                ListingDropdown(label = stringResource(R.string.unit_label), value = unitType, options = listOf(stringResource(R.string.unit_lakhs), stringResource(R.string.unit_thousands), stringResource(R.string.unit_kgs)), onSelectionChange = onUnitTypeChange)
             }
         }
-        ListingTextField(label = stringResource(R.string.price_label), value = price, onValueChange = onPriceChange, isError = errors["price"] == true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+        ListingTextField(label = stringResource(R.string.price_label), value = price, onValueChange = onPriceChange, isError = errors["price"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number))
     }
 }
 
@@ -843,27 +916,40 @@ fun PrawnFields(
     quantity: String, onQuantityChange: (String) -> Unit,
     unitType: String, onUnitTypeChange: (String) -> Unit,
     title: String, onTitleChange: (String) -> Unit,
-    errors: Map<String, Boolean> = emptyMap()
+    errors: Map<String, Boolean> = emptyMap(),
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        SearchableListingDropdown(label = "Type of Prawns", value = prawnType, options = listOf("Growth Line Plus", "Growth Line","Hard Line", "Hard Line Plus", "Sy Aqua", "Benchmark", "Cong", "Blue genetic", "Others"), onSelectionChange = onPrawnTypeChange, isError = errors["prawnType"] == true)
-        ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true)
-        ListingTextField(label = stringResource(R.string.hatchery_name_label), value = hatcheryName, onValueChange = onHatcheryNameChange, isError = errors["hatcheryName"] == true)
-        ListingTextField(label = stringResource(R.string.pl_days_label), value = plDays, onValueChange = onPlDaysChange, isError = errors["plDays"] == true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+        SearchableListingDropdown(
+            label = stringResource(R.string.prawn_type_label), 
+            value = prawnType, 
+            options = listOf(
+                stringResource(R.string.prawn_growth_line_plus), stringResource(R.string.prawn_growth_line),
+                stringResource(R.string.prawn_hard_line), stringResource(R.string.prawn_hard_line_plus), 
+                stringResource(R.string.prawn_sy_aqua), stringResource(R.string.prawn_benchmark), 
+                stringResource(R.string.prawn_cong), stringResource(R.string.prawn_blue_genetic), 
+                stringResource(R.string.fish_others)
+            ), 
+            onSelectionChange = onPrawnTypeChange, 
+            isError = errors["prawnType"] == true
+        )
+        ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true, keyboardOptions = keyboardOptions)
+        ListingTextField(label = stringResource(R.string.hatchery_name_label), value = hatcheryName, onValueChange = onHatcheryNameChange, isError = errors["hatcheryName"] == true, keyboardOptions = keyboardOptions)
+        ListingTextField(label = stringResource(R.string.pl_days_label), value = plDays, onValueChange = onPlDaysChange, isError = errors["plDays"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(modifier = Modifier.weight(1f)) {
-                ListingTextField(label = stringResource(R.string.rate_label), value = rateValue, onValueChange = onRateValueChange, isError = errors["rateValue"] == true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+                ListingTextField(label = stringResource(R.string.rate_label), value = rateValue, onValueChange = onRateValueChange, isError = errors["rateValue"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number))
             }
             Box(modifier = Modifier.weight(1f)) {
-                ListingDropdown(label = "Unit", value = rateType, options = listOf("Paise", "Rupees"), onSelectionChange = onRateTypeChange)
+                ListingDropdown(label = stringResource(R.string.unit_label), value = rateType, options = listOf(stringResource(R.string.unit_paise), stringResource(R.string.unit_rupees)), onSelectionChange = onRateTypeChange)
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(modifier = Modifier.weight(1f)) {
-                ListingTextField(label = stringResource(R.string.quantity_label), value = quantity, onValueChange = onQuantityChange, isError = errors["quantity"] == true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+                ListingTextField(label = stringResource(R.string.quantity_label), value = quantity, onValueChange = onQuantityChange, isError = errors["quantity"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number))
             }
             Box(modifier = Modifier.weight(1f)) {
-                ListingDropdown(label = stringResource(R.string.unit_label), value = unitType, options = listOf("Lakhs", "Thousands"), onSelectionChange = onUnitTypeChange)
+                ListingDropdown(label = stringResource(R.string.unit_label), value = unitType, options = listOf(stringResource(R.string.unit_lakhs), stringResource(R.string.unit_thousands)), onSelectionChange = onUnitTypeChange)
             }
         }
     }
@@ -874,12 +960,25 @@ fun EquipmentFields(
     equipmentType: String, onEquipmentTypeChange: (String) -> Unit,
     title: String, onTitleChange: (String) -> Unit,
     price: String, onPriceChange: (String) -> Unit,
-    errors: Map<String, Boolean> = emptyMap()
+    errors: Map<String, Boolean> = emptyMap(),
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        SearchableListingDropdown(label = "Equipment Type", value = equipmentType, options = listOf("Aerators", "Motors", "Pump Motors", "Bore Motors", "Generators", "Pump Engines", "Boats", "Electrical Wires", "Others"), onSelectionChange = onEquipmentTypeChange, isError = errors["equipmentType"] == true)
-        ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true)
-        ListingTextField(label = stringResource(R.string.price_label), value = price, onValueChange = onPriceChange, isError = errors["price"] == true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+        SearchableListingDropdown(
+            label = stringResource(R.string.equipment_type_label), 
+            value = equipmentType, 
+            options = listOf(
+                stringResource(R.string.equip_aerators), stringResource(R.string.equip_motors), 
+                stringResource(R.string.equip_pump_motors), stringResource(R.string.equip_bore_motors), 
+                stringResource(R.string.equip_generators), stringResource(R.string.equip_pump_engines), 
+                stringResource(R.string.equip_boats), stringResource(R.string.equip_wires), 
+                stringResource(R.string.fish_others)
+            ), 
+            onSelectionChange = onEquipmentTypeChange, 
+            isError = errors["equipmentType"] == true
+        )
+        ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true, keyboardOptions = keyboardOptions)
+        ListingTextField(label = stringResource(R.string.price_label), value = price, onValueChange = onPriceChange, isError = errors["price"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number))
     }
 }
 
@@ -889,13 +988,20 @@ fun VehicleFields(
     vehicleName: String, onVehicleNameChange: (String) -> Unit,
     vehicleCapacity: String, onVehicleCapacityChange: (String) -> Unit,
     title: String, onTitleChange: (String) -> Unit,
-    errors: Map<String, Boolean> = emptyMap()
+    errors: Map<String, Boolean> = emptyMap(),
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        ListingDropdown(label = "Service Type", value = serviceType, options = listOf("Live Fish Vehicles", "Feed Transport"), onSelectionChange = onServiceTypeChange, isError = errors["serviceType"] == true)
-        ListingTextField(label = stringResource(R.string.vehicle_name_label), value = vehicleName, onValueChange = onVehicleNameChange, isError = errors["vehicleName"] == true)
-        ListingTextField(label = stringResource(R.string.vehicle_capacity_label), value = vehicleCapacity, onValueChange = onVehicleCapacityChange, isError = errors["vehicleCapacity"] == true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
-        ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true)
+        ListingDropdown(
+            label = stringResource(R.string.service_type_label), 
+            value = serviceType, 
+            options = listOf(stringResource(R.string.service_live_fish_vehicles), stringResource(R.string.service_feed_transport)), 
+            onSelectionChange = onServiceTypeChange, 
+            isError = errors["serviceType"] == true
+        )
+        ListingTextField(label = stringResource(R.string.vehicle_name_label), value = vehicleName, onValueChange = onVehicleNameChange, isError = errors["vehicleName"] == true, keyboardOptions = keyboardOptions)
+        ListingTextField(label = stringResource(R.string.vehicle_capacity_label), value = vehicleCapacity, onValueChange = onVehicleCapacityChange, isError = errors["vehicleCapacity"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number))
+        ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true, keyboardOptions = keyboardOptions)
     }
 }
 
@@ -907,82 +1013,72 @@ fun BusinessFields(
     medicineName: String, onMedicineNameChange: (String) -> Unit,
     title: String, onTitleChange: (String) -> Unit,
     ratePerTon: String, onRatePerTonChange: (String) -> Unit,
-    errors: Map<String, Boolean> = emptyMap()
+    errors: Map<String, Boolean> = emptyMap(),
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        ListingDropdown(
-            label = "Business Category",
-            value = businessSubCategory,
-            options = listOf("Feed", "Medicine"),
+        val fishFeed = stringResource(R.string.biz_fish_feed)
+        val prawnFeed = stringResource(R.string.biz_prawn_feed)
+        val fishMed = stringResource(R.string.biz_fish_med)
+        val prawnMed = stringResource(R.string.biz_prawn_med)
+
+        SearchableListingDropdown(
+            label = stringResource(R.string.business_type_label),
+            value = if (businessType.isNotEmpty()) businessType else businessSubCategory,
+            options = listOf(fishFeed, prawnFeed, fishMed, prawnMed),
             onSelectionChange = {
-                onBusinessSubCategoryChange(it)
-                onBusinessTypeChange("")
-                onFeedNameChange("")
-                onMedicineNameChange("")
+                onBusinessTypeChange(it)
+                if (it == fishFeed || it == prawnFeed) {
+                    onBusinessSubCategoryChange("Feed")
+                    onMedicineNameChange("")
+                } else {
+                    onBusinessSubCategoryChange("Medicine")
+                    onFeedNameChange("")
+                    onRatePerTonChange("")
+                }
             },
-            isError = errors["businessSubCategory"] == true
+            isError = errors["businessType"] == true
         )
 
         if (businessSubCategory == "Feed") {
-            ListingDropdown(
-                label = "Feed Category",
-                value = businessType,
-                options = listOf("Fish Feed", "Prawn Feed"),
-                onSelectionChange = onBusinessTypeChange,
-                isError = errors["businessType"] == true
+            SearchableListingDropdown(
+                label = stringResource(R.string.feed_name_label),
+                value = feedName,
+                options = listOf(stringResource(R.string.feed_rice_bran), stringResource(R.string.feed_fine_rice_bran), stringResource(R.string.feed_pellets), stringResource(R.string.fish_others)),
+                onSelectionChange = onFeedNameChange,
+                isError = errors["feedName"] == true
             )
-
-            if (businessType == "Fish Feed") {
-                SearchableListingDropdown(
-                    label = "Feed Name",
-                    value = feedName,
-                    options = listOf("Rice bran", "Fine rice bran", "Pellets", "Others"),
-                    onSelectionChange = onFeedNameChange,
-                    isError = errors["feedName"] == true
-                )
-            } else if (businessType == "Prawn Feed") {
-                ListingTextField(
-                    label = "Feed Name",
-                    value = feedName,
-                    onValueChange = onFeedNameChange,
-                    isError = errors["feedName"] == true
-                )
-            }
 
             ListingTextField(
                 label = stringResource(R.string.title_label),
                 value = title,
                 onValueChange = onTitleChange,
-                isError = errors["title"] == true
+                isError = errors["title"] == true,
+                keyboardOptions = keyboardOptions
             )
+
             ListingTextField(
                 label = stringResource(R.string.rate_per_ton_label),
                 value = ratePerTon,
                 onValueChange = onRatePerTonChange,
                 isError = errors["ratePerTon"] == true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number)
             )
         } else if (businessSubCategory == "Medicine") {
-            ListingDropdown(
-                label = "Medicine Category",
-                value = businessType,
-                options = listOf("Fish Medicine", "Prawn Medicine"),
-                onSelectionChange = onBusinessTypeChange,
-                isError = errors["businessType"] == true
-            )
-
             ListingTextField(
-                label = "Medicine Name",
+                label = stringResource(R.string.feed_name_label),
                 value = medicineName,
                 onValueChange = onMedicineNameChange,
-                isError = errors["medicineName"] == true
+                isError = errors["medicineName"] == true,
+                keyboardOptions = keyboardOptions
             )
 
             ListingTextField(
                 label = stringResource(R.string.title_label),
                 value = title,
                 onValueChange = onTitleChange,
-                isError = errors["title"] == true
+                isError = errors["title"] == true,
+                keyboardOptions = keyboardOptions
             )
         }
     }
@@ -994,13 +1090,14 @@ fun FeedFields(
     feedName: String, onFeedNameChange: (String) -> Unit,
     title: String, onTitleChange: (String) -> Unit,
     ratePerTon: String, onRatePerTonChange: (String) -> Unit,
-    errors: Map<String, Boolean> = emptyMap()
+    errors: Map<String, Boolean> = emptyMap(),
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        ListingDropdown(label = "Business Type", value = businessType, options = listOf("Fish Feed", "Shrimp Feed"), onSelectionChange = onBusinessTypeChange, isError = errors["businessType"] == true)
-        ListingDropdown(label = "Feed Name", value = feedName, options = listOf("Godrej", "CP", "Avanti"), onSelectionChange = onFeedNameChange, isError = errors["feedName"] == true)
-        ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true)
-        ListingTextField(label = stringResource(R.string.rate_per_ton_label), value = ratePerTon, onValueChange = onRatePerTonChange, isError = errors["ratePerTon"] == true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+        ListingDropdown(label = stringResource(R.string.business_type_label), value = businessType, options = listOf(stringResource(R.string.biz_fish_feed), stringResource(R.string.biz_prawn_feed)), onSelectionChange = onBusinessTypeChange, isError = errors["businessType"] == true)
+        ListingDropdown(label = stringResource(R.string.feed_name_label), value = feedName, options = listOf("Godrej", "CP", "Avanti"), onSelectionChange = onFeedNameChange, isError = errors["feedName"] == true)
+        ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true, keyboardOptions = keyboardOptions)
+        ListingTextField(label = stringResource(R.string.rate_per_ton_label), value = ratePerTon, onValueChange = onRatePerTonChange, isError = errors["ratePerTon"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number))
     }
 }
 
@@ -1012,42 +1109,47 @@ fun ServiceFields(
     vehicleCapacity: String, onVehicleCapacityChange: (String) -> Unit,
     netType: String, onNetTypeChange: (String) -> Unit,
     title: String, onTitleChange: (String) -> Unit,
-    errors: Map<String, Boolean> = emptyMap()
+    errors: Map<String, Boolean> = emptyMap(),
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        val boreWell = stringResource(R.string.service_bore_well)
+        val fishVehicles = stringResource(R.string.service_live_fish_vehicles)
+        val nets = stringResource(R.string.service_nets)
+
         SearchableListingDropdown(
-            label = "Service Type",
+            label = stringResource(R.string.service_type_label),
             value = serviceType,
-            options = listOf("Bore Well", "Live Fish Vehicles", "Nets", "Others"),
+            options = listOf(boreWell, fishVehicles, nets, stringResource(R.string.fish_others)),
             onSelectionChange = onServiceTypeChange,
             isError = errors["serviceType"] == true
         )
 
         when (serviceType) {
-            "Bore Well" -> {
+            boreWell -> {
                 SearchableListingDropdown(
-                    label = "Bore Well Type",
+                    label = stringResource(R.string.bore_type_label),
                     value = boreWellType,
-                    options = listOf("Drill bore", "Hand bore", "Others"),
+                    options = listOf(stringResource(R.string.bore_drill), stringResource(R.string.bore_hand), stringResource(R.string.fish_others)),
                     onSelectionChange = onBoreWellTypeChange,
                     isError = errors["boreWellType"] == true
                 )
             }
-            "Live Fish Vehicles" -> {
-                ListingTextField(label = stringResource(R.string.vehicle_name_label), value = vehicleName, onValueChange = onVehicleNameChange, isError = errors["vehicleName"] == true)
-                ListingTextField(label = stringResource(R.string.vehicle_capacity_label), value = vehicleCapacity, onValueChange = onVehicleCapacityChange, isError = errors["vehicleCapacity"] == true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+            fishVehicles -> {
+                ListingTextField(label = stringResource(R.string.vehicle_name_label), value = vehicleName, onValueChange = onVehicleNameChange, isError = errors["vehicleName"] == true, keyboardOptions = keyboardOptions)
+                ListingTextField(label = stringResource(R.string.vehicle_capacity_label), value = vehicleCapacity, onValueChange = onVehicleCapacityChange, isError = errors["vehicleCapacity"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number))
             }
-            "Nets" -> {
+            nets -> {
                 SearchableListingDropdown(
-                    label = "Net Type",
+                    label = stringResource(R.string.net_type_label),
                     value = netType,
-                    options = listOf("Harvest netting", "Hand netting", "Others"),
+                    options = listOf(stringResource(R.string.net_harvest), stringResource(R.string.net_hand), stringResource(R.string.fish_others)),
                     onSelectionChange = onNetTypeChange,
                     isError = errors["netType"] == true
                 )
             }
         }
-        ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true)
+        ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true, keyboardOptions = keyboardOptions)
     }
 }
 
@@ -1058,20 +1160,21 @@ fun TankFields(
     tankAcres: String, onTankAcresChange: (String) -> Unit,
     estPricePerAcre: String, onEstPricePerAcreChange: (String) -> Unit,
     tankLocation: String, onTankLocationChange: (String) -> Unit,
-    errors: Map<String, Boolean> = emptyMap()
+    errors: Map<String, Boolean> = emptyMap(),
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        ListingDropdown(label = "Type", value = tankType, options = listOf("Lease", "Sell"), onSelectionChange = onTankTypeChange, isError = errors["tankType"] == true)
-        ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true)
+        ListingDropdown(label = "Type", value = tankType, options = listOf(stringResource(R.string.tank_lease), stringResource(R.string.tank_sell)), onSelectionChange = onTankTypeChange, isError = errors["tankType"] == true)
+        ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true, keyboardOptions = keyboardOptions)
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(modifier = Modifier.weight(1f)) {
-                ListingTextField(label = stringResource(R.string.tank_acres_label), value = tankAcres, onValueChange = onTankAcresChange, isError = errors["tankAcres"] == true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+                ListingTextField(label = stringResource(R.string.tank_acres_label), value = tankAcres, onValueChange = onTankAcresChange, isError = errors["tankAcres"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Decimal))
             }
             Box(modifier = Modifier.weight(1f)) {
-                ListingTextField(label = stringResource(R.string.est_price_per_acre_label), value = estPricePerAcre, onValueChange = onEstPricePerAcreChange, isError = errors["estPricePerAcre"] == true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+                ListingTextField(label = stringResource(R.string.est_price_per_acre_label), value = estPricePerAcre, onValueChange = onEstPricePerAcreChange, isError = errors["estPricePerAcre"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number))
             }
         }
-        ListingTextField(label = stringResource(R.string.tank_location_label), value = tankLocation, onValueChange = onTankLocationChange, isError = errors["tankLocation"] == true)
+        ListingTextField(label = stringResource(R.string.tank_location_label), value = tankLocation, onValueChange = onTankLocationChange, isError = errors["tankLocation"] == true, keyboardOptions = keyboardOptions)
     }
 }
 
@@ -1082,31 +1185,32 @@ fun JobFields(
     tankLocation: String, onTankLocationChange: (String) -> Unit,
     salary: String, onSalaryChange: (String) -> Unit,
     title: String, onTitleChange: (String) -> Unit,
-    errors: Map<String, Boolean> = emptyMap()
+    errors: Map<String, Boolean> = emptyMap(),
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         SearchableListingDropdown(
-            label = "Job Type",
+            label = stringResource(R.string.job_type_label),
             value = jobType,
             options = listOf(
-                "Watch man on pond(for feeding)",
-                "supervisor on pond(for maintenance)",
-                "Electrician",
-                "Technician"
+                stringResource(R.string.job_watchman),
+                stringResource(R.string.job_supervisor),
+                stringResource(R.string.job_electrician),
+                stringResource(R.string.job_technician)
             ),
             onSelectionChange = onJobTypeChange,
             isError = errors["jobType"] == true
         )
-        ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true)
+        ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true, keyboardOptions = keyboardOptions)
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(modifier = Modifier.weight(1f)) {
-                ListingTextField(label = stringResource(R.string.tank_acres_label), value = tankAcres, onValueChange = onTankAcresChange, isError = errors["tankAcres"] == true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+                ListingTextField(label = stringResource(R.string.tank_acres_label), value = tankAcres, onValueChange = onTankAcresChange, isError = errors["tankAcres"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Decimal))
             }
             Box(modifier = Modifier.weight(1f)) {
-                ListingTextField(label = stringResource(R.string.salary_label), value = salary, onValueChange = onSalaryChange, isError = errors["salary"] == true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+                ListingTextField(label = stringResource(R.string.salary_label), value = salary, onValueChange = onSalaryChange, isError = errors["salary"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number))
             }
         }
-        ListingTextField(label = stringResource(R.string.tank_location_label), value = tankLocation, onValueChange = onTankLocationChange, isError = errors["tankLocation"] == true)
+        ListingTextField(label = stringResource(R.string.tank_location_label), value = tankLocation, onValueChange = onTankLocationChange, isError = errors["tankLocation"] == true, keyboardOptions = keyboardOptions)
     }
 }
 
@@ -1156,6 +1260,7 @@ fun SearchableListingDropdown(
     isError: Boolean = false
 ) {
     var showSheet by remember { mutableStateOf(false) }
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     Column {
         Text(
@@ -1167,7 +1272,10 @@ fun SearchableListingDropdown(
         Spacer(modifier = Modifier.height(8.dp))
 
         Surface(
-            onClick = { showSheet = true },
+            onClick = { 
+                keyboardController?.hide()
+                showSheet = true 
+            },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
             border = BorderStroke(1.dp, if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline),
@@ -1257,6 +1365,7 @@ fun SearchableListingDropdown(
                                 }
                             },
                             modifier = Modifier.clickable {
+                                keyboardController?.hide()
                                 onSelectionChange(option)
                                 showSheet = false
                             }
@@ -1284,13 +1393,17 @@ fun SearchableListingDropdown(
 @Composable
 fun ListingDropdown(label: String, value: String, options: List<String>, onSelectionChange: (String) -> Unit, isError: Boolean = false) {
     var expanded by remember { mutableStateOf(false) }
+    val keyboardController = LocalSoftwareKeyboardController.current
     
     Column {
         Text(text = "$label *", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
         Spacer(modifier = Modifier.height(8.dp))
         ExposedDropdownMenuBox(
             expanded = expanded,
-            onExpandedChange = { expanded = !expanded }
+            onExpandedChange = { 
+                keyboardController?.hide()
+                expanded = !expanded 
+            }
         ) {
             OutlinedTextField(
                 value = value,
@@ -1315,6 +1428,7 @@ fun ListingDropdown(label: String, value: String, options: List<String>, onSelec
                     DropdownMenuItem(
                         text = { Text(option) },
                         onClick = {
+                            keyboardController?.hide()
                             onSelectionChange(option)
                             expanded = false
                         }

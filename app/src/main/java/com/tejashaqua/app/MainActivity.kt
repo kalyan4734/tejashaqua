@@ -1,14 +1,15 @@
 package com.tejashaqua.app
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -35,7 +36,11 @@ import com.tejashaqua.app.ui.screens.*
 import com.tejashaqua.app.ui.theme.TejashAquaTheme
 import com.tejashaqua.app.utils.LocaleHelper
 
-class MainActivity : ComponentActivity() {
+class MainActivity : AppCompatActivity() {
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(LocaleHelper.wrapContext(newBase))
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent) // Update current intent to the new one
@@ -361,7 +366,12 @@ class MainActivity : ComponentActivity() {
                                 updatedData["posterName"] = if (isBuying) data["sellerName"] ?: "Seller" else data["buyerName"] ?: "User"
                                 updatedData["userId"] = if (isBuying) data["sellerId"] ?: "" else data["buyerId"] ?: ""
                                 updatedData["title"] = data["listingTitle"] ?: ""
-                                updatedData["price"] = data["listingPrice"] ?: ""
+
+                                // Only set price if listingPrice is not null/empty
+                                data["listingPrice"]?.toString()?.takeIf { it.isNotBlank() }?.let {
+                                    updatedData["price"] = it
+                                }
+
                                 updatedData["location"] = data["listingLocation"] ?: ""
                                 val img = data["listingImage"]?.toString() ?: ""
                                 if (img.isNotEmpty()) {
@@ -565,7 +575,7 @@ class MainActivity : ComponentActivity() {
                     }
 
                     if (authState is AuthState.Loading) {
-                        LoadingOverlay("Signing you in...")
+                        LoadingOverlay(stringResource(R.string.signing_in))
                     }
                 }
             }

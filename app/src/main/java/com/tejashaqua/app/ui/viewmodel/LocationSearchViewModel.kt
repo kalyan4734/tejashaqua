@@ -19,6 +19,7 @@ import kotlinx.coroutines.Dispatchers
 import android.location.Geocoder
 import com.google.android.gms.maps.model.LatLng
 import com.tejashaqua.app.R
+import com.tejashaqua.app.utils.LocaleHelper
 import java.util.Locale
 
 class LocationSearchViewModel(application: Application) : AndroidViewModel(application) {
@@ -29,7 +30,7 @@ class LocationSearchViewModel(application: Application) : AndroidViewModel(appli
     private val _searchResults = MutableStateFlow<List<AutocompletePrediction>>(emptyList())
     val searchResults: StateFlow<List<AutocompletePrediction>> = _searchResults
 
-    private val _currentLocationName = MutableStateFlow(application.getString(R.string.fetching_location))
+    private val _currentLocationName = MutableStateFlow("")
     val currentLocationName: StateFlow<String> = _currentLocationName
 
     private val _currentSubLocation = MutableStateFlow("")
@@ -72,7 +73,9 @@ class LocationSearchViewModel(application: Application) : AndroidViewModel(appli
 
     private fun updateLocationData(latitude: Double, longitude: Double) {
         viewModelScope.launch(Dispatchers.IO) {
-            val geocoder = Geocoder(getApplication(), Locale.getDefault())
+            val lang = LocaleHelper.getSelectedLanguage(getApplication()) ?: "en"
+            val locale = Locale.forLanguageTag(lang)
+            val geocoder = Geocoder(getApplication(), locale)
             try {
                 val addresses = geocoder.getFromLocation(latitude, longitude, 1)
                 if (addresses != null && addresses.isNotEmpty()) {

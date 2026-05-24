@@ -22,7 +22,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.intl.LocaleList
+import com.tejashaqua.app.utils.LocaleHelper
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -50,6 +54,12 @@ fun OtpScreen(
 
     val context = LocalContext.current
     val scrollState = rememberScrollState()
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val currentLang = LocaleHelper.getSelectedLanguage(context) ?: "en"
+    val keyboardOptions = KeyboardOptions(
+        keyboardType = KeyboardType.NumberPassword,
+        hintLocales = if (currentLang == "te") LocaleList("te") else null
+    )
 
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
@@ -117,16 +127,20 @@ fun OtpScreen(
             .navigationBarsPadding()
             .imePadding()
             .verticalScroll(scrollState)
-            .padding(24.dp),
+            .padding(24.dp)
+            .clickable { keyboardController?.hide() },
         horizontalAlignment = Alignment.Start
     ) {
         IconButton(
-            onClick = onBackClick,
+            onClick = {
+                keyboardController?.hide()
+                onBackClick()
+            },
             modifier = Modifier.offset(x = (-12).dp)
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Back",
+                contentDescription = stringResource(R.string.back),
                 tint = Color.Black
             )
         }
@@ -135,7 +149,7 @@ fun OtpScreen(
 
         Image(
             painter = painterResource(id = R.drawable.app_logo),
-            contentDescription = "App Logo",
+            contentDescription = null,
             modifier = Modifier.size(60.dp)
         )
 
@@ -174,7 +188,7 @@ fun OtpScreen(
                 }
             },
             modifier = Modifier.fillMaxWidth(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+            keyboardOptions = keyboardOptions,
             decorationBox = {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     repeat(6) { index ->
@@ -225,7 +239,10 @@ fun OtpScreen(
         Spacer(modifier = Modifier.height(32.dp))
 
         Button(
-            onClick = { if (otpValue.length == 6) onVerifyClick(otpValue) },
+            onClick = { 
+                keyboardController?.hide()
+                if (otpValue.length == 6) onVerifyClick(otpValue) 
+            },
             modifier = Modifier.fillMaxWidth().height(56.dp),
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(containerColor = AquaBlue),

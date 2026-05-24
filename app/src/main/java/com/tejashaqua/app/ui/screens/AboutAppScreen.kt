@@ -80,7 +80,7 @@ fun AboutAppScreen(
             )
             
             Text(
-                text = "Version $versionName",
+                text = stringResource(R.string.version_label, versionName),
                 fontSize = 14.sp,
                 color = GrayText,
                 modifier = Modifier.padding(top = 4.dp)
@@ -89,7 +89,7 @@ fun AboutAppScreen(
             Spacer(modifier = Modifier.height(32.dp))
             
             Text(
-                text = "Tejash Aqua is India's most trusted aqua marketplace app. We provide a platform for farmers to buy and sell fish, prawns, equipment, and services with ease.",
+                text = stringResource(R.string.about_app_desc),
                 fontSize = 16.sp,
                 color = Color.Black,
                 textAlign = TextAlign.Center,
@@ -104,16 +104,16 @@ fun AboutAppScreen(
                 colors = CardDefaults.cardColors(containerColor = Color(0xFFF8F9FA))
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    AboutItem("Contact Us", "tejashaqua@gmail.com")
+                    AboutItem(stringResource(R.string.contact_us), "tejashaqua@gmail.com")
                     HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Color(0xFFEEEEEE))
-                    AboutItem("Website", "www.tejashaqua.com")
+                    AboutItem(stringResource(R.string.website), "www.tejashaqua.com")
                 }
             }
             
             Spacer(modifier = Modifier.weight(1f))
             
             Text(
-                text = "© 2024 Tejash Aqua. All rights reserved.",
+                text = stringResource(R.string.all_rights_reserved),
                 fontSize = 12.sp,
                 color = GrayText,
                 modifier = Modifier.padding(vertical = 16.dp)

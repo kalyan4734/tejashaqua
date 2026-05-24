@@ -25,6 +25,9 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.intl.LocaleList
+import com.tejashaqua.app.utils.LocaleHelper
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -60,24 +63,38 @@ fun ChatScreen(
         listingDetails = listingDetails + listingData
     }
     
-    val title = listingDetails["title"]?.toString() ?: listingDetails["listingTitle"]?.toString() ?: "No Title"
-    val rawPrice = listingDetails["price"] ?: listingDetails["listingPrice"] ?: listingDetails["rateValue"] ?: ""
-    val priceValue = rawPrice.toString().ifBlank { "N/A" }
+    val context = LocalContext.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val currentLang = LocaleHelper.getSelectedLanguage(context) ?: "en"
+    val keyboardOptions = KeyboardOptions(
+        imeAction = ImeAction.Send,
+        hintLocales = if (currentLang == "te") LocaleList("te") else null
+    )
+    
+    val title = listingDetails["title"]?.toString() ?: listingDetails["listingTitle"]?.toString() ?: stringResource(R.string.no_title)
+    
+    // Improved logic to find the best available price value
+    val rawPrice = listingDetails["rateValue"]?.toString()?.takeIf { it.isNotBlank() }
+        ?: listingDetails["price"]?.toString()?.takeIf { it.isNotBlank() }
+        ?: listingDetails["listingPrice"]?.toString()?.takeIf { it.isNotBlank() }
+        ?: stringResource(R.string.not_available_short)
+    
+    val priceValue = rawPrice
     
     val categoryStr = listingDetails["category"]?.toString() ?: ""
     val price = when {
         categoryStr.uppercase() == "FEED" || (listingDetails["businessSubCategory"] == "Feed") -> {
-            if (priceValue == "N/A") priceValue else "₹$priceValue/ton"
+            if (priceValue == stringResource(R.string.not_available_short)) priceValue else "₹$priceValue/ton"
         }
         categoryStr.uppercase() == "JOBS" -> {
-            if (priceValue == "N/A") priceValue else "₹$priceValue"
+            if (priceValue == stringResource(R.string.not_available_short)) priceValue else "₹$priceValue"
         }
         categoryStr.uppercase() == "PRAWNS" -> {
             val unit = listingDetails["rateType"]?.toString()?.lowercase() ?: "paise"
-            if (priceValue == "N/A") priceValue else "₹$priceValue/$unit"
+            if (priceValue == stringResource(R.string.not_available_short)) priceValue else "₹$priceValue/$unit"
         }
         else -> {
-            if (priceValue == "N/A") priceValue else "₹$priceValue"
+            if (priceValue == stringResource(R.string.not_available_short)) priceValue else "₹$priceValue"
         }
     }
     val fullLocation = listingDetails["location"]?.toString() ?: listingDetails["listingLocation"]?.toString() ?: "Unknown"
@@ -163,7 +180,6 @@ fun ChatScreen(
     }
 
     // Load messages from Firestore
-    val context = LocalContext.current
     LaunchedEffect(chatRoomId) {
         // Clear unread count for current user
         db.collection("chats").document(chatRoomId).update("unreadCounts.$currentUserId", 0)
@@ -237,12 +253,18 @@ fun ChatScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     SuggestionChip(
-                        onClick = { sendMessage(context.getString(R.string.is_available)) },
+                        onClick = { 
+                            keyboardController?.hide()
+                            sendMessage(context.getString(R.string.is_available)) 
+                        },
                         label = { Text(stringResource(R.string.is_available)) },
                         colors = SuggestionChipDefaults.suggestionChipColors(containerColor = Color(0xFFE3F2FD))
                     )
                     SuggestionChip(
-                        onClick = { sendMessage(context.getString(R.string.best_price)) },
+                        onClick = { 
+                            keyboardController?.hide()
+                            sendMessage(context.getString(R.string.best_price)) 
+                        },
                         label = { Text(stringResource(R.string.best_price)) },
                         colors = SuggestionChipDefaults.suggestionChipColors(containerColor = Color(0xFFE3F2FD))
                     )
@@ -261,9 +283,10 @@ fun ChatScreen(
                         placeholder = { Text(stringResource(R.string.type_message)) },
                         shape = RoundedCornerShape(24.dp),
                         singleLine = true,
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                        keyboardOptions = keyboardOptions,
                         keyboardActions = KeyboardActions(
                             onSend = {
+                                keyboardController?.hide()
                                 if (messageText.isNotBlank()) {
                                     sendMessage(messageText)
                                     messageText = ""
@@ -280,6 +303,7 @@ fun ChatScreen(
                     Spacer(modifier = Modifier.width(8.dp))
                     IconButton(
                         onClick = {
+                            keyboardController?.hide()
                             if (messageText.isNotBlank()) {
                                 sendMessage(messageText)
                                 messageText = ""

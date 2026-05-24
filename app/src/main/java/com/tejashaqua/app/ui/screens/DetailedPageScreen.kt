@@ -57,6 +57,7 @@ fun DetailedPageScreen(
     val categoryString = listingData["category"]?.toString() ?: "Other"
     val category = try { ListingCategory.valueOf(categoryString.uppercase()) } catch (e: Exception) { null }
     val fullLocation = listingData["location"]?.toString() ?: "Unknown"
+    // Use the first part of the address (Locality) as the main location
     val location = fullLocation.split(",").firstOrNull()?.trim() ?: fullLocation
     val description = listingData["description"]?.toString() ?: "No description provided."
     val posterName = listingData["posterName"]?.toString() ?: "User"
@@ -281,7 +282,28 @@ fun DetailedPageScreen(
                 }
             }
 
-            // 4. Details section
+            // 4. Seller Info
+            item {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(text = stringResource(R.string.seller_label), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier.size(50.dp).background(Color(0xFFE0F7FA), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(text = posterName.take(2).uppercase(), fontWeight = FontWeight.Bold, color = Color(0xFF0097A7))
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(text = posterName, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                            Text(text = stringResource(R.string.member_since, "May 2026") + " • ⚡ Responds in 1 hr", fontSize = 12.sp, color = GrayText)
+                        }
+                    }
+                }
+            }
+
+            // 5. Details section
             item {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(text = stringResource(R.string.details_label), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
@@ -354,27 +376,6 @@ fun DetailedPageScreen(
                         }
                     }
                     DetailRowItem(stringResource(R.string.posted_location), location)
-                }
-            }
-
-            // 5. Seller Info
-            item {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(text = stringResource(R.string.seller_label), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier.size(50.dp).background(Color(0xFFE0F7FA), CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(text = posterName.take(2).uppercase(), fontWeight = FontWeight.Bold, color = Color(0xFF0097A7))
-                        }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text(text = posterName, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                            Text(text = stringResource(R.string.member_since, "May 2026") + " • ⚡ Responds in 1 hr", fontSize = 12.sp, color = GrayText)
-                        }
-                    }
                 }
             }
 

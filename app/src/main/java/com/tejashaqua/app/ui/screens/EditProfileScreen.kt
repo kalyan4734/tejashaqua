@@ -28,6 +28,11 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.intl.LocaleList
+import com.tejashaqua.app.utils.LocaleHelper
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -55,6 +60,11 @@ fun EditProfileScreen(
     var existingPicUrl by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val currentLang = LocaleHelper.getSelectedLanguage(context) ?: "en"
+    val keyboardOptions = KeyboardOptions(
+        hintLocales = if (currentLang == "te") LocaleList("te") else null
+    )
     val db = FirebaseFirestore.getInstance()
     val auth = FirebaseAuth.getInstance()
     val scrollState = rememberScrollState()
@@ -82,9 +92,12 @@ fun EditProfileScreen(
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Edit Profile", color = Color.White, fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.edit_profile), color = Color.White, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = onBackClick) {
+                    IconButton(onClick = {
+                        keyboardController?.hide()
+                        onBackClick()
+                    }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
                     }
                 },
@@ -101,7 +114,8 @@ fun EditProfileScreen(
                     .navigationBarsPadding()
                     .imePadding()
                     .verticalScroll(scrollState)
-                    .padding(24.dp),
+                    .padding(24.dp)
+                    .clickable { keyboardController?.hide() },
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // Profile Picture
@@ -168,10 +182,11 @@ fun EditProfileScreen(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("User Name") },
+                    label = { Text(stringResource(R.string.user_name_label)) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                    singleLine = true
+                    singleLine = true,
+                    keyboardOptions = keyboardOptions
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -179,7 +194,7 @@ fun EditProfileScreen(
                 OutlinedTextField(
                     value = "+91 $currentPhone",
                     onValueChange = { },
-                    label = { Text("Phone Number") },
+                    label = { Text(stringResource(R.string.phone_number_label)) },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = false,
                     readOnly = true,
@@ -190,11 +205,12 @@ fun EditProfileScreen(
 
                 Button(
                     onClick = {
+                        keyboardController?.hide()
                         if (name.isNotBlank()) {
                             isLoading = true
                             authViewModel.updateProfile(name, profileBitmap) {
                                 isLoading = false
-                                Toast.makeText(context, "Profile Updated", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, context.getString(R.string.profile_updated), Toast.LENGTH_SHORT).show()
                                 onProfileUpdated(name)
                                 onBackClick()
                             }
@@ -207,14 +223,14 @@ fun EditProfileScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = AquaBlue),
                     enabled = !isLoading
                 ) {
-                    Text("Update Profile", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text(stringResource(R.string.update_profile), fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 }
                 
                 Spacer(modifier = Modifier.height(24.dp))
             }
 
             if (isLoading) {
-                LoadingOverlay("Updating profile...")
+                LoadingOverlay(stringResource(R.string.updating_profile))
             }
         }
     }

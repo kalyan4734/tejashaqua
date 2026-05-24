@@ -48,7 +48,7 @@ fun LanguageSelectionScreen(
             Spacer(modifier = Modifier.height(32.dp))
 
             Text(
-                text = "Choose Your Language",
+                text = stringResource(R.string.choose_language),
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.Black
@@ -84,6 +84,11 @@ fun LanguageSelectionScreen(
                 onClick = {
                     LocaleHelper.setLocale(context, selectedLanguage)
                     LocaleHelper.updateContextLocale(context, selectedLanguage)
+                    
+                    // Re-initialize Places SDK with the new locale
+                    val locale = java.util.Locale.forLanguageTag(selectedLanguage)
+                    com.google.android.libraries.places.api.Places.initialize(context.applicationContext, "AIzaSyD5VUXOhcaF840JnM5YaUMIH1cx2Qdj4QM", locale)
+
                     onLanguageSelected()
                     (context as? android.app.Activity)?.recreate()
                 },

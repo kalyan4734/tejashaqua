@@ -30,6 +30,10 @@ import androidx.compose.ui.unit.sp
 import com.tejashaqua.app.ui.theme.AquaBlue
 import com.tejashaqua.app.ui.theme.GrayText
 import com.tejashaqua.app.R
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.intl.LocaleList
+import com.tejashaqua.app.utils.LocaleHelper
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,6 +45,13 @@ fun LoginScreen(
     var mobileNumber by remember { mutableStateOf("") }
     var isError by remember { mutableStateOf(value = false) }
     val scrollState = rememberScrollState()
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val context = LocalContext.current
+    val currentLang = LocaleHelper.getSelectedLanguage(context) ?: "en"
+    val keyboardOptions = KeyboardOptions(
+        keyboardType = KeyboardType.Phone,
+        hintLocales = if (currentLang == "te") LocaleList("te") else null
+    )
 
     Column(
         modifier = Modifier
@@ -131,7 +142,7 @@ fun LoginScreen(
                 modifier = Modifier.fillMaxWidth(),
                 placeholder = { Text(text = stringResource(R.string.phone_placeholder), color = Color.Gray) },
                 shape = RoundedCornerShape(12.dp),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                keyboardOptions = keyboardOptions,
                 singleLine = true,
                 isError = isError,
                 supportingText = if (isError) {
@@ -165,6 +176,7 @@ fun LoginScreen(
         // Send OTP Button
         Button(
             onClick = { 
+                keyboardController?.hide()
                 if (mobileNumber.length == 10) {
                     onSendOtp(mobileNumber)
                 } else {

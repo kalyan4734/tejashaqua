@@ -203,4 +203,88 @@
     <string name="fish_pulasa">Pulasa</string>
     <string name="fish_crab">Crab</string>
     <string name="fish_others">Others</string>
+
+    <!-- Units -->
+    <string name="unit_inches">Inches</string>
+    <string name="unit_cms">Centimeters</string>
+    <string name="unit_lakhs">Lakhs</string>
+    <string name="unit_thousands">Thousands</string>
+    <string name="unit_kgs">Kgs</string>
+    <string name="unit_paise">Paise</string>
+    <string name="unit_rupees">Rupees</string>
+
+    <!-- Prawn Types -->
+    <string name="prawn_growth_line_plus">Growth Line Plus</string>
+    <string name="prawn_growth_line">Growth Line</string>
+    <string name="prawn_hard_line">Hard Line</string>
+    <string name="prawn_hard_line_plus">Hard Line Plus</string>
+    <string name="prawn_sy_aqua">Sy Aqua</string>
+    <string name="prawn_benchmark">Benchmark</string>
+    <string name="prawn_cong">Cong</string>
+    <string name="prawn_blue_genetic">Blue Genetic</string>
+
+    <!-- Equipment Types -->
+    <string name="equip_aerators">Aerators</string>
+    <string name="equip_motors">Motors</string>
+    <string name="equip_pump_motors">Pump Motors</string>
+    <string name="equip_bore_motors">Bore Motors</string>
+    <string name="equip_generators">Generators</string>
+    <string name="equip_pump_engines">Pump Engines</string>
+    <string name="equip_boats">Boats</string>
+    <string name="equip_wires">Electrical Wires</string>
+
+    <!-- Service Types -->
+    <string name="service_live_fish_vehicles">Live Fish Vehicles</string>
+    <string name="service_feed_transport">Feed Transport</string>
+    <string name="service_bore_well">Bore Well</string>
+    <string name="service_nets">Nets</string>
+
+    <!-- Business Categories -->
+    <string name="biz_fish_feed">Fish Feed</string>
+    <string name="biz_prawn_feed">Prawn Feed</string>
+    <string name="biz_fish_med">Fish Medicine</string>
+    <string name="biz_prawn_med">Prawn Medicine</string>
+
+    <!-- Feed Types -->
+    <string name="feed_rice_bran">Rice bran</string>
+    <string name="feed_fine_rice_bran">Fine rice bran</string>
+    <string name="feed_pellets">Pellets</string>
+
+    <!-- Bore & Net Types -->
+    <string name="bore_drill">Drill bore</string>
+    <string name="bore_hand">Hand bore</string>
+    <string name="net_harvest">Harvest netting</string>
+    <string name="net_hand">Hand netting</string>
+
+    <!-- Tank Types -->
+    <string name="tank_lease">Lease</string>
+    <string name="tank_sell">Sell</string>
+
+    <!-- Job Types -->
+    <string name="job_watchman">Watch man on pond(for feeding)</string>
+    <string name="job_supervisor">supervisor on pond(for maintenance)</string>
+    <string name="job_electrician">Electrician</string>
+    <string name="job_technician">Technician</string>
+
+    <string name="choose_photo_source">Choose Photo Source</string>
+    <string name="camera">Camera</string>
+    <string name="gallery">Gallery</string>
+    <string name="fill_mandatory_fields">Please fill all mandatory fields highlighted in red</string>
+    <string name="storage_permission_required">Storage permission is required to select photos</string>
+    <string name="edit_profile">Edit Profile</string>
+    <string name="user_name_label">User Name</string>
+    <string name="phone_number_label">Phone Number</string>
+    <string name="profile_updated">Profile Updated</string>
+    <string name="update_profile">Update Profile</string>
+    <string name="updating_profile">Updating profile…</string>
+    <string name="no_title">No Title</string>
+    <string name="not_available_short">N/A</string>
+    <string name="coming_soon">Coming Soon</string>
+    <string name="loading_marketplace">Loading marketplace…</string>
+    <string name="version_label">Version %s</string>
+    <string name="contact_us">Contact Us</string>
+    <string name="website">Website</string>
+    <string name="all_rights_reserved">© 2024 Tejash Aqua. All rights reserved.</string>
+    <string name="choose_language">Choose Your Language</string>
+    <string name="signing_in">Signing you in…</string>
 </resources>
