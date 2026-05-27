@@ -9,6 +9,8 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.*
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -34,6 +36,7 @@ class AuthViewModel : ViewModel() {
     val authState: StateFlow<AuthState> = _authState
 
     private var verificationId: String = ""
+    private var loadingTimeoutJob: Job? = null
 
     init {
         checkCurrentSession()
@@ -47,43 +50,95 @@ class AuthViewModel : ViewModel() {
         }
     }
 
+    private fun startLoadingTimeout() {
+        loadingTimeoutJob?.cancel()
+        loadingTimeoutJob = viewModelScope.launch {
+            delay(45000L) // 45 seconds safety timeout
+            if (_authState.value is AuthState.Loading) {
+                _authState.value = AuthState.Error("Request timed out. Please check your network and try again.")
+            }
+        }
+    }
+
+    private fun stopLoadingTimeout() {
+        loadingTimeoutJob?.cancel()
+        loadingTimeoutJob = null
+    }
+
     fun sendOtp(phoneNumber: String, activity: Activity) {
-        _authState.value = AuthState.Loading
+        if (phoneNumber.length != 10) {
+            _authState.value = AuthState.Error("Please enter a valid 10-digit phone number.")
+            return
+        }
         
-        val options = PhoneAuthOptions.newBuilder(auth)
-            .setPhoneNumber("+91$phoneNumber")
-            .setTimeout(60L, TimeUnit.SECONDS)
-            .setActivity(activity)
-            .setCallbacks(object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
-                override fun onVerificationCompleted(credential: PhoneAuthCredential) {
-                    signInWithPhoneAuthCredential(credential)
-                }
+        _authState.value = AuthState.Loading
+        startLoadingTimeout()
+        
+        try {
+            val options = PhoneAuthOptions.newBuilder(auth)
+                .setPhoneNumber("+91$phoneNumber")
+                .setTimeout(60L, TimeUnit.SECONDS)
+                .setActivity(activity)
+                .setCallbacks(object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
+                    override fun onVerificationCompleted(credential: PhoneAuthCredential) {
+                        stopLoadingTimeout()
+                        signInWithPhoneAuthCredential(credential)
+                    }
 
-                override fun onVerificationFailed(e: com.google.firebase.FirebaseException) {
-                    _authState.value = AuthState.Error(e.localizedMessage ?: "Verification Failed")
-                }
+                    override fun onVerificationFailed(e: com.google.firebase.FirebaseException) {
+                        stopLoadingTimeout()
+                        android.util.Log.e("AuthViewModel", "onVerificationFailed", e)
+                        val message = when(e) {
+                            is FirebaseAuthInvalidCredentialsException -> "Invalid phone number."
+                            else -> e.localizedMessage ?: "Verification Failed"
+                        }
+                        _authState.value = AuthState.Error(message)
+                    }
 
-                override fun onCodeSent(
-                    verificationId: String,
-                    token: PhoneAuthProvider.ForceResendingToken
-                ) {
-                    this@AuthViewModel.verificationId = verificationId
-                    _authState.value = AuthState.OtpSent(verificationId)
-                }
-            })
-            .build()
-        PhoneAuthProvider.verifyPhoneNumber(options)
+                    override fun onCodeSent(
+                        verificationId: String,
+                        token: PhoneAuthProvider.ForceResendingToken
+                    ) {
+                        stopLoadingTimeout()
+                        this@AuthViewModel.verificationId = verificationId
+                        _authState.value = AuthState.OtpSent(verificationId)
+                    }
+                })
+                .build()
+            PhoneAuthProvider.verifyPhoneNumber(options)
+        } catch (e: Exception) {
+            stopLoadingTimeout()
+            android.util.Log.e("AuthViewModel", "verifyPhoneNumber exception", e)
+            _authState.value = AuthState.Error(e.localizedMessage ?: "Failed to start verification")
+        }
     }
 
     fun verifyOtp(otp: String) {
+        if (otp.length != 6) {
+            _authState.value = AuthState.Error("Please enter a 6-digit OTP.")
+            return
+        }
+        if (verificationId.isEmpty()) {
+            _authState.value = AuthState.Error("Session expired. Please resend OTP.")
+            return
+        }
+        
         _authState.value = AuthState.Loading
-        val credential = PhoneAuthProvider.getCredential(verificationId, otp)
-        signInWithPhoneAuthCredential(credential)
+        startLoadingTimeout()
+        
+        try {
+            val credential = PhoneAuthProvider.getCredential(verificationId, otp)
+            signInWithPhoneAuthCredential(credential)
+        } catch (e: Exception) {
+            stopLoadingTimeout()
+            _authState.value = AuthState.Error(e.localizedMessage ?: "Invalid OTP attempt")
+        }
     }
 
     private fun signInWithPhoneAuthCredential(credential: PhoneAuthCredential) {
         auth.signInWithCredential(credential)
             .addOnCompleteListener { task ->
+                stopLoadingTimeout()
                 if (task.isSuccessful) {
                     checkUserExists()
                 } else {
@@ -93,9 +148,14 @@ class AuthViewModel : ViewModel() {
     }
 
     private fun checkUserExists() {
-        val userId = auth.currentUser?.uid ?: return
+        val userId = auth.currentUser?.uid
+        if (userId == null) {
+            _authState.value = AuthState.Error("Session lost. Please try again.")
+            return
+        }
         val phoneNumber = auth.currentUser?.phoneNumber?.removePrefix("+91") ?: ""
         
+        _authState.value = AuthState.Loading
         db.collection("users").document(userId).get()
             .addOnSuccessListener { document ->
                 val isAdmin = document.getBoolean("isAdmin") ?: false
@@ -119,7 +179,7 @@ class AuthViewModel : ViewModel() {
                         "phone" to phoneNumber,
                         "joinedAt" to now,
                         "onboardingComplete" to false,
-                        "isAdmin" to false // Default to false for new users
+                        "isAdmin" to false
                     )
                     db.collection("users").document(userId).set(user)
                     _authState.value = AuthState.RequireName(phoneNumber, false)

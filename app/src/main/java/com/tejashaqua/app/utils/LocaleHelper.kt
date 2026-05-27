@@ -9,6 +9,7 @@ import java.util.Locale
 object LocaleHelper {
     private const val PREFS_NAME = "language_prefs"
     private const val KEY_LANGUAGE = "selected_language"
+    private const val KEY_LOCATION_DISCLOSURE_SHOWN = "location_disclosure_shown"
 
     fun setLocale(context: Context, languageCode: String) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -61,5 +62,15 @@ object LocaleHelper {
         configuration.setLayoutDirection(locale)
         
         return context.createConfigurationContext(configuration)
+    }
+
+    fun isLocationDisclosureShown(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean(KEY_LOCATION_DISCLOSURE_SHOWN, false)
+    }
+
+    fun setLocationDisclosureShown(context: Context) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit { putBoolean(KEY_LOCATION_DISCLOSURE_SHOWN, true) }
     }
 }

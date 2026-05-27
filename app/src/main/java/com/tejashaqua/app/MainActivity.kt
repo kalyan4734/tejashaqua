@@ -22,6 +22,7 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.core.content.ContextCompat
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -264,12 +265,42 @@ class MainActivity : AppCompatActivity() {
                     ) || permissions.getOrDefault(Manifest.permission.ACCESS_COARSE_LOCATION, false)
                     if (isGranted) {
                         locationViewModel.fetchCurrentLocation()
+                    } else {
+                        locationViewModel.onPermissionDenied()
                     }
                 }
 
                 LaunchedEffect(currentScreen) {
-                    when (currentScreen) {
-                        "dashboard" -> {
+                    if (currentScreen == "dashboard") {
+                        val hasLocationPermission = ContextCompat.checkSelfPermission(
+                            context,
+                            Manifest.permission.ACCESS_FINE_LOCATION
+                        ) == PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(
+                            context,
+                            Manifest.permission.ACCESS_COARSE_LOCATION
+                        ) == PackageManager.PERMISSION_GRANTED
+
+                        if (hasLocationPermission) {
+                            // Already granted, just fetch
+                            locationViewModel.fetchCurrentLocation()
+                            
+                            // Only check for other permissions if we haven't done the initial request yet
+                            if (!LocaleHelper.isLocationDisclosureShown(context)) {
+                                val others = mutableListOf<String>()
+                                if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                                    others.add(Manifest.permission.CAMERA)
+                                }
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && 
+                                    ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                                    others.add(Manifest.permission.POST_NOTIFICATIONS)
+                                }
+                                if (others.isNotEmpty()) {
+                                    permissionLauncher.launch(others.toTypedArray())
+                                }
+                                LocaleHelper.setLocationDisclosureShown(context)
+                            }
+                        } else if (!LocaleHelper.isLocationDisclosureShown(context)) {
+                            // Not granted and disclosure not shown yet, show disclosure first
                             val permissions = mutableListOf(
                                 Manifest.permission.ACCESS_FINE_LOCATION,
                                 Manifest.permission.ACCESS_COARSE_LOCATION,
@@ -278,14 +309,13 @@ class MainActivity : AppCompatActivity() {
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                                 permissions.add(Manifest.permission.POST_NOTIFICATIONS)
                             }
-                            
-                            // Google Play requirement: Prominent disclosure for location
                             locationPermissionsToRequest = permissions.toTypedArray()
                             showLocationDisclosure = true
-                        }
-
-                        "otp" -> {
-                            // SMS permissions removed as we moved to SmsRetriever API
+                            // We set it as shown when the dialog is actually triggered
+                            LocaleHelper.setLocationDisclosureShown(context)
+                        } else {
+                            // Already shown once, don't nag again but update UI state
+                            locationViewModel.onPermissionDenied()
                         }
                     }
                 }

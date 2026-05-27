@@ -94,6 +94,112 @@ fun DashboardScreen(
     var showWelcomeSheet by remember { mutableStateOf(showNameSheetInitial) } 
     var tempName by remember { mutableStateOf("") }
 
+    // Marketplace State
+    val db = remember { FirebaseFirestore.getInstance() }
+    var listings by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
+    var favoriteIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var isLoadingListings by remember { mutableStateOf(true) }
+
+    LaunchedEffect(Unit) {
+        db.collection("listings")
+            .orderBy("timestamp", Query.Direction.DESCENDING)
+            .limit(50)
+            .addSnapshotListener { value, error ->
+                if (value != null) {
+                    listings = value.documents.map { 
+                        val data = it.data?.toMutableMap() ?: mutableMapOf()
+                        data["id"] = it.id
+                        data
+                    }
+                }
+                isLoadingListings = false
+            }
+    }
+
+    LaunchedEffect(currentUserId) {
+        if (currentUserId.isNotEmpty()) {
+            db.collection("users").document(currentUserId)
+                .collection("favorites")
+                .addSnapshotListener { snapshot, _ ->
+                    if (snapshot != null) {
+                        favoriteIds = snapshot.documents.map { it.id }.toSet()
+                    }
+                }
+        }
+    }
+
+    val filteredListings = remember(listings, productSearchText, selectedCategoryFilter) {
+        listings.filter { data ->
+            val title = (data["title"] as? String)?.lowercase() ?: ""
+            val location = (data["location"] as? String)?.lowercase() ?: ""
+            val category = (data["category"] as? String) ?: ""
+            
+            val matchesSearch = productSearchText.isBlank() || 
+                title.contains(productSearchText.lowercase()) || 
+                location.contains(productSearchText.lowercase()) ||
+                category.lowercase().contains(productSearchText.lowercase())
+            
+            val matchesCategory = selectedCategoryFilter == "All" || category.uppercase() == selectedCategoryFilter
+            
+            matchesSearch && matchesCategory
+        }
+    }
+
+    // Chat State
+    var chats by remember { mutableStateOf(listOf<ChatListItemData>()) }
+    var isLoadingChats by remember { mutableStateOf(true) }
+    var chatSearchText by remember { mutableStateOf("") }
+    var chatSelectedTabIndex by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(currentUserId) {
+        if (currentUserId.isEmpty()) {
+            isLoadingChats = false
+            return@LaunchedEffect
+        }
+        
+        db.collection("chats")
+            .whereArrayContains("participants", currentUserId)
+            .addSnapshotListener { snapshot, e ->
+                isLoadingChats = false
+                if (e != null || snapshot == null) return@addSnapshotListener
+                
+                chats = snapshot.documents.mapNotNull { doc ->
+                    val data = doc.data ?: return@mapNotNull null
+                    val buyerId = data["buyerId"] as? String ?: ""
+                    val isBuying = buyerId == currentUserId
+                    
+                    val unreadCounts = data["unreadCounts"] as? Map<*, *>
+                    val unreadCount = (unreadCounts?.get(currentUserId) as? Long)?.toInt() ?: 
+                                     (data["unreadCounts.$currentUserId"] as? Long)?.toInt() ?: 0
+
+                    ChatListItemData(
+                        chatId = doc.id,
+                        name = if (isBuying) data["sellerName"] as? String ?: "Seller" else data["buyerName"] as? String ?: "Buyer",
+                        otherUserId = if (isBuying) data["sellerId"] as? String ?: "" else data["buyerId"] as? String ?: "",
+                        type = if (isBuying) "Buying" else "Selling",
+                        listingInfo = data["listingTitle"] as? String ?: "Listing",
+                        lastMessage = data["lastMessage"] as? String ?: "",
+                        time = (data["lastMessageTimestamp"] as? com.google.firebase.Timestamp)?.toDate()?.time ?: 
+                               (data["lastMessageTimestamp"] as? Long) ?: 0L,
+                        unreadCount = unreadCount,
+                        listingImage = data["listingImage"] as? String,
+                        fullData = data + mapOf("id" to (data["listingId"] ?: ""))
+                    )
+                }.sortedByDescending { it.time }
+            }
+    }
+
+    val filteredChats = remember(chats, chatSearchText, chatSelectedTabIndex) {
+        chats.filter {
+            (it.name.contains(chatSearchText, ignoreCase = true) || it.listingInfo.contains(chatSearchText, ignoreCase = true)) &&
+            when (chatSelectedTabIndex) {
+                1 -> it.type == "Buying"
+                2 -> it.type == "Selling"
+                else -> true
+            }
+        }
+    }
+
     Scaffold(
         topBar = {
             Box(
@@ -200,68 +306,191 @@ fun DashboardScreen(
                     .fillMaxSize()
                     .background(MaterialTheme.colorScheme.background)
             ) {
-                if (selectedItem == 0) {
+                if (selectedItem == 0 || selectedItem == 1) {
                     item { 
                         SearchHeader(
                             productSearchText = productSearchText,
                             onProductSearchChange = { productSearchText = it }
                         ) 
                     }
-                    item { 
-                        AquaRatesSection(
-                            onSeeAllClick = onSeeAllRatesClick,
-                            onRateClick = { rate ->
-                                if (rate.isPrawn) {
-                                    onPrawnsClick()
-                                } else {
-                                    selectedRateForGraph = rate
-                                    showGraphSheet = true
+                    
+                    if (selectedItem == 0) {
+                        item { 
+                            AquaRatesSection(
+                                onSeeAllClick = onSeeAllRatesClick,
+                                onRateClick = { rate ->
+                                    if (rate.isPrawn) {
+                                        onPrawnsClick()
+                                    } else {
+                                        selectedRateForGraph = rate
+                                        showGraphSheet = true
+                                    }
+                                }
+                            ) 
+                        }
+                    }
+
+                    item {
+                        CategoryFilterRow(
+                            selected = selectedCategoryFilter,
+                            onSelect = { selectedCategoryFilter = it }
+                        )
+                    }
+
+                    // Marketplace Section flattened
+                    item {
+                        Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text(stringResource(R.string.fresh_marketplace), fontWeight = FontWeight.Bold, fontSize = 18.sp, color = DarkBlueText)
+                            Spacer(modifier = Modifier.weight(1f))
+                            Text(stringResource(R.string.items_count, filteredListings.size), color = GrayText, fontSize = 12.sp)
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
+
+                    if (isLoadingListings) {
+                        item {
+                            Card(
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).height(200.dp),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5))
+                            ) {
+                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        CircularProgressIndicator(color = AquaBlue, modifier = Modifier.size(32.dp))
+                                        Spacer(modifier = Modifier.height(12.dp))
+                                        Text(stringResource(R.string.loading_marketplace), color = GrayText, fontSize = 14.sp)
+                                    }
                                 }
                             }
-                        ) 
+                        }
+                    } else if (filteredListings.isEmpty()) {
+                        item {
+                            Box(modifier = Modifier.fillMaxWidth().height(150.dp), contentAlignment = Alignment.Center) {
+                                val message = if (productSearchText.isEmpty() && selectedCategoryFilter == "All") stringResource(R.string.no_listings) else stringResource(R.string.no_match_search)
+                                Text(message, color = GrayText)
+                            }
+                        }
+                    } else {
+                        items(filteredListings.chunked(2)) { rowItems ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                rowItems.forEach { data ->
+                                    val listingId = data["id"]?.toString() ?: ""
+                                    val images = (data["images"] as? List<*>)?.filterIsInstance<String>()
+                                    val isFavorited = favoriteIds.contains(listingId)
+
+                                    val categoryStr = data["category"]?.toString() ?: "Other"
+                                    val priceLabel = when (categoryStr.uppercase()) {
+                                        "PRAWNS" -> "₹${data["rateValue"] ?: "N/A"}/${data["rateType"]?.toString()?.lowercase() ?: "paise"}"
+                                        "FEED" -> "₹${data["ratePerTon"] ?: "N/A"}/ton"
+                                        "BUSINESS" -> if (data["businessSubCategory"] == "Feed") "₹${data["ratePerTon"] ?: "N/A"}/ton" else "₹${data["price"] ?: data["rateValue"] ?: "N/A"}"
+                                        "JOBS" -> "₹${data["salary"] ?: "N/A"}"
+                                        "TANKS" -> "₹${data["estPricePerAcre"] ?: "N/A"}/acre"
+                                        else -> "₹${data["price"] ?: data["rateValue"] ?: "N/A"}"
+                                    }
+
+                                    MarketItem(
+                                        title = data["title"]?.toString()?.takeIf { it.isNotBlank() } ?: "No Title",
+                                        price = priceLabel,
+                                        category = categoryStr,
+                                        location = data["location"]?.toString() ?: "Unknown",
+                                        posterName = data["posterName"]?.toString() ?: "User",
+                                        imageUrl = images?.firstOrNull(),
+                                        isFavorited = isFavorited,
+                                        onFavoriteClick = {
+                                            if (currentUserId.isNotEmpty() && listingId.isNotEmpty()) {
+                                                val favRef = db.collection("users").document(currentUserId)
+                                                    .collection("favorites").document(listingId)
+                                                if (isFavorited) {
+                                                    favRef.delete()
+                                                } else {
+                                                    favRef.set(data)
+                                                }
+                                            }
+                                        },
+                                        modifier = Modifier.weight(1f).clickable { onItemClick(data) }
+                                    )
+                                }
+                                if (rowItems.size == 1) {
+                                    Spacer(modifier = Modifier.weight(1f))
+                                }
+                            }
+                        }
                     }
-                    item {
-                        CategoryFilterRow(
-                            selected = selectedCategoryFilter,
-                            onSelect = { selectedCategoryFilter = it }
-                        )
-                    }
-                    item { 
-                        MarketplaceSection(
-                            currentUserId = currentUserId,
-                            searchText = productSearchText, 
-                            categoryFilter = selectedCategoryFilter, 
-                            onItemClick = onItemClick
-                        ) 
-                    }
-                    item { FooterSection() }
-                } else if (selectedItem == 1) {
-                    item { 
-                        SearchHeader(
-                            productSearchText = productSearchText,
-                            onProductSearchChange = { productSearchText = it }
-                        ) 
-                    }
-                    item {
-                        CategoryFilterRow(
-                            selected = selectedCategoryFilter,
-                            onSelect = { selectedCategoryFilter = it }
-                        )
-                    }
-                    item { 
-                        MarketplaceSection(
-                            currentUserId = currentUserId,
-                            searchText = productSearchText, 
-                            categoryFilter = selectedCategoryFilter, 
-                            onItemClick = onItemClick
-                        ) 
+                    
+                    if (selectedItem == 0) {
+                        item { FooterSection() }
                     }
                 } else if (selectedItem == 2) {
                     item {
-                        DashboardChatList(
-                            currentUserId = currentUserId,
-                            onChatClick = onChatListClick
+                        Text(
+                            stringResource(R.string.chats), 
+                            fontWeight = FontWeight.Bold, 
+                            fontSize = 18.sp, 
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                            color = DarkBlueText
                         )
+                    }
+
+                    item {
+                        TextField(
+                            value = chatSearchText,
+                            onValueChange = { chatSearchText = it },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                                .heightIn(min = 50.dp),
+                            placeholder = { Text(stringResource(R.string.search_conversations), fontSize = 14.sp) },
+                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = GrayText) },
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = Color(0xFFF5F5F5),
+                                unfocusedContainerColor = Color(0xFFF5F5F5),
+                                focusedIndicatorColor = Color.Transparent,
+                                unfocusedIndicatorColor = Color.Transparent,
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            singleLine = true
+                        )
+                    }
+
+                    item {
+                        TabRow(
+                            selectedTabIndex = chatSelectedTabIndex,
+                            containerColor = MaterialTheme.colorScheme.background,
+                            contentColor = AquaBlue,
+                            divider = { HorizontalDivider(color = Color(0xFFEEEEEE)) }
+                        ) {
+                            Tab(selected = chatSelectedTabIndex == 0, onClick = { chatSelectedTabIndex = 0 }) {
+                                Text(stringResource(R.string.all), modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold)
+                            }
+                            Tab(selected = chatSelectedTabIndex == 1, onClick = { chatSelectedTabIndex = 1 }) {
+                                Text(stringResource(R.string.buying), modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold)
+                            }
+                            Tab(selected = chatSelectedTabIndex == 2, onClick = { chatSelectedTabIndex = 2 }) {
+                                Text(stringResource(R.string.selling), modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+
+                    if (isLoadingChats) {
+                        item {
+                            Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator(color = AquaBlue)
+                            }
+                        }
+                    } else if (filteredChats.isEmpty()) {
+                        item {
+                            Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                                Text(stringResource(R.string.no_chats), color = GrayText)
+                            }
+                        }
+                    } else {
+                        items(filteredChats) { chat ->
+                            ChatListItem(chat, onClick = { onChatListClick(chat.fullData) })
+                            HorizontalDivider(color = Color(0xFFF5F5F5), modifier = Modifier.padding(horizontal = 16.dp))
+                        }
                     }
                 } else {
                     item {
@@ -424,256 +653,6 @@ fun SearchHeader(
             keyboardOptions = keyboardOptions,
             keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() })
         )
-    }
-}
-
-@Composable
-fun MarketplaceSection(currentUserId: String, searchText: String, categoryFilter: String, onItemClick: (Map<String, Any>) -> Unit) {
-    val db = FirebaseFirestore.getInstance()
-    var listings by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
-    var favoriteIds by remember { mutableStateOf<Set<String>>(emptySet()) }
-    var isLoading by remember { mutableStateOf(true) }
-
-    LaunchedEffect(Unit) {
-        db.collection("listings")
-            .orderBy("timestamp", Query.Direction.DESCENDING)
-            .limit(50)
-            .addSnapshotListener { value, error ->
-                if (value != null) {
-                    listings = value.documents.map { 
-                        val data = it.data?.toMutableMap() ?: mutableMapOf()
-                        data["id"] = it.id
-                        data
-                    }
-                }
-                isLoading = false
-            }
-    }
-
-    LaunchedEffect(currentUserId) {
-        if (currentUserId.isNotEmpty()) {
-            db.collection("users").document(currentUserId)
-                .collection("favorites")
-                .addSnapshotListener { snapshot, _ ->
-                    if (snapshot != null) {
-                        favoriteIds = snapshot.documents.map { it.id }.toSet()
-                    }
-                }
-        }
-    }
-
-    val filteredListings = remember(listings, searchText, categoryFilter) {
-        listings.filter { data ->
-            val title = (data["title"] as? String)?.lowercase() ?: ""
-            val location = (data["location"] as? String)?.lowercase() ?: ""
-            val category = (data["category"] as? String) ?: ""
-            
-            val matchesSearch = searchText.isBlank() || 
-                title.contains(searchText.lowercase()) || 
-                location.contains(searchText.lowercase()) ||
-                category.lowercase().contains(searchText.lowercase())
-            
-            val matchesCategory = categoryFilter == "All" || category.uppercase() == categoryFilter
-            
-            matchesSearch && matchesCategory
-        }
-    }
-
-    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(stringResource(R.string.fresh_marketplace), fontWeight = FontWeight.Bold, fontSize = 18.sp, color = DarkBlueText)
-            Spacer(modifier = Modifier.weight(1f))
-            Text(stringResource(R.string.items_count, filteredListings.size), color = GrayText, fontSize = 12.sp)
-        }
-        Spacer(modifier = Modifier.height(12.dp))
-        
-        if (isLoading) {
-            Card(
-                modifier = Modifier.fillMaxWidth().height(200.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5))
-            ) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator(color = AquaBlue, modifier = Modifier.size(32.dp))
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(stringResource(R.string.loading_marketplace), color = GrayText, fontSize = 14.sp)
-                    }
-                }
-            }
-        } else if (filteredListings.isEmpty()) {
-            Box(modifier = Modifier.fillMaxWidth().height(150.dp), contentAlignment = Alignment.Center) {
-                val message = if (searchText.isEmpty() && categoryFilter == "All") stringResource(R.string.no_listings) else stringResource(R.string.no_match_search)
-                Text(message, color = GrayText)
-            }
-        } else {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                filteredListings.chunked(2).forEach { rowItems ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        rowItems.forEach { data ->
-                            val listingId = data["id"]?.toString() ?: ""
-                            val images = (data["images"] as? List<*>)?.filterIsInstance<String>()
-                            val isFavorited = favoriteIds.contains(listingId)
-
-                            val categoryStr = data["category"]?.toString() ?: "Other"
-                            val priceLabel = when (categoryStr.uppercase()) {
-                                "PRAWNS" -> "₹${data["rateValue"] ?: "N/A"}/${data["rateType"]?.toString()?.lowercase() ?: "paise"}"
-                                "FEED" -> "₹${data["ratePerTon"] ?: "N/A"}/ton"
-                                "BUSINESS" -> if (data["businessSubCategory"] == "Feed") "₹${data["ratePerTon"] ?: "N/A"}/ton" else "₹${data["price"] ?: data["rateValue"] ?: "N/A"}"
-                                "JOBS" -> "₹${data["salary"] ?: "N/A"}"
-                                "TANKS" -> "₹${data["estPricePerAcre"] ?: "N/A"}/acre"
-                                else -> "₹${data["price"] ?: data["rateValue"] ?: "N/A"}"
-                            }
-
-                            MarketItem(
-                                title = data["title"]?.toString()?.takeIf { it.isNotBlank() } ?: "No Title",
-                                price = priceLabel,
-                                category = categoryStr,
-                                location = data["location"]?.toString() ?: "Unknown",
-                                posterName = data["posterName"]?.toString() ?: "User",
-                                imageUrl = images?.firstOrNull(),
-                                isFavorited = isFavorited,
-                                onFavoriteClick = {
-                                    if (currentUserId.isNotEmpty() && listingId.isNotEmpty()) {
-                                        val favRef = db.collection("users").document(currentUserId)
-                                            .collection("favorites").document(listingId)
-                                        if (isFavorited) {
-                                            favRef.delete()
-                                        } else {
-                                            favRef.set(data)
-                                        }
-                                    }
-                                },
-                                modifier = Modifier.weight(1f).clickable { onItemClick(data) }
-                            )
-                        }
-                        if (rowItems.size == 1) {
-                            Spacer(modifier = Modifier.weight(1f))
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun DashboardChatList(currentUserId: String, onChatClick: (Map<String, Any>) -> Unit) {
-    var searchText by remember { mutableStateOf("") }
-    var selectedTabIndex by remember { mutableIntStateOf(0) }
-    val db = FirebaseFirestore.getInstance()
-    var chats by remember { mutableStateOf(listOf<ChatListItemData>()) }
-    var isLoading by remember { mutableStateOf(true) }
-
-    LaunchedEffect(currentUserId) {
-        if (currentUserId.isEmpty()) {
-            isLoading = false
-            return@LaunchedEffect
-        }
-        
-        db.collection("chats")
-            .whereArrayContains("participants", currentUserId)
-            .addSnapshotListener { snapshot, e ->
-                isLoading = false
-                if (e != null || snapshot == null) return@addSnapshotListener
-                
-                chats = snapshot.documents.mapNotNull { doc ->
-                    val data = doc.data ?: return@mapNotNull null
-                    val buyerId = data["buyerId"] as? String ?: ""
-                    val isBuying = buyerId == currentUserId
-                    
-                    val unreadCounts = data["unreadCounts"] as? Map<*, *>
-                    val unreadCount = (unreadCounts?.get(currentUserId) as? Long)?.toInt() ?: 
-                                     (data["unreadCounts.$currentUserId"] as? Long)?.toInt() ?: 0
-
-                    ChatListItemData(
-                        chatId = doc.id,
-                        name = if (isBuying) data["sellerName"] as? String ?: "Seller" else data["buyerName"] as? String ?: "Buyer",
-                        otherUserId = if (isBuying) data["sellerId"] as? String ?: "" else data["buyerId"] as? String ?: "",
-                        type = if (isBuying) "Buying" else "Selling",
-                        listingInfo = data["listingTitle"] as? String ?: "Listing",
-                        lastMessage = data["lastMessage"] as? String ?: "",
-                        time = (data["lastMessageTimestamp"] as? com.google.firebase.Timestamp)?.toDate()?.time ?: 
-                               (data["lastMessageTimestamp"] as? Long) ?: 0L,
-                        unreadCount = unreadCount,
-                        listingImage = data["listingImage"] as? String,
-                        fullData = data + mapOf("id" to (data["listingId"] ?: ""))
-                    )
-                }.sortedByDescending { it.time }
-            }
-    }
-
-    val filteredChats = chats.filter {
-        (it.name.contains(searchText, ignoreCase = true) || it.listingInfo.contains(searchText, ignoreCase = true)) &&
-        when (selectedTabIndex) {
-            1 -> it.type == "Buying"
-            2 -> it.type == "Selling"
-            else -> true
-        }
-    }
-
-    Column(modifier = Modifier.fillMaxWidth().background(Color.White)) {
-        Text(
-            stringResource(R.string.chats), 
-            fontWeight = FontWeight.Bold, 
-            fontSize = 18.sp, 
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            color = DarkBlueText
-        )
-
-        TextField(
-            value = searchText,
-            onValueChange = { searchText = it },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp)
-                .heightIn(min = 50.dp),
-            placeholder = { Text(stringResource(R.string.search_conversations), fontSize = 14.sp) },
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = GrayText) },
-            colors = TextFieldDefaults.colors(
-                focusedContainerColor = Color(0xFFF5F5F5),
-                unfocusedContainerColor = Color(0xFFF5F5F5),
-                focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent,
-            ),
-            shape = RoundedCornerShape(12.dp),
-            singleLine = true
-        )
-
-        TabRow(
-            selectedTabIndex = selectedTabIndex,
-            containerColor = Color.White,
-            contentColor = AquaBlue,
-            divider = { HorizontalDivider(color = Color(0xFFEEEEEE)) }
-        ) {
-            Tab(selected = selectedTabIndex == 0, onClick = { selectedTabIndex = 0 }) {
-                Text(stringResource(R.string.all), modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold)
-            }
-            Tab(selected = selectedTabIndex == 1, onClick = { selectedTabIndex = 1 }) {
-                Text(stringResource(R.string.buying), modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold)
-            }
-            Tab(selected = selectedTabIndex == 2, onClick = { selectedTabIndex = 2 }) {
-                Text(stringResource(R.string.selling), modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold)
-            }
-        }
-        
-        if (isLoading) {
-            Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = AquaBlue)
-            }
-        } else if (filteredChats.isEmpty()) {
-            Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
-                Text(stringResource(R.string.no_chats), color = GrayText)
-            }
-        } else {
-            filteredChats.forEach { chat ->
-                ChatListItem(chat, onClick = { onChatClick(chat.fullData) })
-                HorizontalDivider(color = Color(0xFFF5F5F5), modifier = Modifier.padding(horizontal = 16.dp))
-            }
-        }
     }
 }
 

@@ -16,6 +16,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.sp
 import com.tejashaqua.app.R
 import com.tejashaqua.app.ui.theme.AquaBlue
@@ -41,7 +42,7 @@ fun ForceUpdateScreen(updateUrl: String) {
         Spacer(modifier = Modifier.height(40.dp))
 
         Text(
-            text = "Update Required",
+            text = stringResource(R.string.update_required),
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold,
             color = Color.Black
@@ -50,7 +51,7 @@ fun ForceUpdateScreen(updateUrl: String) {
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "A new version of Tejash Aqua is available. Please update to continue using the app.",
+            text = stringResource(R.string.update_desc),
             fontSize = 16.sp,
             color = Color.Gray,
             textAlign = TextAlign.Center,
@@ -71,7 +72,7 @@ fun ForceUpdateScreen(updateUrl: String) {
             colors = ButtonDefaults.buttonColors(containerColor = AquaBlue)
         ) {
             Text(
-                text = "Update Now",
+                text = stringResource(R.string.update_now),
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White

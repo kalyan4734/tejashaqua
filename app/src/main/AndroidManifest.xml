@@ -28,8 +28,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.TejashAqua"
-        android:localeConfig="@xml/locales_config"
-        tools:targetApi="33">
+        android:localeConfig="@xml/locales_config">
         
         <meta-data
             android:name="com.google.android.geo.API_KEY"

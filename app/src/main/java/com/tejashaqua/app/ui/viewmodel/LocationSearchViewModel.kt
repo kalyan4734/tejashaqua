@@ -30,7 +30,7 @@ class LocationSearchViewModel(application: Application) : AndroidViewModel(appli
     private val _searchResults = MutableStateFlow<List<AutocompletePrediction>>(emptyList())
     val searchResults: StateFlow<List<AutocompletePrediction>> = _searchResults
 
-    private val _currentLocationName = MutableStateFlow("")
+    private val _currentLocationName = MutableStateFlow(application.getString(R.string.fetching_location))
     val currentLocationName: StateFlow<String> = _currentLocationName
 
     private val _currentSubLocation = MutableStateFlow("")
@@ -42,8 +42,13 @@ class LocationSearchViewModel(application: Application) : AndroidViewModel(appli
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
 
+    fun onPermissionDenied() {
+        _currentLocationName.value = getApplication<Application>().getString(R.string.location_permission_denied)
+    }
+
     fun fetchCurrentLocation() {
         Log.d("LocationVM", "fetchCurrentLocation called")
+        _currentLocationName.value = getApplication<Application>().getString(R.string.fetching_location)
         try {
             fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
                 .addOnSuccessListener { currentLoc ->
@@ -67,7 +72,7 @@ class LocationSearchViewModel(application: Application) : AndroidViewModel(appli
                 }
         } catch (e: SecurityException) {
             Log.e("LocationVM", "SecurityException: permission denied", e)
-            _currentLocationName.value = "Permission denied"
+            _currentLocationName.value = getApplication<Application>().getString(R.string.location_permission_denied)
         }
     }
 

@@ -41,6 +41,7 @@
     <string name="see_all_rates">See All Rates →</string>
     <string name="location_not_found">Location not found</string>
     <string name="failed_get_location">Failed to get location</string>
+    <string name="location_permission_denied">Location access denied. Tap to select manually.</string>
 
     <!-- Welcome Sheet -->
     <string name="welcome_title">Welcome to Tejash Aqua! 👋</string>
@@ -377,4 +378,7 @@ These terms shall be governed by and construed in accordance with the laws of In
     <string name="location_disclosure_title">Location Permission</string>
     <string name="location_disclosure_desc">Tejash Aqua needs your location to show you relevant aqua marketplace listings in your area and help you select locations for your posts.</string>
     <string name="ok">OK</string>
+    <string name="update_required">Update Required</string>
+    <string name="update_desc">A new version of Tejash Aqua is available. Please update to continue using the app.</string>
+    <string name="update_now">Update Now</string>
 </resources>

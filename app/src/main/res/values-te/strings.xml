@@ -41,6 +41,7 @@
     <string name="see_all_rates">అన్ని ధరలను చూడండి →</string>
     <string name="location_not_found">స్థానం కనుగొనబడలేదు</string>
     <string name="failed_get_location">స్థానాన్ని పొందడంలో విఫలమైంది</string>
+    <string name="location_permission_denied">స్థాన అనుమతి నిరాకరించబడింది. మాన్యువల్‌గా ఎంచుకోవడానికి ఇక్కడ నొక్కండి.</string>
 
     <!-- Welcome Sheet -->
     <string name="welcome_title">తేజశ్ ఆక్వాకు స్వాగతం! 👋</string>
@@ -377,4 +378,7 @@
     <string name="location_disclosure_title">స్థాన అనుమతి (Location Permission)</string>
     <string name="location_disclosure_desc">మీ ప్రాంతంలోని సంబంధిత ఆక్వా మార్కెట్‌ప్లేస్ జాబితాలను చూపడానికి మరియు మీ పోస్ట్‌ల కోసం స్థానాలను ఎంచుకోవడానికి తేజశ్ ఆక్వాకు మీ స్థానం (Location) అవసరం.</string>
     <string name="ok">సరే</string>
+    <string name="update_required">అప్‌డేట్ అవసరం</string>
+    <string name="update_desc">తేజశ్ ఆక్వా కొత్త వెర్షన్ అందుబాటులో ఉంది. యాప్‌ని ఉపయోగించడం కొనసాగించడానికి దయచేసి అప్‌డేట్ చేయండి.</string>
+    <string name="update_now">ఇప్పుడే అప్‌డేట్ చేయండి</string>
 </resources>
