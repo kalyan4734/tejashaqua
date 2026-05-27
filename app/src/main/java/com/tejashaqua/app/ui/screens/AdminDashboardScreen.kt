@@ -20,6 +20,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.intl.LocaleList
+import com.tejashaqua.app.R
+import com.tejashaqua.app.utils.LocaleHelper
 import com.google.firebase.firestore.FirebaseFirestore
 import com.tejashaqua.app.data.model.AquaRate
 import com.tejashaqua.app.data.model.RateTrend
@@ -31,9 +37,10 @@ import java.util.*
 @Composable
 fun AdminDashboardScreen(onBackClick: () -> Unit) {
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Fish Rates", "Prawn Rates")
+    val tabs = listOf(stringResource(R.string.fish_rates), stringResource(R.string.prawn_rates))
     
     var showDatePicker by remember { mutableStateOf(false) }
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     val datePickerState = rememberDatePickerState(
         initialSelectedDateMillis = System.currentTimeMillis()
@@ -57,16 +64,22 @@ fun AdminDashboardScreen(onBackClick: () -> Unit) {
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Admin Portal", color = Color.White, fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.admin_portal), color = Color.White, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                    IconButton(onClick = {
+                        keyboardController?.hide()
+                        onBackClick()
+                    }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back), tint = Color.White)
                     }
                 },
                 actions = {
                     Row(
                         modifier = Modifier
-                            .clickable { showDatePicker = true }
+                            .clickable { 
+                                keyboardController?.hide()
+                                showDatePicker = true 
+                            }
                             .padding(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -84,7 +97,10 @@ fun AdminDashboardScreen(onBackClick: () -> Unit) {
                 tabs.forEachIndexed { index, title ->
                     Tab(
                         selected = selectedTab == index,
-                        onClick = { selectedTab = index },
+                        onClick = { 
+                            keyboardController?.hide()
+                            selectedTab = index 
+                        },
                         text = { Text(title) }
                     )
                 }
@@ -105,6 +121,11 @@ fun FishRatesAdmin(selectedDate: Long) {
     var rates by remember { mutableStateOf<List<AquaRate>>(emptyList()) }
     var previousRates by remember { mutableStateOf<Map<String, Double>>(emptyMap()) }
     val context = LocalContext.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val currentLang = LocaleHelper.getSelectedLanguage(context) ?: "en"
+    val keyboardOptions = KeyboardOptions(
+        hintLocales = if (currentLang == "te") LocaleList("te") else null
+    )
 
     val fishTypes = listOf(
         "Prawns", "Rohu", "Katla", "Karamosu", "Gaddi chepa", "Pangasius", 
@@ -187,14 +208,16 @@ fun FishRatesAdmin(selectedDate: Long) {
                         OutlinedTextField(
                             value = priceText,
                             onValueChange = { priceText = it },
-                            label = { Text("Price (e.g. ₹160/kg)") },
-                            modifier = Modifier.fillMaxWidth()
+                            label = { Text(stringResource(R.string.price_placeholder)) },
+                            modifier = Modifier.fillMaxWidth(),
+                            keyboardOptions = keyboardOptions
                         )
                     }
                     Spacer(modifier = Modifier.height(12.dp))
                     Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
                         Button(
                             onClick = {
+                                keyboardController?.hide()
                                 val data = mapOf(
                                     "price" to priceText,
                                     "change" to changeText,
@@ -218,13 +241,13 @@ fun FishRatesAdmin(selectedDate: Long) {
                                             db.collection("aqua_rates").document(rate.name)
                                                 .collection("history").document(historyId).set(historyData)
                                         }
-                                        Toast.makeText(context, "${rate.name} updated", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, context.getString(R.string.item_updated, rate.name), Toast.LENGTH_SHORT).show()
                                     }
                             }
                         ) {
                             Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Save")
+                            Text(stringResource(R.string.save))
                         }
                     }
                 }
@@ -238,6 +261,11 @@ fun FishRatesAdmin(selectedDate: Long) {
 fun PrawnRatesAdmin(selectedDate: Long) {
     val db = FirebaseFirestore.getInstance()
     val context = LocalContext.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val currentLang = LocaleHelper.getSelectedLanguage(context) ?: "en"
+    val keyboardOptions = KeyboardOptions(
+        hintLocales = if (currentLang == "te") LocaleList("te") else null
+    )
     var selectedMarket by remember { mutableStateOf("Bhimavaram") }
     val markets = listOf("Bhimavaram", "Nellore", "Kakinada", "Machilipatnam")
     var expanded by remember { mutableStateOf(false) }
@@ -259,19 +287,29 @@ fun PrawnRatesAdmin(selectedDate: Long) {
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         ExposedDropdownMenuBox(
             expanded = expanded,
-            onExpandedChange = { expanded = !expanded }
+            onExpandedChange = { 
+                keyboardController?.hide()
+                expanded = !expanded 
+            }
         ) {
             OutlinedTextField(
                 value = selectedMarket,
                 onValueChange = {},
                 readOnly = true,
-                label = { Text("Select Market") },
+                label = { Text(stringResource(R.string.select_market_label)) },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                 modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable)
             )
             ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                 markets.forEach { market ->
-                    DropdownMenuItem(text = { Text(market) }, onClick = { selectedMarket = market; expanded = false })
+                    DropdownMenuItem(
+                        text = { Text(market) }, 
+                        onClick = { 
+                            keyboardController?.hide()
+                            selectedMarket = market
+                            expanded = false 
+                        }
+                    )
                 }
             }
         }
@@ -283,14 +321,16 @@ fun PrawnRatesAdmin(selectedDate: Long) {
                 var price by remember(count, prices) { mutableStateOf(prices[count] ?: "") }
                 
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("Count $count", modifier = Modifier.width(80.dp), fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.count_label, count), modifier = Modifier.width(80.dp), fontWeight = FontWeight.Bold)
                     OutlinedTextField(
                         value = price,
                         onValueChange = { price = it },
-                        label = { Text("₹/kg") },
-                        modifier = Modifier.weight(1f)
+                        label = { Text(stringResource(R.string.rupees_per_kg_label)) },
+                        modifier = Modifier.weight(1f),
+                        keyboardOptions = keyboardOptions
                     )
                     IconButton(onClick = {
+                        keyboardController?.hide()
                         val newPrices = prices.toMutableMap()
                         newPrices[count] = price
                         val data = mapOf(
@@ -300,7 +340,7 @@ fun PrawnRatesAdmin(selectedDate: Long) {
                         db.collection("prawn_rates").document(selectedMarket).set(data)
                             .addOnSuccessListener { 
                                 prices = newPrices
-                                Toast.makeText(context, "Count $count updated for ${SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date(selectedDate))}", Toast.LENGTH_SHORT).show() 
+                                Toast.makeText(context, context.getString(R.string.item_updated, "Count $count"), Toast.LENGTH_SHORT).show()
                             }
                     }) {
                         Icon(Icons.Default.Save, contentDescription = null, tint = AquaBlue)

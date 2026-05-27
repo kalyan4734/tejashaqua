@@ -363,4 +363,18 @@
 7. వర్తించే చట్టం
 ఈ నిబంధనలు భారతదేశ చట్టాల ప్రకారం నిర్వహించబడతాయి మరియు అర్థం చేసుకోవబడతాయి.
     </string>
+    <string name="fish_rates">చేపల ధరలు</string>
+    <string name="prawn_rates">రొయ్యల ధరలు</string>
+    <string name="saved_items_title">మెచ్చినవి (Saved Items)</string>
+    <string name="no_saved_items">ఇంకా ఏమీ సేవ్ చేయలేదు</string>
+    <string name="loading_saved_items">సేవ్ చేసిన వాటిని లోడ్ చేస్తోంది…</string>
+    <string name="price_placeholder">ధర (ఉదా. ₹160/kg)</string>
+    <string name="item_updated">%s అప్‌డేట్ చేయబడింది</string>
+    <string name="select_market_label">మార్కెట్‌ను ఎంచుకోండి</string>
+    <string name="rupees_per_kg_label">₹/కేజీ</string>
+    <string name="count_label">కౌంట్ %s</string>
+    <string name="no_internet_connection">ఇంటర్నెట్ కనెక్షన్ లేదు</string>
+    <string name="location_disclosure_title">స్థాన అనుమతి (Location Permission)</string>
+    <string name="location_disclosure_desc">మీ ప్రాంతంలోని సంబంధిత ఆక్వా మార్కెట్‌ప్లేస్ జాబితాలను చూపడానికి మరియు మీ పోస్ట్‌ల కోసం స్థానాలను ఎంచుకోవడానికి తేజశ్ ఆక్వాకు మీ స్థానం (Location) అవసరం.</string>
+    <string name="ok">సరే</string>
 </resources>

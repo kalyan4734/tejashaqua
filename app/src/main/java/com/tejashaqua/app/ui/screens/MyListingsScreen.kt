@@ -40,9 +40,7 @@ data class UserListing(
     val price: String = "",
     val unit: String = "",
     val location: String = "",
-    val distance: String = "4.5 km",
-    val timeAgo: String = "2 hrs ago",
-    val views: Int = 200,
+    val timestamp: Long = 0L,
     val imageUrl: String? = null
 )
 
@@ -91,6 +89,7 @@ fun MyListingsScreen(
         )
     }
 
+    val context = androidx.compose.ui.platform.LocalContext.current
     LaunchedEffect(currentUserId) {
         if (currentUserId != null) {
             db.collection("listings")
@@ -111,11 +110,12 @@ fun MyListingsScreen(
 
                             UserListing(
                                 id = doc.id,
-                                title = doc.getString("title")?.takeIf { it.isNotBlank() } ?: "No Title",
+                                title = doc.getString("title")?.takeIf { it.isNotBlank() } ?: context.getString(R.string.no_title),
                                 category = categoryStr,
                                 price = priceLabel,
                                 unit = "", // Unit is now included in priceLabel
                                 location = fullLocation.split(",").firstOrNull()?.trim() ?: fullLocation,
+                                timestamp = doc.getLong("timestamp") ?: 0L,
                                 imageUrl = (doc.get("images") as? List<*>)?.filterIsInstance<String>()?.firstOrNull()
                             )
                         }
@@ -224,8 +224,9 @@ fun ListingCard(
                     Text(text = "₹${listing.price}", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, color = Color.Black)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Outlined.LocationOn, contentDescription = null, tint = GrayText, modifier = Modifier.size(14.dp))
+                        val context = androidx.compose.ui.platform.LocalContext.current
                         Text(
-                            text = " ${listing.location} • ${listing.distance}",
+                            text = " ${listing.location} • ${getRelativeTime(context, listing.timestamp)}",
                             color = GrayText,
                             fontSize = 12.sp,
                             maxLines = 1,
@@ -261,5 +262,16 @@ fun ListingCard(
                 }
             }
         }
+    }
+}
+
+private fun getRelativeTime(context: android.content.Context, timestamp: Long): String {
+    val now = System.currentTimeMillis()
+    val diff = now - timestamp
+    return when {
+        diff < 60_000 -> context.getString(R.string.just_now)
+        diff < 3600_000 -> context.getString(R.string.mins_ago, diff / 60_000)
+        diff < 86400_000 -> context.getString(R.string.hours_ago, diff / 3600_000)
+        else -> context.getString(R.string.days_ago, diff / 86400_000)
     }
 }

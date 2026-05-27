@@ -115,7 +115,24 @@ class ListingViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun deleteListing(listingId: String) {
-        db.collection("listings").document(listingId).delete()
+        viewModelScope.launch {
+            try {
+                val doc = db.collection("listings").document(listingId).get().await()
+                if (doc.exists()) {
+                    val images = doc.get("images") as? List<*>
+                    images?.forEach { imageUrl ->
+                        try {
+                            storage.getReferenceFromUrl(imageUrl.toString()).delete().await()
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                    }
+                    db.collection("listings").document(listingId).delete().await()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 
     fun resetState() {

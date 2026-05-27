@@ -363,4 +363,18 @@ TejashAqua shall not be liable for any indirect, incidental, or consequential da
 7. Governing Law
 These terms shall be governed by and construed in accordance with the laws of India.
     </string>
+    <string name="fish_rates">Fish Rates</string>
+    <string name="prawn_rates">Prawn Rates</string>
+    <string name="saved_items_title">Saved Items</string>
+    <string name="no_saved_items">No saved items yet</string>
+    <string name="loading_saved_items">Loading saved items…</string>
+    <string name="price_placeholder">Price (e.g. ₹160/kg)</string>
+    <string name="item_updated">%s updated</string>
+    <string name="select_market_label">Select Market</string>
+    <string name="rupees_per_kg_label">₹/kg</string>
+    <string name="count_label">Count %s</string>
+    <string name="no_internet_connection">No Internet Connection</string>
+    <string name="location_disclosure_title">Location Permission</string>
+    <string name="location_disclosure_desc">Tejash Aqua needs your location to show you relevant aqua marketplace listings in your area and help you select locations for your posts.</string>
+    <string name="ok">OK</string>
 </resources>

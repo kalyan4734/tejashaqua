@@ -16,6 +16,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
+import com.tejashaqua.app.R
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.tejashaqua.app.ui.theme.AquaBlue
@@ -32,6 +35,7 @@ fun SavedItemsScreen(
     val auth = FirebaseAuth.getInstance()
     val db = FirebaseFirestore.getInstance()
     val currentUserId = auth.currentUser?.uid
+    val keyboardController = LocalSoftwareKeyboardController.current
     
     var savedItems by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
@@ -56,10 +60,13 @@ fun SavedItemsScreen(
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Saved Items", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp) },
+                title = { Text(stringResource(R.string.saved_items_title), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp) },
                 navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                    IconButton(onClick = {
+                        keyboardController?.hide()
+                        onBackClick()
+                    }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back), tint = Color.White)
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = AquaBlue)
@@ -72,12 +79,12 @@ fun SavedItemsScreen(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(Icons.Default.FavoriteBorder, contentDescription = null, modifier = Modifier.size(64.dp), tint = Color.LightGray)
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text("No saved items yet", color = GrayText)
+                        Text(stringResource(R.string.no_saved_items), color = GrayText)
                     }
                 }
             } else {
                 LazyColumn(
-                    modifier = Modifier.fillMaxSize().background(Color(0xFFF8F9FA)),
+                    modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
@@ -89,17 +96,18 @@ fun SavedItemsScreen(
                         val priceLabel = when (categoryStr.uppercase()) {
                             "PRAWNS" -> "₹${data["rateValue"] ?: "N/A"}/${data["rateType"]?.toString()?.lowercase() ?: "paise"}"
                             "FEED" -> "₹${data["ratePerTon"] ?: "N/A"}/ton"
+                            "BUSINESS" -> if (data["businessSubCategory"] == "Feed") "₹${data["ratePerTon"] ?: "N/A"}/ton" else "₹${data["price"] ?: data["rateValue"] ?: "N/A"}"
                             "JOBS" -> "₹${data["salary"] ?: "N/A"}"
                             "TANKS" -> "₹${data["estPricePerAcre"] ?: "N/A"}/acre"
                             else -> "₹${data["price"] ?: data["rateValue"] ?: "N/A"}"
                         }
 
                         MarketItem(
-                            title = data["title"]?.toString()?.takeIf { it.isNotBlank() } ?: "No Title",
+                            title = data["title"]?.toString()?.takeIf { it.isNotBlank() } ?: stringResource(R.string.no_title),
                             price = priceLabel,
                             category = categoryStr,
-                            location = data["location"]?.toString() ?: "Unknown",
-                            posterName = data["posterName"]?.toString() ?: "User",
+                            location = data["location"]?.toString() ?: stringResource(R.string.unknown_location),
+                            posterName = data["posterName"]?.toString() ?: stringResource(R.string.user_label),
                             imageUrl = images?.firstOrNull(),
                             isFavorited = true,
                             onFavoriteClick = {
@@ -109,14 +117,17 @@ fun SavedItemsScreen(
                                         .delete()
                                 }
                             },
-                            modifier = Modifier.fillMaxWidth().clickable { onItemClick(data) }
+                            modifier = Modifier.fillMaxWidth().clickable { 
+                                keyboardController?.hide()
+                                onItemClick(data) 
+                            }
                         )
                     }
                 }
             }
             
             if (isLoading) {
-                LoadingOverlay("Loading saved items...")
+                LoadingOverlay(stringResource(R.string.loading_saved_items))
             }
         }
     }

@@ -57,6 +57,17 @@ import com.tejashaqua.app.ui.viewmodel.AuthState
 import com.tejashaqua.app.ui.viewmodel.AuthViewModel
 import com.tejashaqua.app.ui.viewmodel.LocationSearchViewModel
 import com.tejashaqua.app.utils.LocaleHelper
+import com.tejashaqua.app.utils.NetworkObserver
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.WifiOff
+import androidx.compose.material3.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 
 class MainActivity : AppCompatActivity() {
     override fun attachBaseContext(newBase: Context) {
@@ -80,6 +91,9 @@ class MainActivity : AppCompatActivity() {
                 val locationViewModel: LocationSearchViewModel = viewModel()
                 val authState by authViewModel.authState.collectAsState()
                 val context = LocalContext.current
+                
+                val networkObserver = remember { NetworkObserver(context) }
+                val networkStatus by networkObserver.observe.collectAsState(initial = NetworkObserver.Status.Available)
 
                 var appVersion by remember { mutableStateOf("1.0.0") }
                 var needsUpdate by remember { mutableStateOf(false) }
@@ -111,6 +125,9 @@ class MainActivity : AppCompatActivity() {
                 // Track where the location picker was opened from
                 var locationPickerSource by remember { mutableStateOf("dashboard") }
                 var pickedListingLocation by remember { mutableStateOf<Pair<String, LatLng?>?>(null) }
+                
+                var showLocationDisclosure by remember { mutableStateOf(false) }
+                var locationPermissionsToRequest by remember { mutableStateOf<Array<String>>(emptyArray()) }
 
                 // Handle Notification Click Navigation
                 LaunchedEffect(intent, userId) {
@@ -261,7 +278,10 @@ class MainActivity : AppCompatActivity() {
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                                 permissions.add(Manifest.permission.POST_NOTIFICATIONS)
                             }
-                            permissionLauncher.launch(permissions.toTypedArray())
+                            
+                            // Google Play requirement: Prominent disclosure for location
+                            locationPermissionsToRequest = permissions.toTypedArray()
+                            showLocationDisclosure = true
                         }
 
                         "otp" -> {
@@ -340,6 +360,56 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 Box(modifier = Modifier.fillMaxSize()) {
+                    if (showLocationDisclosure) {
+                        AlertDialog(
+                            onDismissRequest = { 
+                                showLocationDisclosure = false
+                                permissionLauncher.launch(locationPermissionsToRequest)
+                            },
+                            title = { Text(stringResource(R.string.location_disclosure_title)) },
+                            text = { Text(stringResource(R.string.location_disclosure_desc)) },
+                            confirmButton = {
+                                TextButton(onClick = {
+                                    showLocationDisclosure = false
+                                    permissionLauncher.launch(locationPermissionsToRequest)
+                                }) {
+                                    Text(stringResource(R.string.ok))
+                                }
+                            }
+                        )
+                    }
+
+                    if (networkStatus == NetworkObserver.Status.Lost || networkStatus == NetworkObserver.Status.Unavailable) {
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .statusBarsPadding()
+                                .zIndex(10f),
+                            color = Color(0xFFF44336)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .padding(vertical = 4.dp, horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.WifiOff,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = stringResource(R.string.no_internet_connection),
+                                    color = Color.White,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+
                     if (needsUpdate) {
                         ForceUpdateScreen(updateUrl = updateUrl)
                     } else {
