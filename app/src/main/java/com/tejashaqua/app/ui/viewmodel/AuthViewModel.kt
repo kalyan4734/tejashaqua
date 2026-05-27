@@ -2,6 +2,8 @@ package com.tejashaqua.app.ui.viewmodel
 
 import android.app.Activity
 import android.graphics.Bitmap
+import android.net.Uri
+import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.*
@@ -151,15 +153,15 @@ class AuthViewModel : ViewModel() {
         }
     }
 
-    fun updateProfile(name: String, profileBitmap: Bitmap?, onSuccess: () -> Unit) {
+    fun updateProfile(name: String, profileImage: Any?, onSuccess: () -> Unit) {
         val userId = auth.currentUser?.uid ?: return
         
         viewModelScope.launch {
             try {
                 val updates = mutableMapOf<String, Any>("name" to name)
                 
-                if (profileBitmap != null) {
-                    val url = uploadProfileImage(userId, profileBitmap)
+                if (profileImage != null) {
+                    val url = uploadProfileImage(userId, profileImage)
                     updates["profilePic"] = url
                 }
 
@@ -178,15 +180,26 @@ class AuthViewModel : ViewModel() {
         }
     }
 
-    private suspend fun uploadProfileImage(userId: String, bitmap: Bitmap): String {
+    private suspend fun uploadProfileImage(userId: String, image: Any): String {
         val fileName = "profile_pics/$userId.jpg"
         val ref = storage.reference.child(fileName)
         
-        val baos = ByteArrayOutputStream()
-        bitmap.compress(Bitmap.CompressFormat.JPEG, 70, baos)
-        val data = baos.toByteArray()
+        when (image) {
+            is Bitmap -> {
+                val baos = ByteArrayOutputStream()
+                image.compress(Bitmap.CompressFormat.JPEG, 70, baos)
+                val data = baos.toByteArray()
+                ref.putBytes(data).await()
+            }
+            is String -> { // Local URI string
+                ref.putFile(image.toUri()).await()
+            }
+            is Uri -> {
+                ref.putFile(image).await()
+            }
+            else -> throw IllegalArgumentException("Unsupported image type")
+        }
         
-        ref.putBytes(data).await()
         return ref.downloadUrl.await().toString()
     }
 

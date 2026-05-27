@@ -20,6 +20,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.tejashaqua.app.R
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
 import com.google.firebase.firestore.FirebaseFirestore
 import com.tejashaqua.app.ui.theme.AquaBlue
 import com.tejashaqua.app.ui.theme.GrayText
@@ -31,6 +34,7 @@ fun PrawnRatesScreen(onBackClick: () -> Unit) {
     val markets = listOf("Bhimavaram", "Nellore", "Kakinada", "Machilipatnam")
     var expanded by remember { mutableStateOf(false) }
     val db = FirebaseFirestore.getInstance()
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     val counts = listOf("200", "100", "90", "80", "70", "60", "50", "45", "40", "35", "30")
     var prices by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
@@ -57,10 +61,13 @@ fun PrawnRatesScreen(onBackClick: () -> Unit) {
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Prawn Count-wise Rates", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp) },
+                title = { Text(stringResource(R.string.prawn_rates_title), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp) },
                 navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                    IconButton(onClick = {
+                        keyboardController?.hide()
+                        onBackClick()
+                    }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back), tint = Color.White)
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = AquaBlue)
@@ -71,7 +78,7 @@ fun PrawnRatesScreen(onBackClick: () -> Unit) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .background(Color.White)
+                .background(MaterialTheme.colorScheme.background)
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
@@ -94,7 +101,7 @@ fun PrawnRatesScreen(onBackClick: () -> Unit) {
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Count = prawns per kg. Lower count = bigger prawn = higher price. Rates in ₹/kg.",
+                            text = stringResource(R.string.prawn_info_text),
                             fontSize = 13.sp,
                             color = Color(0xFF1565C0),
                             lineHeight = 18.sp
@@ -106,11 +113,14 @@ fun PrawnRatesScreen(onBackClick: () -> Unit) {
             // Market Selection
             item {
                 Column {
-                    Text("Select Seashore / Market", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                    Text(stringResource(R.string.select_market), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                     Spacer(modifier = Modifier.height(8.dp))
                     ExposedDropdownMenuBox(
                         expanded = expanded,
-                        onExpandedChange = { expanded = !expanded }
+                        onExpandedChange = { 
+                            keyboardController?.hide()
+                            expanded = !expanded 
+                        }
                     ) {
                         OutlinedTextField(
                             value = selectedMarket,
@@ -132,6 +142,7 @@ fun PrawnRatesScreen(onBackClick: () -> Unit) {
                                 DropdownMenuItem(
                                     text = { Text(market) },
                                     onClick = {
+                                        keyboardController?.hide()
                                         selectedMarket = market
                                         expanded = false
                                     }
@@ -147,7 +158,7 @@ fun PrawnRatesScreen(onBackClick: () -> Unit) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.DateRange, null, tint = GrayText, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("${if (lastUpdatedDate.isNotEmpty()) lastUpdatedDate else "--"} • Rates vary by seashore location", fontSize = 12.sp, color = GrayText)
+                    Text("${if (lastUpdatedDate.isNotEmpty()) lastUpdatedDate else "--"} • ${stringResource(R.string.rates_vary)}", fontSize = 12.sp, color = GrayText)
                 }
             }
 
@@ -168,9 +179,9 @@ fun PrawnRatesScreen(onBackClick: () -> Unit) {
                                 .background(AquaBlue)
                                 .padding(horizontal = 16.dp, vertical = 12.dp)
                         ) {
-                            Text("Count/kg", color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                            Text(stringResource(R.string.count_per_kg), color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                             Box(modifier = Modifier.width(1.dp).height(20.dp).background(Color.White.copy(alpha = 0.3f)))
-                            Text("₹/kg", color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f).padding(start = 16.dp))
+                            Text(stringResource(R.string.rupees_per_kg), color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f).padding(start = 16.dp))
                         }
 
                         // Rows

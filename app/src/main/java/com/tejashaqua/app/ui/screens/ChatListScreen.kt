@@ -20,6 +20,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.intl.LocaleList
+import com.tejashaqua.app.utils.LocaleHelper
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -45,6 +51,13 @@ fun ChatListScreen(
     val db = FirebaseFirestore.getInstance()
     var chats by remember { mutableStateOf(listOf<ChatListItemData>()) }
     var isLoading by remember { mutableStateOf(true) }
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val context = LocalContext.current
+    val currentLang = LocaleHelper.getSelectedLanguage(context) ?: "en"
+    val keyboardOptions = KeyboardOptions(
+        imeAction = ImeAction.Search,
+        hintLocales = if (currentLang == "te") LocaleList("te") else null
+    )
 
     DisposableEffect(currentUserId) {
         if (currentUserId.isEmpty()) return@DisposableEffect onDispose {}
@@ -102,8 +115,11 @@ fun ChatListScreen(
                 CenterAlignedTopAppBar(
                     title = { Text(stringResource(R.string.chat_title), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp) },
                     navigationIcon = {
-                        IconButton(onClick = onBackClick) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                        IconButton(onClick = {
+                            keyboardController?.hide()
+                            onBackClick()
+                        }) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back), tint = Color.White)
                         }
                     },
                     colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = AquaBlue)
@@ -125,7 +141,8 @@ fun ChatListScreen(
                         unfocusedIndicatorColor = Color.Transparent,
                     ),
                     shape = RoundedCornerShape(12.dp),
-                    singleLine = true
+                    singleLine = true,
+                    keyboardOptions = keyboardOptions
                 )
                 Spacer(modifier = Modifier.height(8.dp))
             }
@@ -136,7 +153,7 @@ fun ChatListScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
-                    .background(Color.White)
+                    .background(MaterialTheme.colorScheme.background)
             ) {
                 TabRow(
                     selectedTabIndex = selectedTabIndex,
@@ -144,13 +161,22 @@ fun ChatListScreen(
                     contentColor = AquaBlue,
                     divider = { HorizontalDivider(color = Color(0xFFEEEEEE)) }
                 ) {
-                    Tab(selected = selectedTabIndex == 0, onClick = { selectedTabIndex = 0 }) {
+                    Tab(selected = selectedTabIndex == 0, onClick = { 
+                        keyboardController?.hide()
+                        selectedTabIndex = 0 
+                    }) {
                         Text(stringResource(R.string.all), modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold)
                     }
-                    Tab(selected = selectedTabIndex == 1, onClick = { selectedTabIndex = 1 }) {
+                    Tab(selected = selectedTabIndex == 1, onClick = { 
+                        keyboardController?.hide()
+                        selectedTabIndex = 1 
+                    }) {
                         Text(stringResource(R.string.buying), modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold)
                     }
-                    Tab(selected = selectedTabIndex == 2, onClick = { selectedTabIndex = 2 }) {
+                    Tab(selected = selectedTabIndex == 2, onClick = { 
+                        keyboardController?.hide()
+                        selectedTabIndex = 2 
+                    }) {
                         Text(stringResource(R.string.selling), modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold)
                     }
                 }
@@ -162,7 +188,10 @@ fun ChatListScreen(
                 } else {
                     LazyColumn(modifier = Modifier.fillMaxSize()) {
                         items(filteredChats) { chat ->
-                            ChatListItem(chat, onClick = { onChatClick(chat.fullData) })
+                            ChatListItem(chat, onClick = { 
+                                keyboardController?.hide()
+                                onChatClick(chat.fullData) 
+                            })
                             HorizontalDivider(color = Color(0xFFF5F5F5), modifier = Modifier.padding(horizontal = 16.dp))
                         }
                     }
@@ -170,7 +199,7 @@ fun ChatListScreen(
             }
 
             if (isLoading) {
-                LoadingOverlay("Loading your chats...")
+                LoadingOverlay(stringResource(R.string.chats) + "...")
             }
         }
     }

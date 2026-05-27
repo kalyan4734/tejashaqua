@@ -16,8 +16,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -56,7 +56,7 @@ fun EditProfileScreen(
     authViewModel: AuthViewModel = viewModel()
 ) {
     var name by remember { mutableStateOf(currentName) }
-    var profileBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    var profileImage by remember { mutableStateOf<Any?>(null) }
     var existingPicUrl by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(false) }
     val context = LocalContext.current
@@ -85,8 +85,56 @@ fun EditProfileScreen(
         contract = ActivityResultContracts.TakePicturePreview()
     ) { bitmap ->
         if (bitmap != null) {
-            profileBitmap = bitmap
+            profileImage = bitmap
         }
+    }
+
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            profileImage = uri.toString()
+        }
+    }
+
+    var showPhotoOptions by remember { mutableStateOf(false) }
+
+    if (showPhotoOptions) {
+        AlertDialog(
+            onDismissRequest = { showPhotoOptions = false },
+            title = { Text(stringResource(R.string.choose_photo_source)) },
+            text = {
+                Column {
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.camera)) },
+                        leadingContent = { Icon(Icons.Default.PhotoCamera, contentDescription = null) },
+                        modifier = Modifier.clickable {
+                            keyboardController?.hide()
+                            showPhotoOptions = false
+                            cameraLauncher.launch()
+                        }
+                    )
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.gallery)) },
+                        leadingContent = { Icon(Icons.Default.PhotoLibrary, contentDescription = null) },
+                        modifier = Modifier.clickable {
+                            keyboardController?.hide()
+                            showPhotoOptions = false
+                            galleryLauncher.launch("image/*")
+                        }
+                    )
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { 
+                    keyboardController?.hide()
+                    showPhotoOptions = false 
+                }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
     }
 
     Scaffold(
@@ -122,20 +170,31 @@ fun EditProfileScreen(
                 Box(
                     modifier = Modifier
                         .size(120.dp)
-                        .clickable { cameraLauncher.launch() }
+                        .clickable { showPhotoOptions = true }
                 ) {
-                    val currentBitmap = profileBitmap
+                    val currentImage = profileImage
                     val existingUrl = existingPicUrl
 
-                    if (currentBitmap != null) {
+                    if (currentImage is Bitmap) {
                         Image(
-                            bitmap = currentBitmap.asImageBitmap(),
+                            bitmap = currentImage.asImageBitmap(),
                             contentDescription = "Profile Picture",
                             modifier = Modifier
                                 .fillMaxSize()
                                 .clip(CircleShape)
                                 .border(2.dp, AquaBlue, CircleShape),
                             contentScale = ContentScale.Crop
+                        )
+                    } else if (currentImage is String) {
+                        AsyncImage(
+                            model = currentImage,
+                            contentDescription = "Profile Picture",
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(CircleShape)
+                                .border(2.dp, AquaBlue, CircleShape),
+                            contentScale = ContentScale.Crop,
+                            error = painterResource(id = R.drawable.app_logo)
                         )
                     } else if (!existingUrl.isNullOrBlank()) {
                         AsyncImage(
@@ -208,7 +267,7 @@ fun EditProfileScreen(
                         keyboardController?.hide()
                         if (name.isNotBlank()) {
                             isLoading = true
-                            authViewModel.updateProfile(name, profileBitmap) {
+                            authViewModel.updateProfile(name, profileImage) {
                                 isLoading = false
                                 Toast.makeText(context, context.getString(R.string.profile_updated), Toast.LENGTH_SHORT).show()
                                 onProfileUpdated(name)

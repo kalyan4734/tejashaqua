@@ -2,6 +2,8 @@ package com.tejashaqua.app.ui.viewmodel
 
 import android.app.Application
 import android.graphics.Bitmap
+import android.net.Uri
+import androidx.core.net.toUri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.firestore.FirebaseFirestore
@@ -22,7 +24,7 @@ class ListingViewModel(application: Application) : AndroidViewModel(application)
     private val _postState = MutableStateFlow<PostState>(PostState.Idle)
     val postState: StateFlow<PostState> = _postState
 
-    fun saveListing(data: Map<String, Any>, newBitmaps: List<Bitmap>, existingUrls: List<String>) {
+    fun saveListing(data: Map<String, Any>, photos: List<Any>) {
         viewModelScope.launch {
             _postState.value = PostState.Loading
             try {
@@ -43,7 +45,19 @@ class ListingViewModel(application: Application) : AndroidViewModel(application)
                     }
                 }
 
-                val uploadedUrls = uploadImages(newBitmaps)
+                // Separate existing URLs from new content (Bitmaps or local URIs)
+                val existingUrls = mutableListOf<String>()
+                val toUpload = mutableListOf<Any>()
+                
+                for (photo in photos) {
+                    if (photo is String && photo.startsWith("http")) {
+                        existingUrls.add(photo)
+                    } else {
+                        toUpload.add(photo)
+                    }
+                }
+
+                val uploadedUrls = uploadImages(toUpload)
                 val finalUrls = existingUrls + uploadedUrls
                 
                 val listingId = existingListingId ?: db.collection("listings").document().id
@@ -69,19 +83,33 @@ class ListingViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    private suspend fun uploadImages(bitmaps: List<Bitmap>): List<String> {
+    private suspend fun uploadImages(toUpload: List<Any>): List<String> {
         val urls = mutableListOf<String>()
-        for (bitmap in bitmaps) {
+        for (item in toUpload) {
             val fileName = "listings/${UUID.randomUUID()}.jpg"
             val ref = storage.reference.child(fileName)
             
-            val baos = ByteArrayOutputStream()
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 70, baos)
-            val data = baos.toByteArray()
-            
-            ref.putBytes(data).await()
-            val url = ref.downloadUrl.await().toString()
-            urls.add(url)
+            try {
+                when (item) {
+                    is Bitmap -> {
+                        val baos = ByteArrayOutputStream()
+                        item.compress(Bitmap.CompressFormat.JPEG, 70, baos)
+                        val data = baos.toByteArray()
+                        ref.putBytes(data).await()
+                    }
+                    is String -> { // Local URI string
+                        val uri = item.toUri()
+                        ref.putFile(uri).await()
+                    }
+                    is Uri -> {
+                        ref.putFile(item).await()
+                    }
+                }
+                val url = ref.downloadUrl.await().toString()
+                urls.add(url)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
         return urls
     }

@@ -42,7 +42,6 @@ import com.tejashaqua.app.ui.screens.EditListingScreen
 import com.tejashaqua.app.ui.screens.EditProfileScreen
 import com.tejashaqua.app.ui.screens.ForceUpdateScreen
 import com.tejashaqua.app.ui.screens.LanguageSelectionScreen
-import com.tejashaqua.app.ui.screens.LegalConstants
 import com.tejashaqua.app.ui.screens.LegalScreen
 import com.tejashaqua.app.ui.screens.LoginScreen
 import com.tejashaqua.app.ui.screens.MyListingsScreen
@@ -562,7 +561,7 @@ class MainActivity : AppCompatActivity() {
 
                             "privacy_policy" -> LegalScreen(
                                 title = stringResource(R.string.privacy_policy),
-                                content = LegalConstants.PRIVACY_POLICY,
+                                content = stringResource(R.string.privacy_policy_content),
                                 onBackClick = {
                                     currentScreen =
                                         if (authState is AuthState.Success) "profile" else "login"
@@ -570,7 +569,7 @@ class MainActivity : AppCompatActivity() {
 
                             "terms_conditions" -> LegalScreen(
                                 title = stringResource(R.string.terms_conditions),
-                                content = LegalConstants.TERMS_CONDITIONS,
+                                content = stringResource(R.string.terms_conditions_content),
                                 onBackClick = {
                                     currentScreen =
                                         if (authState is AuthState.Success) "profile" else "login"

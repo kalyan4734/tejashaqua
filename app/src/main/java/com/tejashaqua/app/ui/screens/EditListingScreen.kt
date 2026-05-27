@@ -478,10 +478,7 @@ fun EditListingScreen(
                                 tankType, userId
                             )
                             
-                            val newBitmaps = selectedPhotos.filterIsInstance<Bitmap>()
-                            val existingUrls = selectedPhotos.filterIsInstance<String>()
-                            
-                            listingViewModel.saveListing(data, newBitmaps, existingUrls)
+                            listingViewModel.saveListing(data, selectedPhotos)
                         }
                     }
 

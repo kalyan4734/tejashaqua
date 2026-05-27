@@ -24,6 +24,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.style.TextOverflow
 import coil.compose.AsyncImage
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.tejashaqua.app.ui.theme.AquaBlue
@@ -56,6 +58,7 @@ fun MyListingsScreen(
     
     var listings by remember { mutableStateOf<List<UserListing>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
+    val keyboardController = LocalSoftwareKeyboardController.current
     
     var showDeleteDialog by remember { mutableStateOf(false) }
     var listingToDelete by remember { mutableStateOf<UserListing?>(null) }
@@ -63,22 +66,26 @@ fun MyListingsScreen(
     if (showDeleteDialog && listingToDelete != null) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Delete Listing") },
-            text = { Text("Are you sure you want to delete this listing? This action cannot be undone.") },
+            title = { Text(stringResource(R.string.delete_listing)) },
+            text = { Text(stringResource(R.string.delete_listing_confirm)) },
             confirmButton = {
                 TextButton(
                     onClick = {
+                        keyboardController?.hide()
                         db.collection("listings").document(listingToDelete!!.id).delete()
                         showDeleteDialog = false
                         listingToDelete = null
                     }
                 ) {
-                    Text("Delete", color = Color.Red)
+                    Text(stringResource(R.string.delete), color = Color.Red)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Cancel")
+                TextButton(onClick = { 
+                    keyboardController?.hide()
+                    showDeleteDialog = false 
+                }) {
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -121,10 +128,13 @@ fun MyListingsScreen(
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("My Listings", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp) },
+                title = { Text(stringResource(R.string.my_listings), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp) },
                 navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                    IconButton(onClick = {
+                        keyboardController?.hide()
+                        onBackClick()
+                    }) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.back), tint = Color.White)
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = AquaBlue)
@@ -134,22 +144,26 @@ fun MyListingsScreen(
         Box(modifier = Modifier.fillMaxSize()) {
             if (listings.isEmpty() && !isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("No listings found", color = GrayText)
+                    Text(stringResource(R.string.no_listings_found), color = GrayText)
                 }
             } else {
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(innerPadding)
-                        .background(Color(0xFFF8F9FA)),
+                        .background(MaterialTheme.colorScheme.background),
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     items(listings) { listing ->
                         ListingCard(
                             listing = listing,
-                            onEditClick = { onEditClick(listing.id, listing.category) },
+                            onEditClick = { 
+                                keyboardController?.hide()
+                                onEditClick(listing.id, listing.category) 
+                            },
                             onDeleteClick = {
+                                keyboardController?.hide()
                                 listingToDelete = listing
                                 showDeleteDialog = true
                             }
@@ -159,7 +173,7 @@ fun MyListingsScreen(
             }
             
             if (isLoading) {
-                LoadingOverlay("Loading your listings...")
+                LoadingOverlay(stringResource(R.string.loading_listings))
             }
         }
     }
@@ -232,7 +246,7 @@ fun ListingCard(
                 ) {
                     Icon(Icons.Outlined.Delete, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color(0xFFD32F2F))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Delete", fontWeight = FontWeight.Bold, color = Color(0xFFD32F2F))
+                    Text(stringResource(R.string.delete), fontWeight = FontWeight.Bold, color = Color(0xFFD32F2F))
                 }
 
                 Button(
@@ -243,7 +257,7 @@ fun ListingCard(
                 ) {
                     Icon(Icons.Outlined.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Edit Post", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.edit_post), fontWeight = FontWeight.Bold)
                 }
             }
         }

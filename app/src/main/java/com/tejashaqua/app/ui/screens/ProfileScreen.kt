@@ -285,7 +285,7 @@ fun ProfileScreen(
                     ) {
                         ProfileMenuItem(
                             icon = Icons.Default.AdminPanelSettings,
-                            label = "Admin Portal",
+                            label = stringResource(R.string.admin_portal),
                             iconTint = Color.Red,
                             onClick = onAdminClick
                         )
@@ -346,7 +346,7 @@ fun ProfileHeader(userName: String, mobileNumber: String, profilePicUrl: String?
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = if (userName.isNotEmpty()) userName else stringResource(R.string.by_label, "User"), color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text(text = if (userName.isNotEmpty()) userName else stringResource(R.string.user_label), color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 Text(text = if (mobileNumber.isNotEmpty()) "+91 $mobileNumber" else stringResource(R.string.phone_not_available), color = Color.White.copy(alpha = 0.8f), fontSize = 14.sp)
             }
             IconButton(onClick = onEditClick) {

@@ -23,6 +23,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.runtime.*
 import com.google.firebase.firestore.FirebaseFirestore
@@ -36,6 +37,7 @@ import com.tejashaqua.app.ui.components.RateGraphBottomSheet
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AquaRatesScreen(onBackClick: () -> Unit) {
+    val context = LocalContext.current
     val db = FirebaseFirestore.getInstance()
     var rates by remember { mutableStateOf<List<AquaRate>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
@@ -55,7 +57,7 @@ fun AquaRatesScreen(onBackClick: () -> Unit) {
                 if (value != null) {
                     val fetchedMap = value.documents.associateBy({ it.id }, { doc ->
                         val price = doc.getString("price") ?: "--"
-                        val change = doc.getString("change") ?: "No Change"
+                        val change = doc.getString("change") ?: context.getString(R.string.no_change)
                         val trendStr = doc.getString("trend") ?: "FLAT"
                         val trend = try { RateTrend.valueOf(trendStr) } catch (e: Exception) { RateTrend.FLAT }
                         val isPrawn = doc.getBoolean("isPrawn") ?: (doc.id == "Prawns")
@@ -66,7 +68,7 @@ fun AquaRatesScreen(onBackClick: () -> Unit) {
 
                     // Merge with the fixed list of fish types
                     rates = fishTypes.map { fish ->
-                        fetchedMap[fish] ?: AquaRate(fish, "--", "No Change", RateTrend.FLAT, isPrawn = fish == "Prawns")
+                        fetchedMap[fish] ?: AquaRate(fish, "--", context.getString(R.string.no_change), RateTrend.FLAT, isPrawn = fish == "Prawns")
                     }
                 }
                 isLoading = false
@@ -83,7 +85,7 @@ fun AquaRatesScreen(onBackClick: () -> Unit) {
                         if (latestUpdate > 0) {
                             val sdf = java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault())
                             Text(
-                                text = "Last Updated: ${sdf.format(java.util.Date(latestUpdate))}",
+                                text = stringResource(R.string.last_updated, sdf.format(java.util.Date(latestUpdate))),
                                 color = Color.White.copy(alpha = 0.8f),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Normal
@@ -107,7 +109,7 @@ fun AquaRatesScreen(onBackClick: () -> Unit) {
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color(0xFFF8F9FA))
+                        .background(MaterialTheme.colorScheme.background)
                         .padding(horizontal = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     contentPadding = PaddingValues(top = 16.dp, bottom = 16.dp)
