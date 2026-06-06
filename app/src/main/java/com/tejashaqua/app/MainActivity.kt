@@ -41,6 +41,7 @@ import com.tejashaqua.app.ui.screens.DashboardScreen
 import com.tejashaqua.app.ui.screens.DetailedPageScreen
 import com.tejashaqua.app.ui.screens.EditListingScreen
 import com.tejashaqua.app.ui.screens.EditProfileScreen
+import com.tejashaqua.app.ui.screens.FishRatesScreen
 import com.tejashaqua.app.ui.screens.ForceUpdateScreen
 import com.tejashaqua.app.ui.screens.LanguageSelectionScreen
 import com.tejashaqua.app.ui.screens.LegalScreen
@@ -70,7 +71,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 
+import com.tejashaqua.app.utils.AppStateTracker
+
 class MainActivity : AppCompatActivity() {
+    override fun onResume() {
+        super.onResume()
+        AppStateTracker.isAppInForeground = true
+    }
+
+    override fun onPause() {
+        super.onPause()
+        AppStateTracker.isAppInForeground = false
+    }
+
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(LocaleHelper.wrapContext(newBase))
     }
@@ -215,6 +228,7 @@ class MainActivity : AppCompatActivity() {
                         }
 
                         "aqua_rates" -> currentScreen = "dashboard"
+                        "fish_rates" -> currentScreen = "dashboard"
                         "select_category" -> currentScreen = "dashboard"
                         "edit_listing" -> {
                             currentScreen = if (isEditMode) "my_listings" else "select_category"
@@ -491,7 +505,6 @@ class MainActivity : AppCompatActivity() {
                                 currentUserId = userId,
                                 locationName = currentLocationName,
                                 subLocation = currentSubLocation,
-                                onSeeAllRatesClick = { currentScreen = "aqua_rates" },
                                 onAddClick = {
                                     isEditMode = false
                                     selectedListingId = null
@@ -504,6 +517,7 @@ class MainActivity : AppCompatActivity() {
                                     currentScreen = "select_location"
                                 },
                                 onPrawnsClick = { currentScreen = "prawn_rates" },
+                                onFishRatesClick = { currentScreen = "fish_rates" },
                                 onItemClick = { data ->
                                     selectedListingData = data
                                     detailedPageSource = "dashboard"
@@ -623,6 +637,9 @@ class MainActivity : AppCompatActivity() {
                                 onBackClick = { currentScreen = "dashboard" })
 
                             "prawn_rates" -> PrawnRatesScreen(
+                                onBackClick = { currentScreen = "dashboard" })
+
+                            "fish_rates" -> FishRatesScreen(
                                 onBackClick = { currentScreen = "dashboard" })
 
                             "select_category" -> SelectCategoryScreen(

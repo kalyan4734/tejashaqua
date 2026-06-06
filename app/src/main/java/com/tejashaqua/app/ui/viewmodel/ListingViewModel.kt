@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
 import com.tejashaqua.app.R
+import com.tejashaqua.app.utils.ImageUtils
 import com.tejashaqua.app.utils.NotificationUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -99,10 +100,28 @@ class ListingViewModel(application: Application) : AndroidViewModel(application)
                     }
                     is String -> { // Local URI string
                         val uri = item.toUri()
-                        ref.putFile(uri).await()
+                        val rotatedBitmap = ImageUtils.getCorrectlyOrientedBitmap(getApplication(), uri)
+                        if (rotatedBitmap != null) {
+                            val baos = ByteArrayOutputStream()
+                            rotatedBitmap.compress(Bitmap.CompressFormat.JPEG, 70, baos)
+                            val data = baos.toByteArray()
+                            ref.putBytes(data).await()
+                            rotatedBitmap.recycle()
+                        } else {
+                            ref.putFile(uri).await()
+                        }
                     }
                     is Uri -> {
-                        ref.putFile(item).await()
+                        val rotatedBitmap = ImageUtils.getCorrectlyOrientedBitmap(getApplication(), item)
+                        if (rotatedBitmap != null) {
+                            val baos = ByteArrayOutputStream()
+                            rotatedBitmap.compress(Bitmap.CompressFormat.JPEG, 70, baos)
+                            val data = baos.toByteArray()
+                            ref.putBytes(data).await()
+                            rotatedBitmap.recycle()
+                        } else {
+                            ref.putFile(item).await()
+                        }
                     }
                 }
                 val url = ref.downloadUrl.await().toString()

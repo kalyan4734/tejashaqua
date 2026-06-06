@@ -10,10 +10,23 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
+import com.tejashaqua.app.utils.AppStateTracker
 
 class MyFirebaseMessagingService : FirebaseMessagingService() {
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
+        val type = remoteMessage.data["type"]
+        val chatId = remoteMessage.data["chatId"]
+
+        // If it's a chat message, check if we should show a notification
+        if (type == "chat" && chatId != null) {
+            // Don't show if app is in foreground AND user is already on the same chat screen
+            if (AppStateTracker.isAppInForeground && AppStateTracker.activeChatId == chatId) {
+                android.util.Log.d("FCM", "User is active in this chat, skipping notification")
+                return
+            }
+        }
+
         android.util.Log.d("FCM", "Message received: ${remoteMessage.notification?.title}")
         
         val title = remoteMessage.notification?.title ?: remoteMessage.data["title"] ?: "Tejash Aqua"

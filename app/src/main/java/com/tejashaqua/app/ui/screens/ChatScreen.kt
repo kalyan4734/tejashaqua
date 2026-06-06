@@ -1,13 +1,17 @@
 package com.tejashaqua.app.ui.screens
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -26,11 +30,16 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.intl.LocaleList
+import com.tejashaqua.app.utils.AppStateTracker
 import com.tejashaqua.app.utils.LocaleHelper
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -128,6 +137,13 @@ fun ChatScreen(
         "${currentUserId}_${sellerUserId}_$listingId"
     } else {
         "${sellerUserId}_${currentUserId}_$listingId"
+    }
+
+    DisposableEffect(chatRoomId) {
+        AppStateTracker.activeChatId = chatRoomId
+        onDispose {
+            AppStateTracker.activeChatId = null
+        }
     }
 
     fun sendMessage(text: String) {
@@ -246,28 +262,45 @@ fun ChatScreen(
                     .imePadding()
             ) {
                 val context = LocalContext.current
-                Row(
-                    modifier = Modifier
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                        .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    SuggestionChip(
-                        onClick = { 
-                            keyboardController?.hide()
-                            sendMessage(context.getString(R.string.is_available)) 
-                        },
-                        label = { Text(stringResource(R.string.is_available)) },
-                        colors = SuggestionChipDefaults.suggestionChipColors(containerColor = Color(0xFFE3F2FD))
-                    )
-                    SuggestionChip(
-                        onClick = { 
-                            keyboardController?.hide()
-                            sendMessage(context.getString(R.string.best_price)) 
-                        },
-                        label = { Text(stringResource(R.string.best_price)) },
-                        colors = SuggestionChipDefaults.suggestionChipColors(containerColor = Color(0xFFE3F2FD))
-                    )
+                val listingSellerId = listingDetails["userId"]?.toString() ?: ""
+                val isMeSeller = currentUserId == listingSellerId
+
+                val buyerSuggestions = listOf(
+                    stringResource(R.string.is_available),
+                    stringResource(R.string.best_price),
+                    "Where is the location?",
+                    "Can I call you?"
+                )
+
+                val sellerSuggestions = listOf(
+                    "Yes, it is available.",
+                    "Price is slightly negotiable.",
+                    "Price is fixed.",
+                    "Please call me for details."
+                )
+
+                val currentSuggestions = if (isMeSeller) sellerSuggestions else buyerSuggestions
+                val sentMessagesTexts = chatMessages.filter { it.isFromMe }.map { it.text }
+                val visibleSuggestions = currentSuggestions.filter { it !in sentMessagesTexts }
+
+                if (visibleSuggestions.isNotEmpty()) {
+                    Row(
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                            .fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        visibleSuggestions.take(3).forEach { suggestion ->
+                            SuggestionChip(
+                                onClick = {
+                                    keyboardController?.hide()
+                                    sendMessage(suggestion)
+                                },
+                                label = { Text(suggestion, fontSize = 12.sp) },
+                                colors = SuggestionChipDefaults.suggestionChipColors(containerColor = Color(0xFFE3F2FD))
+                            )
+                        }
+                    }
                 }
                 
                 Row(
@@ -405,6 +438,7 @@ fun ChatScreen(
 fun ChatBubble(message: ChatMessage, senderName: String) {
     val timeFormat = remember { java.text.SimpleDateFormat("hh:mm a", java.util.Locale.getDefault()) }
     val timeString = timeFormat.format(java.util.Date(message.timestamp))
+    val context = LocalContext.current
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -427,11 +461,45 @@ fun ChatBubble(message: ChatMessage, senderName: String) {
                 modifier = Modifier.widthIn(max = 240.dp)
             ) {
                 Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) {
-                    Text(
-                        text = message.text,
-                        color = if (message.isFromMe) Color.White else Color.Black,
-                        fontSize = 13.sp,
-                        lineHeight = 18.sp
+                    val phoneRegex = remember { Regex("""(\+91|0)?[6-9][0-9]{9}""") }
+                    val annotatedString = buildAnnotatedString {
+                        append(message.text)
+                        val matches = phoneRegex.findAll(message.text)
+                        for (match in matches) {
+                            addStringAnnotation(
+                                tag = "phone",
+                                annotation = match.value,
+                                start = match.range.first,
+                                end = match.range.last + 1
+                            )
+                            addStyle(
+                                style = SpanStyle(
+                                    color = if (message.isFromMe) Color(0xFF81D4FA) else Color(0xFF1976D2),
+                                    textDecoration = TextDecoration.Underline,
+                                    fontWeight = FontWeight.ExtraBold
+                                ),
+                                start = match.range.first,
+                                end = match.range.last + 1
+                            )
+                        }
+                    }
+
+                    ClickableText(
+                        text = annotatedString,
+                        style = TextStyle(
+                            color = if (message.isFromMe) Color.White else Color.Black,
+                            fontSize = 13.sp,
+                            lineHeight = 18.sp
+                        ),
+                        onClick = { offset ->
+                            annotatedString.getStringAnnotations(tag = "phone", start = offset, end = offset)
+                                .firstOrNull()?.let { annotation ->
+                                    val intent = Intent(Intent.ACTION_DIAL).apply {
+                                        data = Uri.parse("tel:${annotation.item}")
+                                    }
+                                    context.startActivity(intent)
+                                }
+                        }
                     )
                     Text(
                         text = timeString,

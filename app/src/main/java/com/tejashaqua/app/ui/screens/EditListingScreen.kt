@@ -3,6 +3,7 @@ package com.tejashaqua.app.ui.screens
 import android.graphics.Bitmap
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.launch
 import androidx.compose.foundation.*
@@ -114,15 +115,21 @@ fun EditListingScreen(
         contract = ActivityResultContracts.TakePicturePreview()
     ) { bitmap ->
         if (bitmap != null) {
+            // Processing camera thumbnail isn't ideal, but if we have to use it:
             selectedPhotos = selectedPhotos + bitmap
         }
     }
 
     val galleryLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri ->
-        if (uri != null) {
-            selectedPhotos = selectedPhotos + uri.toString()
+        contract = ActivityResultContracts.PickMultipleVisualMedia(5)
+    ) { uris ->
+        val remainingSlots = 5 - selectedPhotos.size
+        if (remainingSlots > 0 && uris.isNotEmpty()) {
+            val toAdd = uris.take(remainingSlots).map { it.toString() }
+            selectedPhotos = selectedPhotos + toAdd
+            if (uris.size > remainingSlots) {
+                Toast.makeText(context, "Only 5 photos allowed. Added $remainingSlots photos.", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -130,7 +137,7 @@ fun EditListingScreen(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
-            galleryLauncher.launch("image/*")
+            galleryLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
         } else {
             Toast.makeText(context, "Storage permission is required to select photos", Toast.LENGTH_SHORT).show()
         }
@@ -171,7 +178,7 @@ fun EditListingScreen(
                             }
                             
                             if (androidx.core.content.ContextCompat.checkSelfPermission(context, permission) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                                galleryLauncher.launch("image/*")
+                                galleryLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                             } else {
                                 storagePermissionLauncher.launch(permission)
                             }
@@ -346,6 +353,20 @@ fun EditListingScreen(
         }
     }
 
+    val categoryColor = remember(category) {
+        when (category) {
+            ListingCategory.FISH -> Color(0xFF009688)
+            ListingCategory.PRAWNS -> Color(0xFF3F51B5)
+            ListingCategory.EQUIPMENTS -> Color(0xFF1976D2)
+            ListingCategory.VEHICLES -> Color(0xFF1976D2)
+            ListingCategory.FEED -> Color(0xFFE65100)
+            ListingCategory.SERVICES -> Color(0xFFF57C00)
+            ListingCategory.TANKS -> Color(0xFF388E3C)
+            ListingCategory.BUSINESS -> Color(0xFFB71C1C)
+            ListingCategory.JOBS -> Color(0xFF673AB7)
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
             topBar = {
@@ -359,7 +380,7 @@ fun EditListingScreen(
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
                         }
                     },
-                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = AquaBlue)
+                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = categoryColor)
                 )
             },
             bottomBar = {
@@ -505,7 +526,7 @@ fun EditListingScreen(
                                 onClick = onActionClick,
                                 modifier = Modifier.weight(1f).height(56.dp),
                                 shape = RoundedCornerShape(12.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = AquaBlue)
+                                colors = ButtonDefaults.buttonColors(containerColor = categoryColor)
                             ) {
                                 Text(stringResource(R.string.save_changes), fontWeight = FontWeight.Bold, fontSize = 16.sp)
                             }
@@ -516,7 +537,7 @@ fun EditListingScreen(
                                 onClick = onActionClick,
                                 modifier = Modifier.fillMaxWidth().height(56.dp),
                                 shape = RoundedCornerShape(12.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = AquaBlue)
+                                colors = ButtonDefaults.buttonColors(containerColor = categoryColor)
                             ) {
                                 Text(stringResource(R.string.post_listing), fontWeight = FontWeight.Bold, fontSize = 16.sp)
                             }
@@ -546,7 +567,8 @@ fun EditListingScreen(
                             unitType, { unitType = it },
                             price, { price = it },
                             errors = fieldErrors,
-                            keyboardOptions = keyboardOptionsBase
+                            keyboardOptions = keyboardOptionsBase,
+                            accentColor = categoryColor
                         )
                         ListingCategory.PRAWNS -> PrawnFields(
                             prawnType, { prawnType = it },
@@ -558,14 +580,16 @@ fun EditListingScreen(
                             unitType, { unitType = it },
                             title, { title = it },
                             errors = fieldErrors,
-                            keyboardOptions = keyboardOptionsBase
+                            keyboardOptions = keyboardOptionsBase,
+                            accentColor = categoryColor
                         )
                         ListingCategory.EQUIPMENTS -> EquipmentFields(
                             equipmentType, { equipmentType = it },
                             title, { title = it },
                             price, { price = it },
                             errors = fieldErrors,
-                            keyboardOptions = keyboardOptionsBase
+                            keyboardOptions = keyboardOptionsBase,
+                            accentColor = categoryColor
                         )
                         ListingCategory.VEHICLES -> VehicleFields(
                             selectedServiceType, { selectedServiceType = it },
@@ -573,7 +597,8 @@ fun EditListingScreen(
                             vehicleCapacity, { vehicleCapacity = it },
                             title, { title = it },
                             errors = fieldErrors,
-                            keyboardOptions = keyboardOptionsBase
+                            keyboardOptions = keyboardOptionsBase,
+                            accentColor = categoryColor
                         )
                         ListingCategory.FEED -> FeedFields(
                             businessType, { businessType = it },
@@ -581,7 +606,8 @@ fun EditListingScreen(
                             title, { title = it },
                             ratePerTon, { ratePerTon = it },
                             errors = fieldErrors,
-                            keyboardOptions = keyboardOptionsBase
+                            keyboardOptions = keyboardOptionsBase,
+                            accentColor = categoryColor
                         )
                         ListingCategory.SERVICES -> ServiceFields(
                             selectedServiceType, { selectedServiceType = it },
@@ -591,7 +617,8 @@ fun EditListingScreen(
                             netType, { netType = it },
                             title, { title = it },
                             errors = fieldErrors,
-                            keyboardOptions = keyboardOptionsBase
+                            keyboardOptions = keyboardOptionsBase,
+                            accentColor = categoryColor
                         )
                         ListingCategory.TANKS -> TankFields(
                             title, { title = it },
@@ -600,7 +627,8 @@ fun EditListingScreen(
                             estPricePerAcre, { estPricePerAcre = it },
                             tankLocation, { tankLocation = it },
                             errors = fieldErrors,
-                            keyboardOptions = keyboardOptionsBase
+                            keyboardOptions = keyboardOptionsBase,
+                            accentColor = categoryColor
                         )
                         ListingCategory.JOBS -> JobFields(
                             jobType, { jobType = it },
@@ -609,7 +637,8 @@ fun EditListingScreen(
                             salary, { salary = it },
                             title, { title = it },
                             errors = fieldErrors,
-                            keyboardOptions = keyboardOptionsBase
+                            keyboardOptions = keyboardOptionsBase,
+                            accentColor = categoryColor
                         )
                         ListingCategory.BUSINESS -> BusinessFields(
                             businessSubCategory, { businessSubCategory = it },
@@ -619,7 +648,8 @@ fun EditListingScreen(
                             title, { title = it },
                             ratePerTon, { ratePerTon = it },
                             errors = fieldErrors,
-                            keyboardOptions = keyboardOptionsBase
+                            keyboardOptions = keyboardOptionsBase,
+                            accentColor = categoryColor
                         )
                     }
                 }
@@ -631,7 +661,8 @@ fun EditListingScreen(
                         onValueChange = { description = it }, 
                         minLines = 3, 
                         isRequired = false,
-                        keyboardOptions = keyboardOptionsBase
+                        keyboardOptions = keyboardOptionsBase,
+                        accentColor = categoryColor
                     )
                 }
 
@@ -648,7 +679,8 @@ fun EditListingScreen(
                                 selectedPhotos = selectedPhotos.toMutableList().apply { removeAt(index) }
                                 if (selectedPhotos.isNotEmpty()) photoError = false
                             },
-                            isError = photoError
+                            isError = photoError,
+                            accentColor = categoryColor
                         )
                     }
                 }
@@ -657,7 +689,7 @@ fun EditListingScreen(
                     LocationSection(location, onClick = {
                         keyboardController?.hide()
                         onLocationChangeClick()
-                    }, isError = fieldErrors["location"] == true)
+                    }, isError = fieldErrors["location"] == true, accentColor = categoryColor)
                 }
 
                 item { Spacer(modifier = Modifier.height(20.dp)) }
@@ -675,7 +707,8 @@ fun PhotoSection(
     photos: List<Any>,
     onAddPhoto: () -> Unit,
     onRemovePhoto: (Int) -> Unit,
-    isError: Boolean = false
+    isError: Boolean = false,
+    accentColor: Color = AquaBlue
 ) {
     Column {
         Text(text = androidx.compose.ui.text.buildAnnotatedString {
@@ -725,7 +758,7 @@ fun PhotoSection(
                         .clickable { onAddPhoto() },
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Default.PhotoCamera, contentDescription = null, tint = if (isError) MaterialTheme.colorScheme.error else AquaBlue, modifier = Modifier.size(32.dp))
+                    Icon(Icons.Default.PhotoCamera, contentDescription = null, tint = if (isError) MaterialTheme.colorScheme.error else accentColor, modifier = Modifier.size(32.dp))
                 }
             }
         }
@@ -861,7 +894,8 @@ fun FishFields(
     unitType: String, onUnitTypeChange: (String) -> Unit,
     price: String, onPriceChange: (String) -> Unit,
     errors: Map<String, Boolean> = emptyMap(),
-    keyboardOptions: KeyboardOptions = KeyboardOptions.Default
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    accentColor: Color = AquaBlue
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         SearchableListingDropdown(
@@ -879,27 +913,28 @@ fun FishFields(
                 stringResource(R.string.fish_others)
             ), 
             onSelectionChange = onFishTypeChange, 
-            isError = errors["fishType"] == true
+            isError = errors["fishType"] == true,
+            accentColor = accentColor
         )
-        ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true, keyboardOptions = keyboardOptions)
+        ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true, keyboardOptions = keyboardOptions, accentColor = accentColor)
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(modifier = Modifier.weight(1f)) {
-                ListingDropdown(label = stringResource(R.string.size_label), value = sizeType, options = listOf(stringResource(R.string.unit_inches), stringResource(R.string.unit_cms)), onSelectionChange = onSizeTypeChange)
+                ListingDropdown(label = stringResource(R.string.size_label), value = sizeType, options = listOf(stringResource(R.string.unit_inches), stringResource(R.string.unit_cms)), onSelectionChange = onSizeTypeChange, accentColor = accentColor)
             }
             Box(modifier = Modifier.weight(1f)) {
-                ListingTextField(label = stringResource(R.string.size_value_label), value = sizeValue, onValueChange = onSizeValueChange, isError = errors["sizeValue"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Decimal))
+                ListingTextField(label = stringResource(R.string.size_value_label), value = sizeValue, onValueChange = onSizeValueChange, isError = errors["sizeValue"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Decimal), accentColor = accentColor)
             }
         }
-        ListingTextField(label = stringResource(R.string.fish_age_label), value = fishAge, onValueChange = onFishAgeChange, isError = errors["fishAge"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number))
+        ListingTextField(label = stringResource(R.string.fish_age_label), value = fishAge, onValueChange = onFishAgeChange, isError = errors["fishAge"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number), accentColor = accentColor)
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(modifier = Modifier.weight(1f)) {
-                ListingTextField(label = stringResource(R.string.quantity_label), value = quantity, onValueChange = onQuantityChange, isError = errors["quantity"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number))
+                ListingTextField(label = stringResource(R.string.quantity_label), value = quantity, onValueChange = onQuantityChange, isError = errors["quantity"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number), accentColor = accentColor)
             }
             Box(modifier = Modifier.weight(1f)) {
-                ListingDropdown(label = stringResource(R.string.unit_label), value = unitType, options = listOf(stringResource(R.string.unit_lakhs), stringResource(R.string.unit_thousands), stringResource(R.string.unit_kgs)), onSelectionChange = onUnitTypeChange)
+                ListingDropdown(label = stringResource(R.string.unit_label), value = unitType, options = listOf(stringResource(R.string.unit_lakhs), stringResource(R.string.unit_thousands), stringResource(R.string.unit_kgs)), onSelectionChange = onUnitTypeChange, accentColor = accentColor)
             }
         }
-        ListingTextField(label = stringResource(R.string.price_label), value = price, onValueChange = onPriceChange, isError = errors["price"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number))
+        ListingTextField(label = stringResource(R.string.price_label), value = price, onValueChange = onPriceChange, isError = errors["price"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number), accentColor = accentColor)
     }
 }
 
@@ -914,7 +949,8 @@ fun PrawnFields(
     unitType: String, onUnitTypeChange: (String) -> Unit,
     title: String, onTitleChange: (String) -> Unit,
     errors: Map<String, Boolean> = emptyMap(),
-    keyboardOptions: KeyboardOptions = KeyboardOptions.Default
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    accentColor: Color = AquaBlue
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         SearchableListingDropdown(
@@ -928,25 +964,26 @@ fun PrawnFields(
                 stringResource(R.string.fish_others)
             ), 
             onSelectionChange = onPrawnTypeChange, 
-            isError = errors["prawnType"] == true
+            isError = errors["prawnType"] == true,
+            accentColor = accentColor
         )
-        ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true, keyboardOptions = keyboardOptions)
-        ListingTextField(label = stringResource(R.string.hatchery_name_label), value = hatcheryName, onValueChange = onHatcheryNameChange, isError = errors["hatcheryName"] == true, keyboardOptions = keyboardOptions)
-        ListingTextField(label = stringResource(R.string.pl_days_label), value = plDays, onValueChange = onPlDaysChange, isError = errors["plDays"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number))
+        ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true, keyboardOptions = keyboardOptions, accentColor = accentColor)
+        ListingTextField(label = stringResource(R.string.hatchery_name_label), value = hatcheryName, onValueChange = onHatcheryNameChange, isError = errors["hatcheryName"] == true, keyboardOptions = keyboardOptions, accentColor = accentColor)
+        ListingTextField(label = stringResource(R.string.pl_days_label), value = plDays, onValueChange = onPlDaysChange, isError = errors["plDays"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number), accentColor = accentColor)
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(modifier = Modifier.weight(1f)) {
-                ListingTextField(label = stringResource(R.string.rate_label), value = rateValue, onValueChange = onRateValueChange, isError = errors["rateValue"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number))
+                ListingTextField(label = stringResource(R.string.rate_label), value = rateValue, onValueChange = onRateValueChange, isError = errors["rateValue"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number), accentColor = accentColor)
             }
             Box(modifier = Modifier.weight(1f)) {
-                ListingDropdown(label = stringResource(R.string.unit_label), value = rateType, options = listOf(stringResource(R.string.unit_paise), stringResource(R.string.unit_rupees)), onSelectionChange = onRateTypeChange)
+                ListingDropdown(label = stringResource(R.string.unit_label), value = rateType, options = listOf(stringResource(R.string.unit_paise), stringResource(R.string.unit_rupees)), onSelectionChange = onRateTypeChange, accentColor = accentColor)
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(modifier = Modifier.weight(1f)) {
-                ListingTextField(label = stringResource(R.string.quantity_label), value = quantity, onValueChange = onQuantityChange, isError = errors["quantity"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number))
+                ListingTextField(label = stringResource(R.string.quantity_label), value = quantity, onValueChange = onQuantityChange, isError = errors["quantity"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number), accentColor = accentColor)
             }
             Box(modifier = Modifier.weight(1f)) {
-                ListingDropdown(label = stringResource(R.string.unit_label), value = unitType, options = listOf(stringResource(R.string.unit_lakhs), stringResource(R.string.unit_thousands)), onSelectionChange = onUnitTypeChange)
+                ListingDropdown(label = stringResource(R.string.unit_label), value = unitType, options = listOf(stringResource(R.string.unit_lakhs), stringResource(R.string.unit_thousands)), onSelectionChange = onUnitTypeChange, accentColor = accentColor)
             }
         }
     }
@@ -958,7 +995,8 @@ fun EquipmentFields(
     title: String, onTitleChange: (String) -> Unit,
     price: String, onPriceChange: (String) -> Unit,
     errors: Map<String, Boolean> = emptyMap(),
-    keyboardOptions: KeyboardOptions = KeyboardOptions.Default
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    accentColor: Color = AquaBlue
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         SearchableListingDropdown(
@@ -972,10 +1010,11 @@ fun EquipmentFields(
                 stringResource(R.string.fish_others)
             ), 
             onSelectionChange = onEquipmentTypeChange, 
-            isError = errors["equipmentType"] == true
+            isError = errors["equipmentType"] == true,
+            accentColor = accentColor
         )
-        ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true, keyboardOptions = keyboardOptions)
-        ListingTextField(label = stringResource(R.string.price_label), value = price, onValueChange = onPriceChange, isError = errors["price"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number))
+        ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true, keyboardOptions = keyboardOptions, accentColor = accentColor)
+        ListingTextField(label = stringResource(R.string.price_label), value = price, onValueChange = onPriceChange, isError = errors["price"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number), accentColor = accentColor)
     }
 }
 
@@ -986,7 +1025,8 @@ fun VehicleFields(
     vehicleCapacity: String, onVehicleCapacityChange: (String) -> Unit,
     title: String, onTitleChange: (String) -> Unit,
     errors: Map<String, Boolean> = emptyMap(),
-    keyboardOptions: KeyboardOptions = KeyboardOptions.Default
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    accentColor: Color = AquaBlue
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         ListingDropdown(
@@ -994,11 +1034,12 @@ fun VehicleFields(
             value = serviceType, 
             options = listOf(stringResource(R.string.service_live_fish_vehicles), stringResource(R.string.service_feed_transport)), 
             onSelectionChange = onServiceTypeChange, 
-            isError = errors["serviceType"] == true
+            isError = errors["serviceType"] == true,
+            accentColor = accentColor
         )
-        ListingTextField(label = stringResource(R.string.vehicle_name_label), value = vehicleName, onValueChange = onVehicleNameChange, isError = errors["vehicleName"] == true, keyboardOptions = keyboardOptions)
-        ListingTextField(label = stringResource(R.string.vehicle_capacity_label), value = vehicleCapacity, onValueChange = onVehicleCapacityChange, isError = errors["vehicleCapacity"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number))
-        ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true, keyboardOptions = keyboardOptions)
+        ListingTextField(label = stringResource(R.string.vehicle_name_label), value = vehicleName, onValueChange = onVehicleNameChange, isError = errors["vehicleName"] == true, keyboardOptions = keyboardOptions, accentColor = accentColor)
+        ListingTextField(label = stringResource(R.string.vehicle_capacity_label), value = vehicleCapacity, onValueChange = onVehicleCapacityChange, isError = errors["vehicleCapacity"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number), accentColor = accentColor)
+        ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true, keyboardOptions = keyboardOptions, accentColor = accentColor)
     }
 }
 
@@ -1011,7 +1052,8 @@ fun BusinessFields(
     title: String, onTitleChange: (String) -> Unit,
     ratePerTon: String, onRatePerTonChange: (String) -> Unit,
     errors: Map<String, Boolean> = emptyMap(),
-    keyboardOptions: KeyboardOptions = KeyboardOptions.Default
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    accentColor: Color = AquaBlue
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         val fishFeed = stringResource(R.string.biz_fish_feed)
@@ -1034,24 +1076,29 @@ fun BusinessFields(
                     onRatePerTonChange("")
                 }
             },
-            isError = errors["businessType"] == true
+            isError = errors["businessType"] == true,
+            accentColor = accentColor
         )
 
         if (businessSubCategory == "Feed") {
-            SearchableListingDropdown(
-                label = stringResource(R.string.feed_name_label),
-                value = feedName,
-                options = listOf(stringResource(R.string.feed_rice_bran), stringResource(R.string.feed_fine_rice_bran), stringResource(R.string.feed_pellets), stringResource(R.string.fish_others)),
-                onSelectionChange = onFeedNameChange,
-                isError = errors["feedName"] == true
-            )
+            if (businessType != prawnFeed) {
+                SearchableListingDropdown(
+                    label = stringResource(R.string.feed_name_label),
+                    value = feedName,
+                    options = listOf(stringResource(R.string.feed_rice_bran), stringResource(R.string.feed_fine_rice_bran), stringResource(R.string.feed_pellets), stringResource(R.string.fish_others)),
+                    onSelectionChange = onFeedNameChange,
+                    isError = errors["feedName"] == true,
+                    accentColor = accentColor
+                )
+            }
 
             ListingTextField(
                 label = stringResource(R.string.title_label),
                 value = title,
                 onValueChange = onTitleChange,
                 isError = errors["title"] == true,
-                keyboardOptions = keyboardOptions
+                keyboardOptions = keyboardOptions,
+                accentColor = accentColor
             )
 
             ListingTextField(
@@ -1059,15 +1106,17 @@ fun BusinessFields(
                 value = ratePerTon,
                 onValueChange = onRatePerTonChange,
                 isError = errors["ratePerTon"] == true,
-                keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number)
+                keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number),
+                accentColor = accentColor
             )
         } else if (businessSubCategory == "Medicine") {
             ListingTextField(
-                label = stringResource(R.string.feed_name_label),
+                label = stringResource(R.string.medicine_name_label),
                 value = medicineName,
                 onValueChange = onMedicineNameChange,
                 isError = errors["medicineName"] == true,
-                keyboardOptions = keyboardOptions
+                keyboardOptions = keyboardOptions,
+                accentColor = accentColor
             )
 
             ListingTextField(
@@ -1075,7 +1124,17 @@ fun BusinessFields(
                 value = title,
                 onValueChange = onTitleChange,
                 isError = errors["title"] == true,
-                keyboardOptions = keyboardOptions
+                keyboardOptions = keyboardOptions,
+                accentColor = accentColor
+            )
+
+            ListingTextField(
+                label = stringResource(R.string.rate_per_ton_label),
+                value = ratePerTon,
+                onValueChange = onRatePerTonChange,
+                isError = errors["ratePerTon"] == true,
+                keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number),
+                accentColor = accentColor
             )
         }
     }
@@ -1088,13 +1147,14 @@ fun FeedFields(
     title: String, onTitleChange: (String) -> Unit,
     ratePerTon: String, onRatePerTonChange: (String) -> Unit,
     errors: Map<String, Boolean> = emptyMap(),
-    keyboardOptions: KeyboardOptions = KeyboardOptions.Default
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    accentColor: Color = AquaBlue
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        ListingDropdown(label = stringResource(R.string.business_type_label), value = businessType, options = listOf(stringResource(R.string.biz_fish_feed), stringResource(R.string.biz_prawn_feed)), onSelectionChange = onBusinessTypeChange, isError = errors["businessType"] == true)
-        ListingDropdown(label = stringResource(R.string.feed_name_label), value = feedName, options = listOf("Godrej", "CP", "Avanti"), onSelectionChange = onFeedNameChange, isError = errors["feedName"] == true)
-        ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true, keyboardOptions = keyboardOptions)
-        ListingTextField(label = stringResource(R.string.rate_per_ton_label), value = ratePerTon, onValueChange = onRatePerTonChange, isError = errors["ratePerTon"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number))
+        ListingDropdown(label = stringResource(R.string.business_type_label), value = businessType, options = listOf(stringResource(R.string.biz_fish_feed), stringResource(R.string.biz_prawn_feed)), onSelectionChange = onBusinessTypeChange, isError = errors["businessType"] == true, accentColor = accentColor)
+        ListingDropdown(label = stringResource(R.string.feed_name_label), value = feedName, options = listOf("Godrej", "CP", "Avanti"), onSelectionChange = onFeedNameChange, isError = errors["feedName"] == true, accentColor = accentColor)
+        ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true, keyboardOptions = keyboardOptions, accentColor = accentColor)
+        ListingTextField(label = stringResource(R.string.rate_per_ton_label), value = ratePerTon, onValueChange = onRatePerTonChange, isError = errors["ratePerTon"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number), accentColor = accentColor)
     }
 }
 
@@ -1107,7 +1167,8 @@ fun ServiceFields(
     netType: String, onNetTypeChange: (String) -> Unit,
     title: String, onTitleChange: (String) -> Unit,
     errors: Map<String, Boolean> = emptyMap(),
-    keyboardOptions: KeyboardOptions = KeyboardOptions.Default
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    accentColor: Color = AquaBlue
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         val boreWell = stringResource(R.string.service_bore_well)
@@ -1119,7 +1180,8 @@ fun ServiceFields(
             value = serviceType,
             options = listOf(boreWell, fishVehicles, nets, stringResource(R.string.fish_others)),
             onSelectionChange = onServiceTypeChange,
-            isError = errors["serviceType"] == true
+            isError = errors["serviceType"] == true,
+            accentColor = accentColor
         )
 
         when (serviceType) {
@@ -1129,12 +1191,13 @@ fun ServiceFields(
                     value = boreWellType,
                     options = listOf(stringResource(R.string.bore_drill), stringResource(R.string.bore_hand), stringResource(R.string.fish_others)),
                     onSelectionChange = onBoreWellTypeChange,
-                    isError = errors["boreWellType"] == true
+                    isError = errors["boreWellType"] == true,
+                    accentColor = accentColor
                 )
             }
             fishVehicles -> {
-                ListingTextField(label = stringResource(R.string.vehicle_name_label), value = vehicleName, onValueChange = onVehicleNameChange, isError = errors["vehicleName"] == true, keyboardOptions = keyboardOptions)
-                ListingTextField(label = stringResource(R.string.vehicle_capacity_label), value = vehicleCapacity, onValueChange = onVehicleCapacityChange, isError = errors["vehicleCapacity"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number))
+                ListingTextField(label = stringResource(R.string.vehicle_name_label), value = vehicleName, onValueChange = onVehicleNameChange, isError = errors["vehicleName"] == true, keyboardOptions = keyboardOptions, accentColor = accentColor)
+                ListingTextField(label = stringResource(R.string.vehicle_capacity_label), value = vehicleCapacity, onValueChange = onVehicleCapacityChange, isError = errors["vehicleCapacity"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number), accentColor = accentColor)
             }
             nets -> {
                 SearchableListingDropdown(
@@ -1142,11 +1205,12 @@ fun ServiceFields(
                     value = netType,
                     options = listOf(stringResource(R.string.net_harvest), stringResource(R.string.net_hand), stringResource(R.string.fish_others)),
                     onSelectionChange = onNetTypeChange,
-                    isError = errors["netType"] == true
+                    isError = errors["netType"] == true,
+                    accentColor = accentColor
                 )
             }
         }
-        ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true, keyboardOptions = keyboardOptions)
+        ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true, keyboardOptions = keyboardOptions, accentColor = accentColor)
     }
 }
 
@@ -1158,20 +1222,21 @@ fun TankFields(
     estPricePerAcre: String, onEstPricePerAcreChange: (String) -> Unit,
     tankLocation: String, onTankLocationChange: (String) -> Unit,
     errors: Map<String, Boolean> = emptyMap(),
-    keyboardOptions: KeyboardOptions = KeyboardOptions.Default
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    accentColor: Color = AquaBlue
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        ListingDropdown(label = "Type", value = tankType, options = listOf(stringResource(R.string.tank_lease), stringResource(R.string.tank_sell)), onSelectionChange = onTankTypeChange, isError = errors["tankType"] == true)
-        ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true, keyboardOptions = keyboardOptions)
+        ListingDropdown(label = "Type", value = tankType, options = listOf(stringResource(R.string.tank_lease), stringResource(R.string.tank_sell)), onSelectionChange = onTankTypeChange, isError = errors["tankType"] == true, accentColor = accentColor)
+        ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true, keyboardOptions = keyboardOptions, accentColor = accentColor)
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(modifier = Modifier.weight(1f)) {
-                ListingTextField(label = stringResource(R.string.tank_acres_label), value = tankAcres, onValueChange = onTankAcresChange, isError = errors["tankAcres"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Decimal))
+                ListingTextField(label = stringResource(R.string.tank_acres_label), value = tankAcres, onValueChange = onTankAcresChange, isError = errors["tankAcres"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Decimal), accentColor = accentColor)
             }
             Box(modifier = Modifier.weight(1f)) {
-                ListingTextField(label = stringResource(R.string.est_price_per_acre_label), value = estPricePerAcre, onValueChange = onEstPricePerAcreChange, isError = errors["estPricePerAcre"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number))
+                ListingTextField(label = stringResource(R.string.est_price_per_acre_label), value = estPricePerAcre, onValueChange = onEstPricePerAcreChange, isError = errors["estPricePerAcre"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number), accentColor = accentColor)
             }
         }
-        ListingTextField(label = stringResource(R.string.tank_location_label), value = tankLocation, onValueChange = onTankLocationChange, isError = errors["tankLocation"] == true, keyboardOptions = keyboardOptions)
+        ListingTextField(label = stringResource(R.string.tank_location_label), value = tankLocation, onValueChange = onTankLocationChange, isError = errors["tankLocation"] == true, keyboardOptions = keyboardOptions, accentColor = accentColor)
     }
 }
 
@@ -1183,7 +1248,8 @@ fun JobFields(
     salary: String, onSalaryChange: (String) -> Unit,
     title: String, onTitleChange: (String) -> Unit,
     errors: Map<String, Boolean> = emptyMap(),
-    keyboardOptions: KeyboardOptions = KeyboardOptions.Default
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    accentColor: Color = AquaBlue
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         SearchableListingDropdown(
@@ -1196,18 +1262,19 @@ fun JobFields(
                 stringResource(R.string.job_technician)
             ),
             onSelectionChange = onJobTypeChange,
-            isError = errors["jobType"] == true
+            isError = errors["jobType"] == true,
+            accentColor = accentColor
         )
-        ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true, keyboardOptions = keyboardOptions)
+        ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true, keyboardOptions = keyboardOptions, accentColor = accentColor)
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(modifier = Modifier.weight(1f)) {
-                ListingTextField(label = stringResource(R.string.tank_acres_label), value = tankAcres, onValueChange = onTankAcresChange, isError = errors["tankAcres"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Decimal))
+                ListingTextField(label = stringResource(R.string.tank_acres_label), value = tankAcres, onValueChange = onTankAcresChange, isError = errors["tankAcres"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Decimal), accentColor = accentColor)
             }
             Box(modifier = Modifier.weight(1f)) {
-                ListingTextField(label = stringResource(R.string.salary_label), value = salary, onValueChange = onSalaryChange, isError = errors["salary"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number))
+                ListingTextField(label = stringResource(R.string.salary_label), value = salary, onValueChange = onSalaryChange, isError = errors["salary"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number), accentColor = accentColor)
             }
         }
-        ListingTextField(label = stringResource(R.string.tank_location_label), value = tankLocation, onValueChange = onTankLocationChange, isError = errors["tankLocation"] == true, keyboardOptions = keyboardOptions)
+        ListingTextField(label = stringResource(R.string.tank_location_label), value = tankLocation, onValueChange = onTankLocationChange, isError = errors["tankLocation"] == true, keyboardOptions = keyboardOptions, accentColor = accentColor)
     }
 }
 
@@ -1219,7 +1286,8 @@ fun ListingTextField(
     minLines: Int = 1,
     isRequired: Boolean = true,
     isError: Boolean = false,
-    keyboardOptions: KeyboardOptions = KeyboardOptions.Default
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    accentColor: Color = AquaBlue
 ) {
     Column {
         Text(text = androidx.compose.ui.text.buildAnnotatedString {
@@ -1239,7 +1307,7 @@ fun ListingTextField(
             keyboardOptions = keyboardOptions,
             colors = OutlinedTextFieldDefaults.colors(
                 unfocusedBorderColor = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline,
-                focusedBorderColor = if (isError) MaterialTheme.colorScheme.error else AquaBlue,
+                focusedBorderColor = if (isError) MaterialTheme.colorScheme.error else accentColor,
                 unfocusedContainerColor = MaterialTheme.colorScheme.surface,
                 focusedContainerColor = MaterialTheme.colorScheme.surface
             )
@@ -1254,7 +1322,8 @@ fun SearchableListingDropdown(
     value: String,
     options: List<String>,
     onSelectionChange: (String) -> Unit,
-    isError: Boolean = false
+    isError: Boolean = false,
+    accentColor: Color = AquaBlue
 ) {
     var showSheet by remember { mutableStateOf(false) }
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -1336,7 +1405,7 @@ fun SearchableListingDropdown(
                         }
                     },
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = AquaBlue,
+                        focusedBorderColor = accentColor,
                         unfocusedBorderColor = MaterialTheme.colorScheme.outline
                     )
                 )
@@ -1353,12 +1422,12 @@ fun SearchableListingDropdown(
                                 Text(
                                     text = option,
                                     fontWeight = if (option == value) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (option == value) AquaBlue else MaterialTheme.colorScheme.onSurface
+                                    color = if (option == value) accentColor else MaterialTheme.colorScheme.onSurface
                                 )
                             },
                             trailingContent = {
                                 if (option == value) {
-                                    Icon(Icons.Default.Check, contentDescription = null, tint = AquaBlue)
+                                    Icon(Icons.Default.Check, contentDescription = null, tint = accentColor)
                                 }
                             },
                             modifier = Modifier.clickable {
@@ -1388,7 +1457,7 @@ fun SearchableListingDropdown(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ListingDropdown(label: String, value: String, options: List<String>, onSelectionChange: (String) -> Unit, isError: Boolean = false) {
+fun ListingDropdown(label: String, value: String, options: List<String>, onSelectionChange: (String) -> Unit, isError: Boolean = false, accentColor: Color = AquaBlue) {
     var expanded by remember { mutableStateOf(false) }
     val keyboardController = LocalSoftwareKeyboardController.current
     
@@ -1412,7 +1481,7 @@ fun ListingDropdown(label: String, value: String, options: List<String>, onSelec
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                 colors = OutlinedTextFieldDefaults.colors(
                     unfocusedBorderColor = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline,
-                    focusedBorderColor = if (isError) MaterialTheme.colorScheme.error else AquaBlue,
+                    focusedBorderColor = if (isError) MaterialTheme.colorScheme.error else accentColor,
                     unfocusedContainerColor = MaterialTheme.colorScheme.surface,
                     focusedContainerColor = MaterialTheme.colorScheme.surface
                 )
@@ -1437,7 +1506,7 @@ fun ListingDropdown(label: String, value: String, options: List<String>, onSelec
 }
 
 @Composable
-fun LocationSection(location: String, onClick: () -> Unit, isError: Boolean = false) {
+fun LocationSection(location: String, onClick: () -> Unit, isError: Boolean = false, accentColor: Color = AquaBlue) {
     Column {
         Text(text = stringResource(R.string.location_label), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
         Spacer(modifier = Modifier.height(8.dp))
@@ -1462,7 +1531,7 @@ fun LocationSection(location: String, onClick: () -> Unit, isError: Boolean = fa
                     modifier = Modifier.weight(1f)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(stringResource(R.string.change_btn), color = if (isError) MaterialTheme.colorScheme.error else AquaBlue, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.change_btn), color = if (isError) MaterialTheme.colorScheme.error else accentColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
         }
     }

@@ -55,11 +55,11 @@ fun DashboardScreen(
     currentUserId: String,
     locationName: String,
     subLocation: String,
-    onSeeAllRatesClick: () -> Unit,
     onAddClick: () -> Unit,
     onProfileClick: () -> Unit,
     onLocationClick: () -> Unit,
     onPrawnsClick: () -> Unit,
+    onFishRatesClick: () -> Unit,
     onItemClick: (Map<String, Any>) -> Unit,
     onChatListClick: (Map<String, Any>) -> Unit,
     onLocationFetched: (String, String) -> Unit,
@@ -317,10 +317,11 @@ fun DashboardScreen(
                     if (selectedItem == 0) {
                         item { 
                             AquaRatesSection(
-                                onSeeAllClick = onSeeAllRatesClick,
                                 onRateClick = { rate ->
                                     if (rate.isPrawn) {
                                         onPrawnsClick()
+                                    } else if (rate.name == "Rohu") {
+                                        onFishRatesClick()
                                     } else {
                                         selectedRateForGraph = rate
                                         showGraphSheet = true
@@ -593,12 +594,25 @@ fun CategoryFilterRow(selected: String, onSelect: (String) -> Unit) {
                 else -> category
             }
             
+            val selectedColor = when(category) {
+                "FISH" -> Color(0xFF009688)
+                "PRAWNS" -> Color(0xFF3F51B5)
+                "EQUIPMENTS" -> Color(0xFF1976D2)
+                "VEHICLES" -> Color(0xFF1976D2)
+                "FEED" -> Color(0xFFE65100)
+                "SERVICES" -> Color(0xFFF57C00)
+                "TANKS" -> Color(0xFF388E3C)
+                "BUSINESS" -> Color(0xFFB71C1C)
+                "JOBS" -> Color(0xFF673AB7)
+                else -> AquaBlue
+            }
+            
             FilterChip(
                 selected = selected == category,
                 onClick = { onSelect(category) },
                 label = { Text(label) },
                 colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = AquaBlue,
+                    selectedContainerColor = selectedColor,
                     selectedLabelColor = Color.White
                 )
             )
@@ -665,7 +679,7 @@ fun FooterSection() {
 }
 
 @Composable
-fun AquaRatesSection(onSeeAllClick: () -> Unit, onRateClick: (AquaRate) -> Unit) {
+fun AquaRatesSection(onRateClick: (AquaRate) -> Unit) {
     val currentDate = SimpleDateFormat("MMMM dd, yyyy", Locale.getDefault()).format(Date())
     val context = LocalContext.current
     val db = FirebaseFirestore.getInstance()
@@ -673,7 +687,7 @@ fun AquaRatesSection(onSeeAllClick: () -> Unit, onRateClick: (AquaRate) -> Unit)
     var isLoading by remember { mutableStateOf(true) }
 
     val fishTypes = listOf(
-        "Prawns", "Rohu", "Pangasius", "Roopchand"
+        "Prawns", "Rohu"
     )
 
     LaunchedEffect(Unit) {
@@ -699,10 +713,7 @@ fun AquaRatesSection(onSeeAllClick: () -> Unit, onRateClick: (AquaRate) -> Unit)
                 if (rates.isEmpty()) {
                     rates = listOf(
                         AquaRate("Prawns", "₹280-1000", context.getString(R.string.view_all_prices), RateTrend.FLAT, isPrawn = true),
-                        AquaRate("Rohu", "₹160/kg", "+₹5 (3%)", RateTrend.UP),
-                        AquaRate("Katla", "₹180/kg", "-₹10 (5.9%)", RateTrend.DOWN),
-                        AquaRate("Tilapia", "₹120/kg", context.getString(R.string.no_change), RateTrend.FLAT),
-                        AquaRate("Pangasius", "₹95/kg", "+₹2 (2%)", RateTrend.UP)
+                        AquaRate("Rohu", "₹160/kg", "+₹5 (3%)", RateTrend.UP)
                     )
                 }
                 isLoading = false
@@ -710,44 +721,62 @@ fun AquaRatesSection(onSeeAllClick: () -> Unit, onRateClick: (AquaRate) -> Unit)
     }
 
     Column(modifier = Modifier.padding(16.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Top
+        ) {
             Column {
-                Text(stringResource(R.string.today_aqua_rates), fontWeight = FontWeight.Bold, fontSize = 18.sp, color = DarkBlueText)
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.DateRange, contentDescription = null, tint = GrayText, modifier = Modifier.size(14.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = stringResource(R.string.today_aqua_rates),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    color = DarkBlueText
+                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(top = 4.dp)
+                ) {
+                    Icon(
+                        Icons.Default.CalendarToday,
+                        contentDescription = null,
+                        tint = GrayText,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
                     Text(currentDate, color = GrayText, fontSize = 12.sp)
                 }
             }
-            Spacer(modifier = Modifier.weight(1f))
-            Surface(color = Color(0xFFE8F5E9), shape = RoundedCornerShape(12.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
+            Surface(
+                color = Color(0xFFE8F5E9),
+                shape = CircleShape
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                ) {
                     Box(modifier = Modifier.size(6.dp).background(LiveGreen, CircleShape))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(stringResource(R.string.live), color = LiveGreen, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        stringResource(R.string.live),
+                        color = LiveGreen,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
         }
         Spacer(modifier = Modifier.height(12.dp))
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            items(rates) { rate ->
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            rates.forEach { rate ->
                 RateCard(
                     rate = rate,
-                    onClick = { onRateClick(rate) }
+                    onClick = { onRateClick(rate) },
+                    modifier = Modifier.weight(1f)
                 )
-            }
-        }
-        Spacer(modifier = Modifier.height(12.dp))
-        Button(
-            onClick = onSeeAllClick, 
-            modifier = Modifier.fillMaxWidth().height(52.dp), 
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE3F2FD), contentColor = AquaBlue), 
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(R.string.see_all_rates), fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                Spacer(modifier = Modifier.width(8.dp))
-                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(18.dp))
             }
         }
     }
@@ -756,50 +785,59 @@ fun AquaRatesSection(onSeeAllClick: () -> Unit, onRateClick: (AquaRate) -> Unit)
 @Composable
 fun RateCard(
     rate: AquaRate,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Surface(
-        modifier = Modifier
-            .width(140.dp)
-            .clickable { onClick() }, 
-        shape = RoundedCornerShape(16.dp), 
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEEEEEE)), 
-        color = Color.White
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        shape = RoundedCornerShape(12.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF0F0F0)),
+        color = Color.White,
+        shadowElevation = 2.dp
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
-                Box(modifier = Modifier.size(44.dp).background(rate.iconBgColor, CircleShape), contentAlignment = Alignment.Center) { 
-                    Icon(painterResource(id = rate.icon), null, tint = Color.Unspecified, modifier = Modifier.size(24.dp)) 
-                }
-                if (rate.isPrawn) {
-                    Surface(modifier = Modifier.size(20.dp), shape = CircleShape, color = AquaBlue) {
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = Color.White, modifier = Modifier.size(14.dp))
-                    }
-                }
-            }
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(rate.getDisplayName(), fontSize = 15.sp, color = Color.Black, fontWeight = FontWeight.Medium)
-            Text(rate.price, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color.Black)
-            
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (rate.trend != RateTrend.FLAT) {
-                    Icon(
-                        imageVector = if (rate.trend == RateTrend.UP) Icons.AutoMirrored.Filled.TrendingUp else Icons.AutoMirrored.Filled.TrendingDown,
-                        contentDescription = null,
-                        tint = if (rate.trend == RateTrend.UP) Color(0xFF4CAF50) else Color(0xFFF44336),
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                }
+            // Category Badge
+            Surface(
+                color = if (rate.isPrawn) Color(0xFFE0F2F1) else Color(0xFFFFF3E0),
+                shape = RoundedCornerShape(4.dp)
+            ) {
                 Text(
-                    text = rate.change,
-                    fontSize = 12.sp,
-                    color = when {
-                        rate.isPrawn -> AquaBlue
-                        rate.trend == RateTrend.UP -> Color(0xFF4CAF50)
-                        rate.trend == RateTrend.DOWN -> Color(0xFFF44336)
-                        else -> GrayText
-                    }
+                    text = if (rate.isPrawn) stringResource(R.string.cat_prawns) else stringResource(R.string.cat_fish),
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (rate.isPrawn) Color(0xFF00796B) else Color(0xFFE65100)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = rate.price,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 18.sp,
+                        color = Color.Black
+                    )
+                    Text(
+                        text = if (rate.isPrawn) "100 Count" else rate.getDisplayName(),
+                        fontSize = 12.sp,
+                        color = GrayText
+                    )
+                }
+
+                Icon(
+                    painter = painterResource(id = rate.icon),
+                    contentDescription = null,
+                    tint = if (rate.isPrawn) Color(0xFF3F51B5) else Color(0xFF009688),
+                    modifier = Modifier.size(40.dp)
                 )
             }
         }

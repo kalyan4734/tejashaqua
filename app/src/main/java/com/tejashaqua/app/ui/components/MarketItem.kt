@@ -44,11 +44,42 @@ fun MarketItem(
         location.split(",").firstOrNull()?.trim() ?: location
     }
 
+    val categoryColor = remember(category) {
+        when (category.uppercase()) {
+            "FISH" -> Color(0xFF009688)
+            "PRAWNS" -> Color(0xFF3F51B5)
+            "EQUIPMENTS" -> Color(0xFF1976D2)
+            "VEHICLES" -> Color(0xFF1976D2)
+            "FEED" -> Color(0xFFE65100)
+            "SERVICES" -> Color(0xFFF57C00)
+            "TANKS" -> Color(0xFF388E3C)
+            "BUSINESS" -> Color(0xFFB71C1C)
+            "JOBS" -> Color(0xFF673AB7)
+            else -> AquaBlue
+        }
+    }
+
+    val categoryBgColor = remember(category) {
+        when (category.uppercase()) {
+            "FISH" -> Color(0xFFFFF3E0)
+            "PRAWNS" -> Color(0xFFE0F2F1)
+            "EQUIPMENTS" -> Color(0xFFE1F5FE)
+            "VEHICLES" -> Color(0xFFE1F5FE)
+            "FEED" -> Color(0xFFFFF3E0)
+            "SERVICES" -> Color(0xFFFFFDE7)
+            "TANKS" -> Color(0xFFE8F5E9)
+            "BUSINESS" -> Color(0xFFFFEBEE)
+            "JOBS" -> Color(0xFFF3E5F5)
+            else -> Color(0xFFE8EAF6)
+        }
+    }
+
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(12.dp),
         border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEEEEEE)),
-        color = Color.White
+        color = Color.White,
+        shadowElevation = 1.dp
     ) {
         Column {
             Box(modifier = Modifier.height(110.dp).fillMaxWidth().background(Color(0xFFF5F5F5))) {
@@ -83,8 +114,8 @@ fun MarketItem(
                 }
             }
             Column(modifier = Modifier.padding(8.dp)) {
-                Surface(color = Color(0xFFE8EAF6), shape = RoundedCornerShape(4.dp)) { 
-                    Text(category, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), fontSize = 10.sp, color = AquaBlue, fontWeight = FontWeight.Bold) 
+                Surface(color = categoryBgColor, shape = RoundedCornerShape(4.dp)) { 
+                    Text(category, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), fontSize = 10.sp, color = categoryColor, fontWeight = FontWeight.Bold) 
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(title, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -95,7 +126,7 @@ fun MarketItem(
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Person, null, tint = AquaBlue, modifier = Modifier.size(12.dp))
+                    Icon(Icons.Default.Person, null, tint = categoryColor, modifier = Modifier.size(12.dp))
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(text = stringResource(R.string.by_label, posterName), fontSize = 10.sp, color = Color.DarkGray, maxLines = 1)
                 }

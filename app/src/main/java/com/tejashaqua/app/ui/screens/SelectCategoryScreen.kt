@@ -71,7 +71,7 @@ fun SelectCategoryScreen(
         CategoryItem(
             stringResource(R.string.cat_services),
             stringResource(R.string.services_desc),
-            Icons.Default.MiscellaneousServices,
+            Icons.Default.Settings,
             ListingCategory.SERVICES
         ),
         CategoryItem(
@@ -136,56 +136,89 @@ fun SelectCategoryScreen(
 
 @Composable
 fun CategoryCard(item: CategoryItem, onClick: () -> Unit) {
+    val bgColor = when (item.category) {
+        ListingCategory.PRAWNS -> Color(0xFFE0F2F1)
+        ListingCategory.FISH -> Color(0xFFFFF3E0)
+        ListingCategory.EQUIPMENTS -> Color(0xFFE1F5FE)
+        ListingCategory.TANKS -> Color(0xFFE8F5E9)
+        ListingCategory.JOBS -> Color(0xFFF3E5F5)
+        ListingCategory.SERVICES -> Color(0xFFFFFDE7)
+        ListingCategory.BUSINESS -> Color(0xFFFFEBEE)
+        ListingCategory.VEHICLES -> Color(0xFFE1F5FE)
+        ListingCategory.FEED -> Color(0xFFFFF3E0)
+    }
+
+    val tintColor = when (item.category) {
+        ListingCategory.PRAWNS -> Color(0xFF3F51B5)
+        ListingCategory.FISH -> Color(0xFF009688)
+        ListingCategory.EQUIPMENTS -> Color(0xFF1976D2)
+        ListingCategory.TANKS -> Color(0xFF388E3C)
+        ListingCategory.JOBS -> Color(0xFF673AB7)
+        ListingCategory.SERVICES -> Color(0xFFF57C00)
+        ListingCategory.BUSINESS -> Color(0xFFB71C1C)
+        ListingCategory.VEHICLES -> Color(0xFF1976D2)
+        ListingCategory.FEED -> Color(0xFFE65100)
+    }
+
     Surface(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() },
         shape = RoundedCornerShape(16.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE0E0E0)),
-        color = Color.White
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF0F0F0)),
+        color = Color.White,
+        shadowElevation = 2.dp
     ) {
         Column {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(110.dp)
-                    .background(Color(0xFFF8F9FA)),
+                    .height(100.dp)
+                    .background(bgColor),
                 contentAlignment = Alignment.Center
             ) {
                 when (item.icon) {
                     is Int -> {
-                        Image(
+                        Icon(
                             painter = painterResource(id = item.icon),
                             contentDescription = item.title,
-                            modifier = Modifier.size(80.dp),
-                            contentScale = ContentScale.Fit
+                            modifier = Modifier.size(60.dp),
+                            tint = tintColor
                         )
                     }
                     is ImageVector -> {
                         Icon(
                             imageVector = item.icon,
                             contentDescription = item.title,
-                            modifier = Modifier.size(64.dp),
-                            tint = VibrantBlue
+                            modifier = Modifier.size(50.dp),
+                            tint = tintColor
                         )
                     }
                 }
             }
             Column(
                 modifier = Modifier.padding(12.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                horizontalAlignment = Alignment.Start
             ) {
-                Text(
-                    text = item.title,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.Black
-                )
+                Surface(
+                    color = bgColor,
+                    shape = RoundedCornerShape(4.dp)
+                ) {
+                    Text(
+                        text = item.title,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = tintColor
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = item.subtitle,
-                    fontSize = 12.sp,
+                    fontSize = 11.sp,
                     color = GrayText,
-                    fontWeight = FontWeight.Normal
+                    fontWeight = FontWeight.Normal,
+                    lineHeight = 16.sp
                 )
             }
         }

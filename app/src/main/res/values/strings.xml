@@ -380,5 +380,9 @@ These terms shall be governed by and construed in accordance with the laws of In
     <string name="ok">OK</string>
     <string name="update_required">Update Required</string>
     <string name="update_desc">A new version of Tejash Aqua is available. Please update to continue using the app.</string>
+    <string name="fish_rates_title">Fish Rates</string>
+    <string name="fish_table_header">Fish (చేప)</string>
+    <string name="average_table_header">Average (సగటు బరువు)</string>
+    <string name="price_table_header">Price (రేటు)</string>
     <string name="update_now">Update Now</string>
 </resources>

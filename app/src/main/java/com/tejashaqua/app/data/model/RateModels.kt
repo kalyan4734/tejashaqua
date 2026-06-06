@@ -14,7 +14,11 @@ data class AquaRate(
     val lastUpdated: Long = 0L
 ) {
     val icon: Int
-        get() = if (isPrawn) R.drawable.prawn else R.drawable.fish
+        get() = when (name) {
+            "Rohu" -> R.drawable.fish
+            "Prawns" -> R.drawable.prawn
+            else -> if (isPrawn) R.drawable.prawn else R.drawable.fish
+        }
         
     val iconBgColor: Color
         get() = when (name) {
