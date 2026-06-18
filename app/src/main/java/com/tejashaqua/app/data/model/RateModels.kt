@@ -14,42 +14,42 @@ data class AquaRate(
     val lastUpdated: Long = 0L
 ) {
     val icon: Int
-        get() = when (name) {
-            "Rohu" -> R.drawable.fish
-            "Prawns" -> R.drawable.prawn
+        get() = when (name.lowercase(java.util.Locale.ROOT)) {
+            "rohu" -> R.drawable.fish
+            "prawns" -> R.drawable.prawn
             else -> if (isPrawn) R.drawable.prawn else R.drawable.fish
         }
         
     val iconBgColor: Color
-        get() = when (name) {
-            "Rohu" -> Color(0xFFFFF3E0)
-            "Katla", "Prawns" -> Color(0xFFE0F2F1)
-            "Tilapia" -> Color(0xFFE8EAF6)
-            "Pangasius" -> Color(0xFFFCE4EC)
+        get() = when (name.lowercase(java.util.Locale.ROOT)) {
+            "rohu" -> Color(0xFFFFF3E0)
+            "katla", "prawns" -> Color(0xFFE0F2F1)
+            "tilapia" -> Color(0xFFE8EAF6)
+            "pangasius" -> Color(0xFFFCE4EC)
             else -> Color(0xFFF5F5F5)
         }
 
     @Composable
     fun getDisplayName(): String {
-        return when (name) {
-            "Rohu" -> stringResource(R.string.fish_rohu)
-            "Katla" -> stringResource(R.string.fish_katla)
-            "Karamosu" -> stringResource(R.string.fish_karamosu)
-            "Gaddi chepa" -> stringResource(R.string.fish_gaddi_chepa)
-            "Pangasius" -> stringResource(R.string.fish_pangasius)
-            "Roopchand" -> stringResource(R.string.fish_roopchand)
-            "Pandu gappa" -> stringResource(R.string.fish_pandu_gappa)
-            "Tilapia" -> stringResource(R.string.fish_tilapia)
-            "Chitala" -> stringResource(R.string.fish_chitala)
-            "Koramenu" -> stringResource(R.string.fish_koramenu)
-            "Valuga" -> stringResource(R.string.fish_valuga)
-            "Engilayi" -> stringResource(R.string.fish_engilayi)
-            "Jalla" -> stringResource(R.string.fish_jalla)
-            "Tuna" -> stringResource(R.string.fish_tuna)
-            "Pulasa" -> stringResource(R.string.fish_pulasa)
-            "Crab" -> stringResource(R.string.fish_crab)
-            "Others" -> stringResource(R.string.fish_others)
-            "Prawns" -> stringResource(R.string.cat_prawns)
+        return when (name.lowercase(java.util.Locale.ROOT)) {
+            "rohu" -> stringResource(R.string.fish_rohu)
+            "katla" -> stringResource(R.string.fish_katla)
+            "karamosu" -> stringResource(R.string.fish_karamosu)
+            "gaddi chepa" -> stringResource(R.string.fish_gaddi_chepa)
+            "pangasius" -> stringResource(R.string.fish_pangasius)
+            "roopchand" -> stringResource(R.string.fish_roopchand)
+            "pandu gappa" -> stringResource(R.string.fish_pandu_gappa)
+            "tilapia" -> stringResource(R.string.fish_tilapia)
+            "chitala" -> stringResource(R.string.fish_chitala)
+            "koramenu" -> stringResource(R.string.fish_koramenu)
+            "valuga" -> stringResource(R.string.fish_valuga)
+            "engilayi" -> stringResource(R.string.fish_engilayi)
+            "jalla" -> stringResource(R.string.fish_jalla)
+            "tuna" -> stringResource(R.string.fish_tuna)
+            "pulasa" -> stringResource(R.string.fish_pulasa)
+            "crab" -> stringResource(R.string.fish_crab)
+            "others" -> stringResource(R.string.fish_others)
+            "prawns" -> stringResource(R.string.cat_prawns)
             else -> name
         }
     }

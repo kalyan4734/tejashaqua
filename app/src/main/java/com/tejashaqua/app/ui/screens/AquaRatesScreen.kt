@@ -55,12 +55,12 @@ fun AquaRatesScreen(onBackClick: () -> Unit) {
         db.collection("aqua_rates")
             .addSnapshotListener { value, error ->
                 if (value != null) {
-                    val fetchedMap = value.documents.associateBy({ it.id }, { doc ->
+                    val fetchedMap = value.documents.associateBy({ it.id.lowercase(java.util.Locale.ROOT) }, { doc ->
                         val price = doc.getString("price") ?: "--"
                         val change = doc.getString("change") ?: context.getString(R.string.no_change)
                         val trendStr = doc.getString("trend") ?: "FLAT"
                         val trend = try { RateTrend.valueOf(trendStr) } catch (e: Exception) { RateTrend.FLAT }
-                        val isPrawn = doc.getBoolean("isPrawn") ?: (doc.id == "Prawns")
+                        val isPrawn = doc.getBoolean("isPrawn") ?: (doc.id.lowercase(java.util.Locale.ROOT) == "prawns")
                         val lastUpdated = doc.getLong("lastUpdated") ?: 0L
                         
                         AquaRate(doc.id, price, change, trend, isPrawn, lastUpdated)
@@ -68,7 +68,7 @@ fun AquaRatesScreen(onBackClick: () -> Unit) {
 
                     // Merge with the fixed list of fish types
                     rates = fishTypes.map { fish ->
-                        fetchedMap[fish] ?: AquaRate(fish, "--", context.getString(R.string.no_change), RateTrend.FLAT, isPrawn = fish == "Prawns")
+                        fetchedMap[fish.lowercase(java.util.Locale.ROOT)] ?: AquaRate(fish, "--", context.getString(R.string.no_change), RateTrend.FLAT, isPrawn = fish.lowercase(java.util.Locale.ROOT) == "prawns")
                     }
                 }
                 isLoading = false

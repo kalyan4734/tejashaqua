@@ -54,6 +54,11 @@ fun DetailedPageScreen(
 ) {
     val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
+    
+    val naText = stringResource(R.string.not_available_short)
+    val tonText = stringResource(R.string.unit_ton)
+    val acreText = stringResource(R.string.unit_acre)
+
     val title = listingData["title"]?.toString() ?: stringResource(R.string.no_title)
     val priceValue = listingData["price"] ?: listingData["rateValue"] ?: stringResource(R.string.not_available_short)
     val price = "₹$priceValue"
@@ -260,13 +265,13 @@ fun DetailedPageScreen(
                     
                     val priceLabel = when(category) {
                         ListingCategory.PRAWNS -> {
-                            val rate = listingData["rateValue"] ?: "N/A"
-                            val unit = listingData["rateType"]?.toString()?.lowercase() ?: "kg"
+                            val rate = listingData["rateValue"] ?: naText
+                            val unit = listingData["rateType"]?.toString()?.lowercase() ?: stringResource(R.string.unit_kgs)
                             "₹$rate/$unit"
                         }
-                        ListingCategory.FEED -> "₹${listingData["ratePerTon"] ?: "N/A"}/ton"
-                        ListingCategory.BUSINESS -> if (listingData["businessSubCategory"] == "Feed") "₹${listingData["ratePerTon"] ?: "N/A"}/ton" else price
-                        ListingCategory.JOBS -> "₹${listingData["salary"] ?: "N/A"}"
+                        ListingCategory.FEED -> "₹${listingData["ratePerTon"] ?: naText}/$tonText"
+                        ListingCategory.BUSINESS -> if (listingData["businessSubCategory"] == "Feed") "₹${listingData["ratePerTon"] ?: naText}/$tonText" else price
+                        ListingCategory.JOBS -> "₹${listingData["salary"] ?: naText}"
                         else -> price
                     }
                     Text(text = priceLabel, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = AquaBlue)
@@ -309,7 +314,7 @@ fun DetailedPageScreen(
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text(text = posterName, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                            Text(text = stringResource(R.string.member_since_label, "May 2024") + " • ⚡ " + stringResource(R.string.responds_in_label, "1 hr"), fontSize = 12.sp, color = GrayText)
+                            Text(text = stringResource(R.string.member_since_label, stringResource(R.string.may_2024)) + " • ⚡ " + stringResource(R.string.responds_in_label, stringResource(R.string.one_hr)), fontSize = 12.sp, color = GrayText)
                         }
                     }
                 }
@@ -503,11 +508,11 @@ fun DetailedPageScreen(
 
                                 val categoryStr = data["category"]?.toString() ?: "Other"
                                 val priceLabel = when (categoryStr.uppercase()) {
-                                    "PRAWNS" -> "₹${data["rateValue"] ?: "N/A"}/${data["rateType"]?.toString()?.lowercase() ?: "paise"}"
-                                    "FEED" -> "₹${data["ratePerTon"] ?: "N/A"}/ton"
-                                    "JOBS" -> "₹${data["salary"] ?: "N/A"}"
-                                    "TANKS" -> "₹${data["estPricePerAcre"] ?: "N/A"}/acre"
-                                    else -> "₹${data["price"] ?: data["rateValue"] ?: "N/A"}"
+                                    "PRAWNS" -> "₹${data["rateValue"] ?: naText}/${data["rateType"]?.toString()?.lowercase() ?: stringResource(R.string.unit_paise)}"
+                                    "FEED" -> "₹${data["ratePerTon"] ?: naText}/$tonText"
+                                    "JOBS" -> "₹${data["salary"] ?: naText}"
+                                    "TANKS" -> "₹${data["estPricePerAcre"] ?: naText}/$acreText"
+                                    else -> "₹${data["price"] ?: data["rateValue"] ?: naText}"
                                 }
 
                                 MarketItem(

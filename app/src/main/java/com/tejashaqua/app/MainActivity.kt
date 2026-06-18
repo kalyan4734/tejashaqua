@@ -28,6 +28,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.android.gms.maps.model.LatLng
+import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.messaging.FirebaseMessaging
 import com.tejashaqua.app.data.model.ListingCategory
@@ -70,10 +71,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
-
 import com.tejashaqua.app.utils.AppStateTracker
 
 class MainActivity : AppCompatActivity() {
+    private lateinit var firebaseAnalytics: FirebaseAnalytics
+
     override fun onResume() {
         super.onResume()
         AppStateTracker.isAppInForeground = true
@@ -95,6 +97,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        firebaseAnalytics = FirebaseAnalytics.getInstance(this)
         LocaleHelper.applySavedLocale(this)
         val lang = LocaleHelper.getSelectedLanguage(this) ?: "en"
         LocaleHelper.updateContextLocale(this, lang)
@@ -131,6 +134,15 @@ class MainActivity : AppCompatActivity() {
                 var detailedPageSource by remember { mutableStateOf("dashboard") }
                 var chatSourceScreen by remember { mutableStateOf("detailed_page") }
                 var shouldSendInitialChatMessage by remember { mutableStateOf(false) }
+
+                var dashboardTab by remember { mutableStateOf(0) }
+
+                LaunchedEffect(currentScreen) {
+                    val bundle = Bundle()
+                    bundle.putString(FirebaseAnalytics.Param.SCREEN_NAME, currentScreen)
+                    bundle.putString(FirebaseAnalytics.Param.SCREEN_CLASS, "MainActivity")
+                    firebaseAnalytics.logEvent(FirebaseAnalytics.Event.SCREEN_VIEW, bundle)
+                }
 
                 val fetchingLocText = stringResource(R.string.fetching_location)
                 var currentLocationName by remember { mutableStateOf(fetchingLocText) }
@@ -169,6 +181,7 @@ class MainActivity : AppCompatActivity() {
 
                                         selectedListingData = updatedData
                                         chatSourceScreen = "dashboard"
+                                        dashboardTab = 2
                                         shouldSendInitialChatMessage = false
                                         currentScreen = "chat"
 
@@ -562,6 +575,8 @@ class MainActivity : AppCompatActivity() {
                                 onNameSkip = {
                                     authViewModel.skipOnboarding()
                                 },
+                                initialTab = dashboardTab,
+                                onTabChange = { dashboardTab = it },
                                 locationViewModel = locationViewModel
                             )
 
@@ -588,7 +603,12 @@ class MainActivity : AppCompatActivity() {
                                     currentUserName = userName,
                                     currentUserPhone = mobileNumber,
                                     currentUserLocation = currentLocationName,
-                                    onBackClick = { currentScreen = chatSourceScreen },
+                                    onBackClick = { 
+                                        if (chatSourceScreen == "dashboard") {
+                                            dashboardTab = 2 // Ensure we go back to Chat tab
+                                        }
+                                        currentScreen = chatSourceScreen 
+                                    },
                                     sendInitialMessage = shouldSendInitialChatMessage
                                 )
                             }
@@ -627,6 +647,7 @@ class MainActivity : AppCompatActivity() {
                                     pickedListingLocation = "$name, $sub" to latLng
                                     currentScreen = "edit_listing"
                                 } else {
+                                    locationViewModel.setManualLocation(name, sub, latLng)
                                     currentLocationName = name
                                     currentSubLocation = sub
                                     currentScreen = "dashboard"

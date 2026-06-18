@@ -26,6 +26,7 @@ import com.tejashaqua.app.data.model.AquaRate
 import com.tejashaqua.app.data.model.RateTrend
 import com.tejashaqua.app.ui.theme.AquaBlue
 import com.tejashaqua.app.ui.theme.GrayText
+import com.tejashaqua.app.ui.components.RateGraphBottomSheet
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,23 +43,26 @@ fun FishRatesScreen(onBackClick: () -> Unit) {
     var rates by remember { mutableStateOf<List<AquaRate>>(emptyList()) }
     var lastUpdatedDate by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(true) }
+    
+    var showGraphSheet by remember { mutableStateOf(false) }
+    var selectedRateForGraph by remember { mutableStateOf<AquaRate?>(null) }
 
     LaunchedEffect(Unit) {
         db.collection("aqua_rates").addSnapshotListener { value, _ ->
             if (value != null) {
-                val fetchedMap = value.documents.associateBy({ it.id }, { doc ->
+                val fetchedMap = value.documents.associateBy({ it.id.lowercase(java.util.Locale.ROOT) }, { doc ->
                     val price = doc.getString("price") ?: "--"
                     val change = doc.getString("change") ?: ""
                     val trendStr = doc.getString("trend") ?: "FLAT"
                     val trend = try { RateTrend.valueOf(trendStr) } catch (_: Exception) { RateTrend.FLAT }
-                    val isPrawn = doc.getBoolean("isPrawn") ?: (doc.id == "Prawns")
+                    val isPrawn = doc.getBoolean("isPrawn") ?: (doc.id.lowercase(java.util.Locale.ROOT) == "prawns")
                     val lastUpdated = doc.getLong("lastUpdated") ?: 0L
                     
                     AquaRate(doc.id, price, change, trend, isPrawn, lastUpdated)
                 })
 
                 rates = fishTypes.map { fish ->
-                    fetchedMap[fish] ?: AquaRate(fish)
+                    fetchedMap[fish.lowercase(java.util.Locale.ROOT)] ?: AquaRate(fish)
                 }
 
                 val maxTs = rates.maxOfOrNull { it.lastUpdated } ?: 0L
@@ -141,7 +145,10 @@ fun FishRatesScreen(onBackClick: () -> Unit) {
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .background(if (isEven) Color.White else Color(0xFFF1F8FF))
-                                            .clickable { /* Handle row click if needed */ }
+                                            .clickable { 
+                                                selectedRateForGraph = rate
+                                                showGraphSheet = true
+                                            }
                                             .padding(vertical = 12.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
@@ -156,7 +163,7 @@ fun FishRatesScreen(onBackClick: () -> Unit) {
                                         Box(modifier = Modifier.width(1.dp).height(24.dp).background(Color.LightGray.copy(alpha = 0.3f)))
                                         
                                         Text(
-                                            text = "1 kg", 
+                                            text = stringResource(R.string.one_kg),
                                             color = GrayText, 
                                             modifier = Modifier.weight(1f).padding(start = 12.dp), 
                                             fontSize = 14.sp
@@ -200,6 +207,13 @@ fun FishRatesScreen(onBackClick: () -> Unit) {
                         }
                     }
                 }
+            }
+
+            if (showGraphSheet && selectedRateForGraph != null) {
+                RateGraphBottomSheet(
+                    rate = selectedRateForGraph!!,
+                    onDismiss = { showGraphSheet = false }
+                )
             }
         }
     }

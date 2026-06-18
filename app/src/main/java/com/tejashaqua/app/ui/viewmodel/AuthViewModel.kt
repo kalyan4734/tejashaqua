@@ -1,12 +1,15 @@
 package com.tejashaqua.app.ui.viewmodel
 
 import android.app.Activity
+import android.os.Bundle
 import android.graphics.Bitmap
 import android.net.Uri
 import androidx.core.net.toUri
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.AndroidViewModel
 import com.google.firebase.auth.*
+import com.google.firebase.analytics.FirebaseAnalytics
+import com.google.firebase.FirebaseApp
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.Job
@@ -27,15 +30,17 @@ sealed class AuthState {
     data class Error(val message: String) : AuthState()
 }
 
-class AuthViewModel : ViewModel() {
+class AuthViewModel(application: android.app.Application) : AndroidViewModel(application) {
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
     private val db = FirebaseFirestore.getInstance()
     private val storage = FirebaseStorage.getInstance()
+    private val analytics = FirebaseAnalytics.getInstance(application)
     
     private val _authState = MutableStateFlow<AuthState>(AuthState.Idle)
     val authState: StateFlow<AuthState> = _authState
 
     private var verificationId: String = ""
+    private var resendToken: PhoneAuthProvider.ForceResendingToken? = null
     private var loadingTimeoutJob: Job? = null
 
     init {
@@ -71,25 +76,48 @@ class AuthViewModel : ViewModel() {
             return
         }
         
+        // If already loading, don't trigger another one
+        if (_authState.value is AuthState.Loading) return
+
         _authState.value = AuthState.Loading
         startLoadingTimeout()
         
+        // Clear previous verification data for a fresh attempt from login screen
+        if (activity.localClassName.contains("MainActivity") && resendToken == null) {
+             verificationId = ""
+        }
+
         try {
-            val options = PhoneAuthOptions.newBuilder(auth)
+            val bundle = Bundle()
+            bundle.putString("phone_number", "+91$phoneNumber")
+            analytics.logEvent("otp_request", bundle)
+
+            val builder = PhoneAuthOptions.newBuilder(auth)
                 .setPhoneNumber("+91$phoneNumber")
                 .setTimeout(60L, TimeUnit.SECONDS)
                 .setActivity(activity)
                 .setCallbacks(object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
                     override fun onVerificationCompleted(credential: PhoneAuthCredential) {
+                        android.util.Log.d("AuthViewModel", "onVerificationCompleted")
                         stopLoadingTimeout()
                         signInWithPhoneAuthCredential(credential)
                     }
 
                     override fun onVerificationFailed(e: com.google.firebase.FirebaseException) {
                         stopLoadingTimeout()
-                        android.util.Log.e("AuthViewModel", "onVerificationFailed", e)
+                        android.util.Log.e("AuthViewModel", "onVerificationFailed: ${e.message}", e)
+                        
+                        val errorBundle = Bundle()
+                        errorBundle.putString(FirebaseAnalytics.Param.METHOD, "phone")
+                        errorBundle.putString("error_message", e.localizedMessage)
+                        analytics.logEvent("auth_failure", errorBundle)
+
                         val message = when(e) {
                             is FirebaseAuthInvalidCredentialsException -> "Invalid phone number."
+                            is FirebaseAuthException -> {
+                                if (e.errorCode == "ERROR_TOO_MANY_REQUESTS") "Too many requests. Please try again later."
+                                else e.localizedMessage ?: "Verification Failed"
+                            }
                             else -> e.localizedMessage ?: "Verification Failed"
                         }
                         _authState.value = AuthState.Error(message)
@@ -99,13 +127,19 @@ class AuthViewModel : ViewModel() {
                         verificationId: String,
                         token: PhoneAuthProvider.ForceResendingToken
                     ) {
+                        android.util.Log.d("AuthViewModel", "onCodeSent: $verificationId")
                         stopLoadingTimeout()
                         this@AuthViewModel.verificationId = verificationId
+                        this@AuthViewModel.resendToken = token
                         _authState.value = AuthState.OtpSent(verificationId)
                     }
                 })
-                .build()
-            PhoneAuthProvider.verifyPhoneNumber(options)
+            
+            resendToken?.let {
+                builder.setForceResendingToken(it)
+            }
+                
+            PhoneAuthProvider.verifyPhoneNumber(builder.build())
         } catch (e: Exception) {
             stopLoadingTimeout()
             android.util.Log.e("AuthViewModel", "verifyPhoneNumber exception", e)
@@ -140,8 +174,12 @@ class AuthViewModel : ViewModel() {
             .addOnCompleteListener { task ->
                 stopLoadingTimeout()
                 if (task.isSuccessful) {
+                    analytics.logEvent("otp_verify_success", null)
                     checkUserExists()
                 } else {
+                    val bundle = Bundle()
+                    bundle.putString("error_message", task.exception?.localizedMessage)
+                    analytics.logEvent("otp_verify_failure", bundle)
                     _authState.value = AuthState.Error(task.exception?.localizedMessage ?: "Sign-in Failed")
                 }
             }
@@ -166,8 +204,10 @@ class AuthViewModel : ViewModel() {
                     val onboardingComplete = document.getBoolean("onboardingComplete") ?: false
                     
                     if (onboardingComplete) {
+                        analytics.logEvent(FirebaseAnalytics.Event.LOGIN, null)
                         _authState.value = AuthState.Success(userId, name, phoneNumber, joinedAt, isAdmin)
                     } else {
+                        analytics.logEvent(FirebaseAnalytics.Event.SIGN_UP, null)
                         _authState.value = AuthState.RequireName(phoneNumber, isAdmin)
                     }
                 } else {
@@ -205,6 +245,7 @@ class AuthViewModel : ViewModel() {
             
             db.collection("users").document(userId).update(updates)
                 .addOnSuccessListener {
+                    analytics.logEvent("profile_onboarding_complete", null)
                     _authState.value = AuthState.Success(userId, name, phoneNumber, joinedAt, isAdmin)
                 }
                 .addOnFailureListener { e ->
@@ -226,6 +267,7 @@ class AuthViewModel : ViewModel() {
                 }
 
                 db.collection("users").document(userId).update(updates).await()
+                analytics.logEvent("profile_updated", null)
                 
                 val doc = db.collection("users").document(userId).get().await()
                 val phoneNumber = doc.getString("phone") ?: ""
@@ -247,7 +289,7 @@ class AuthViewModel : ViewModel() {
         when (image) {
             is Bitmap -> {
                 val baos = ByteArrayOutputStream()
-                image.compress(Bitmap.CompressFormat.JPEG, 70, baos)
+                image.compress(Bitmap.CompressFormat.JPEG, 95, baos)
                 val data = baos.toByteArray()
                 ref.putBytes(data).await()
             }

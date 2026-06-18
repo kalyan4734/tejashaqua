@@ -99,13 +99,16 @@ fun MyListingsScreen(
                         listings = snapshot.documents.map { doc ->
                             val fullLocation = doc.getString("location") ?: ""
                             val categoryStr = doc.getString("category") ?: "Other"
+                            val naText = context.getString(R.string.not_available_short)
+                            val tonText = context.getString(R.string.unit_ton)
+                            val acreText = context.getString(R.string.unit_acre)
                             val priceLabel = when (categoryStr.uppercase()) {
-                                "PRAWNS" -> "${doc.get("rateValue") ?: "N/A"}/${doc.getString("rateType")?.lowercase() ?: "paise"}"
-                                "FEED" -> "${doc.get("ratePerTon") ?: "N/A"}/ton"
-                                "BUSINESS" -> if (doc.getString("businessSubCategory") == "Feed") "${doc.get("ratePerTon") ?: "N/A"}/ton" else "${doc.get("price") ?: doc.get("rateValue") ?: "N/A"}"
-                                "JOBS" -> "${doc.get("salary") ?: "N/A"}"
-                                "TANKS" -> "${doc.get("estPricePerAcre") ?: "N/A"}/acre"
-                                else -> "${doc.get("price") ?: doc.get("rateValue") ?: "N/A"}"
+                                "PRAWNS" -> "${doc.get("rateValue") ?: naText}/${doc.getString("rateType")?.lowercase() ?: context.getString(R.string.unit_paise)}"
+                                "FEED" -> "${doc.get("ratePerTon") ?: naText}/$tonText"
+                                "BUSINESS" -> if (doc.getString("businessSubCategory") == "Feed") "${doc.get("ratePerTon") ?: naText}/$tonText" else "${doc.get("price") ?: doc.get("rateValue") ?: naText}"
+                                "JOBS" -> "${doc.get("salary") ?: naText}"
+                                "TANKS" -> "${doc.get("estPricePerAcre") ?: naText}/$acreText"
+                                else -> "${doc.get("price") ?: doc.get("rateValue") ?: naText}"
                             }
 
                             UserListing(

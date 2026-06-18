@@ -15,11 +15,19 @@
       },
       "oauth_client": [
         {
-          "client_id": "887054237997-32psqhdv25g9u9fgoi589v48pb6si3bu.apps.googleusercontent.com",
+          "client_id": "887054237997-d8kklmbb5vk654922hha44bbgfdadpv3.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.tejashaqua.app",
-            "certificate_hash": "516bf444a4b087f6684d971c8c14576bc97a21c8"
+            "certificate_hash": "9d03e238830b8da7d3cb32eadbd0865ad237bace"
+          }
+        },
+        {
+          "client_id": "887054237997-vi835sc1pa9iqmvhcjt4v54c4ma5r1e7.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.tejashaqua.app",
+            "certificate_hash": "ae77f4ff2f4be5087055810b3537cbe5b8d2a66f"
           }
         },
         {

@@ -385,4 +385,14 @@
     <string name="average_table_header">Average (సగటు బరువు)</string>
     <string name="price_table_header">Price (రేటు)</string>
     <string name="update_now">ఇప్పుడే అప్‌డేట్ చేయండి</string>
+    <string name="buyer_label">కొనుగోలుదారు</string>
+    <string name="one_kg">1 కిలో</string>
+    <string name="one_hr">1 గంట</string>
+    <string name="may_2024">మే 2024</string>
+    <string name="market_bhimavaram">భీమవరం</string>
+    <string name="market_nellore">నెల్లూరు</string>
+    <string name="market_kakinada">కాకినాడ</string>
+    <string name="market_machilipatnam">మచిలీపట్నం</string>
+    <string name="unit_ton">టన్ను</string>
+    <string name="unit_acre">ఎకరం</string>
 </resources>

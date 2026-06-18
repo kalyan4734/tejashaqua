@@ -30,8 +30,13 @@ import com.tejashaqua.app.ui.theme.GrayText
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PrawnRatesScreen(onBackClick: () -> Unit) {
-    var selectedMarket by remember { mutableStateOf("Bhimavaram") }
-    val markets = listOf("Bhimavaram", "Nellore", "Kakinada", "Machilipatnam")
+    val markets = listOf(
+        "Bhimavaram" to stringResource(R.string.market_bhimavaram),
+        "Nellore" to stringResource(R.string.market_nellore),
+        "Kakinada" to stringResource(R.string.market_kakinada),
+        "Machilipatnam" to stringResource(R.string.market_machilipatnam)
+    )
+    var selectedMarketId by remember { mutableStateOf("Bhimavaram") }
     var expanded by remember { mutableStateOf(false) }
     val db = FirebaseFirestore.getInstance()
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -40,8 +45,10 @@ fun PrawnRatesScreen(onBackClick: () -> Unit) {
     var prices by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var lastUpdatedDate by remember { mutableStateOf("") }
 
-    LaunchedEffect(selectedMarket) {
-        db.collection("prawn_rates").document(selectedMarket).addSnapshotListener { doc, _ ->
+    val currentMarketName = markets.find { it.first == selectedMarketId }?.second ?: selectedMarketId
+
+    LaunchedEffect(selectedMarketId) {
+        db.collection("prawn_rates").document(selectedMarketId).addSnapshotListener { doc, _ ->
             if (doc != null && doc.exists()) {
                 val data = doc.get("rates") as? Map<*, *>
                 prices = data?.mapKeys { it.key.toString() }?.mapValues { it.value.toString() } ?: emptyMap()
@@ -123,7 +130,7 @@ fun PrawnRatesScreen(onBackClick: () -> Unit) {
                         }
                     ) {
                         OutlinedTextField(
-                            value = selectedMarket,
+                            value = currentMarketName,
                             onValueChange = {},
                             readOnly = true,
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
@@ -138,12 +145,12 @@ fun PrawnRatesScreen(onBackClick: () -> Unit) {
                             expanded = expanded,
                             onDismissRequest = { expanded = false }
                         ) {
-                            markets.forEach { market ->
+                            markets.forEach { marketPair ->
                                 DropdownMenuItem(
-                                    text = { Text(market) },
+                                    text = { Text(marketPair.second) },
                                     onClick = {
                                         keyboardController?.hide()
-                                        selectedMarket = market
+                                        selectedMarketId = marketPair.first
                                         expanded = false
                                     }
                                 )

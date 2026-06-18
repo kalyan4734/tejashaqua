@@ -92,14 +92,18 @@ fun SavedItemsScreen(
                         val listingId = data["id"]?.toString() ?: ""
                         val images = (data["images"] as? List<*>)?.filterIsInstance<String>()
                         
+                        val naText = stringResource(R.string.not_available_short)
+                        val tonText = stringResource(R.string.unit_ton)
+                        val acreText = stringResource(R.string.unit_acre)
+                        
                         val categoryStr = data["category"]?.toString() ?: "Other"
                         val priceLabel = when (categoryStr.uppercase()) {
-                            "PRAWNS" -> "₹${data["rateValue"] ?: "N/A"}/${data["rateType"]?.toString()?.lowercase() ?: "paise"}"
-                            "FEED" -> "₹${data["ratePerTon"] ?: "N/A"}/ton"
-                            "BUSINESS" -> if (data["businessSubCategory"] == "Feed") "₹${data["ratePerTon"] ?: "N/A"}/ton" else "₹${data["price"] ?: data["rateValue"] ?: "N/A"}"
-                            "JOBS" -> "₹${data["salary"] ?: "N/A"}"
-                            "TANKS" -> "₹${data["estPricePerAcre"] ?: "N/A"}/acre"
-                            else -> "₹${data["price"] ?: data["rateValue"] ?: "N/A"}"
+                            "PRAWNS" -> "₹${data["rateValue"] ?: naText}/${data["rateType"]?.toString()?.lowercase() ?: stringResource(R.string.unit_paise)}"
+                            "FEED" -> "₹${data["ratePerTon"] ?: naText}/$tonText"
+                            "BUSINESS" -> if (data["businessSubCategory"] == "Feed") "₹${data["ratePerTon"] ?: naText}/$tonText" else "₹${data["price"] ?: data["rateValue"] ?: naText}"
+                            "JOBS" -> "₹${data["salary"] ?: naText}"
+                            "TANKS" -> "₹${data["estPricePerAcre"] ?: naText}/$acreText"
+                            else -> "₹${data["price"] ?: data["rateValue"] ?: naText}"
                         }
 
                         MarketItem(

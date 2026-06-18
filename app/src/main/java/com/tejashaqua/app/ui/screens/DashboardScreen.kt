@@ -15,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -66,11 +67,24 @@ fun DashboardScreen(
     showNameSheetInitial: Boolean,
     onNameSave: (String) -> Unit,
     onNameSkip: () -> Unit,
+    initialTab: Int = 0,
+    onTabChange: (Int) -> Unit = {},
     locationViewModel: LocationSearchViewModel = viewModel()
 ) {
-    var selectedItem by remember { mutableIntStateOf(0) }
+    var selectedItem by remember { mutableIntStateOf(initialTab) }
+    
+    // Sync internal state with initialTab when it changes from outside
+    LaunchedEffect(initialTab) {
+        selectedItem = initialTab
+    }
+
+    // Call onTabChange whenever internal selection changes
+    LaunchedEffect(selectedItem) {
+        onTabChange(selectedItem)
+    }
     var productSearchText by remember { mutableStateOf("") }
     var selectedCategoryFilter by remember { mutableStateOf("All") }
+    val context = LocalContext.current
     
     var showGraphSheet by remember { mutableStateOf(false) }
     var selectedRateForGraph by remember { mutableStateOf<AquaRate?>(null) }
@@ -80,10 +94,6 @@ fun DashboardScreen(
     val keyboardController = LocalSoftwareKeyboardController.current
 
     val fetchingLocText = stringResource(R.string.fetching_location)
-    
-    LaunchedEffect(Unit) {
-        locationViewModel.fetchCurrentLocation()
-    }
 
     LaunchedEffect(fetchedName, fetchedSub) {
         if (fetchedName.isNotBlank() && fetchedName != fetchingLocText) {
@@ -128,22 +138,43 @@ fun DashboardScreen(
         }
     }
 
-    val filteredListings = remember(listings, productSearchText, selectedCategoryFilter) {
-        listings.filter { data ->
-            val title = (data["title"] as? String)?.lowercase() ?: ""
-            val location = (data["location"] as? String)?.lowercase() ?: ""
-            val category = (data["category"] as? String) ?: ""
-            
-            val matchesSearch = productSearchText.isBlank() || 
-                title.contains(productSearchText.lowercase()) || 
-                location.contains(productSearchText.lowercase()) ||
-                category.lowercase().contains(productSearchText.lowercase())
-            
-            val matchesCategory = selectedCategoryFilter == "All" || category.uppercase() == selectedCategoryFilter
-            
-            matchesSearch && matchesCategory
+    val userLatLng by locationViewModel.currentLatLng.collectAsState()
+
+    val filteredListings = remember {
+        derivedStateOf {
+            val filtered = listings.filter { data ->
+                val title = (data["title"] as? String)?.lowercase() ?: ""
+                val location = (data["location"] as? String)?.lowercase() ?: ""
+                val category = (data["category"] as? String) ?: ""
+                
+                val matchesSearch = productSearchText.isBlank() || 
+                    title.contains(productSearchText.lowercase()) || 
+                    location.contains(productSearchText.lowercase()) ||
+                    category.lowercase().contains(productSearchText.lowercase())
+                
+                val matchesCategory = selectedCategoryFilter == "All" || category.uppercase() == selectedCategoryFilter
+                
+                matchesSearch && matchesCategory
+            }
+
+            val currentPos = userLatLng
+            if (currentPos != null) {
+                filtered.sortedBy { data ->
+                    val lat = (data["lat"] as? Number)?.toDouble()
+                    val lng = (data["lng"] as? Number)?.toDouble()
+                    if (lat != null && lng != null) {
+                        val results = FloatArray(1)
+                        android.location.Location.distanceBetween(currentPos.latitude, currentPos.longitude, lat, lng, results)
+                        results[0]
+                    } else {
+                        Float.MAX_VALUE
+                    }
+                }
+            } else {
+                filtered
+            }
         }
-    }
+    }.value
 
     // Chat State
     var chats by remember { mutableStateOf(listOf<ChatListItemData>()) }
@@ -174,7 +205,7 @@ fun DashboardScreen(
 
                     ChatListItemData(
                         chatId = doc.id,
-                        name = if (isBuying) data["sellerName"] as? String ?: "Seller" else data["buyerName"] as? String ?: "Buyer",
+                        name = if (isBuying) data["sellerName"] as? String ?: context.getString(R.string.seller_label) else data["buyerName"] as? String ?: context.getString(R.string.buyer_label),
                         otherUserId = if (isBuying) data["sellerId"] as? String ?: "" else data["buyerId"] as? String ?: "",
                         type = if (isBuying) "Buying" else "Selling",
                         listingInfo = data["listingTitle"] as? String ?: "Listing",
@@ -202,47 +233,121 @@ fun DashboardScreen(
 
     Scaffold(
         topBar = {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(brush = Brush.verticalGradient(colors = listOf(AquaBlue, AquaLightBlue)))
-                    .statusBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
+            if (selectedItem == 0 || selectedItem == 1) {
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { 
-                            keyboardController?.hide()
-                            onLocationClick() 
-                        }
+                        .background(brush = Brush.verticalGradient(colors = listOf(AquaBlue, AquaLightBlue)))
+                        .statusBarsPadding()
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
                 ) {
-                    Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = locationName,
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Icon(Icons.Default.KeyboardArrowDown, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { 
+                                keyboardController?.hide()
+                                onLocationClick() 
+                            }
+                    ) {
+                        Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = locationName,
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 16.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Icon(Icons.Default.KeyboardArrowDown, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+                            }
+                            if (subLocation.isNotEmpty()) {
+                                Text(
+                                    text = subLocation,
+                                    color = Color.White.copy(alpha = 0.8f),
+                                    fontSize = 11.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
                         }
-                        if (subLocation.isNotEmpty()) {
-                            Text(
-                                text = subLocation,
-                                color = Color.White.copy(alpha = 0.8f),
-                                fontSize = 11.sp,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
+                        Icon(Icons.Default.Public, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
+                    }
+                }
+            } else if (selectedItem == 2) {
+                Column(
+                    modifier = Modifier
+                        .background(brush = Brush.verticalGradient(colors = listOf(AquaBlue, AquaLightBlue)))
+                        .statusBarsPadding()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            stringResource(R.string.chats),
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 22.sp
+                        )
+                    }
+
+                    TextField(
+                        value = chatSearchText,
+                        onValueChange = { chatSearchText = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
+                            .heightIn(min = 48.dp),
+                        placeholder = { Text(stringResource(R.string.search_conversations), fontSize = 14.sp, color = Color.Gray) },
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = GrayText) },
+                        trailingIcon = {
+                            if (chatSearchText.isNotEmpty()) {
+                                IconButton(onClick = { chatSearchText = "" }) {
+                                    Icon(Icons.Default.Close, contentDescription = "Clear", tint = GrayText)
+                                }
+                            }
+                        },
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Color.White,
+                            unfocusedContainerColor = Color.White,
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent,
+                        ),
+                        shape = RoundedCornerShape(24.dp),
+                        singleLine = true
+                    )
+
+                    TabRow(
+                        selectedTabIndex = chatSelectedTabIndex,
+                        containerColor = Color.White,
+                        contentColor = AquaBlue,
+                        indicator = { tabPositions ->
+                            if (chatSelectedTabIndex < tabPositions.size) {
+                                TabRowDefaults.SecondaryIndicator(
+                                    modifier = Modifier.tabIndicatorOffset(tabPositions[chatSelectedTabIndex]),
+                                    color = AquaBlue,
+                                    height = 3.dp
+                                )
+                            }
+                        },
+                        divider = { HorizontalDivider(color = Color(0xFFEEEEEE)) }
+                    ) {
+                        Tab(selected = chatSelectedTabIndex == 0, onClick = { chatSelectedTabIndex = 0 }) {
+                            Text(stringResource(R.string.all), modifier = Modifier.padding(14.dp), fontWeight = if(chatSelectedTabIndex == 0) FontWeight.Bold else FontWeight.Normal)
+                        }
+                        Tab(selected = chatSelectedTabIndex == 1, onClick = { chatSelectedTabIndex = 1 }) {
+                            Text(stringResource(R.string.buying), modifier = Modifier.padding(14.dp), fontWeight = if(chatSelectedTabIndex == 1) FontWeight.Bold else FontWeight.Normal)
+                        }
+                        Tab(selected = chatSelectedTabIndex == 2, onClick = { chatSelectedTabIndex = 2 }) {
+                            Text(stringResource(R.string.selling), modifier = Modifier.padding(14.dp), fontWeight = if(chatSelectedTabIndex == 2) FontWeight.Bold else FontWeight.Normal)
                         }
                     }
-                    Icon(Icons.Default.Public, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
                 }
             }
         },
@@ -320,11 +425,8 @@ fun DashboardScreen(
                                 onRateClick = { rate ->
                                     if (rate.isPrawn) {
                                         onPrawnsClick()
-                                    } else if (rate.name == "Rohu") {
-                                        onFishRatesClick()
                                     } else {
-                                        selectedRateForGraph = rate
-                                        showGraphSheet = true
+                                        onFishRatesClick()
                                     }
                                 }
                             ) 
@@ -383,13 +485,16 @@ fun DashboardScreen(
                                     val isFavorited = favoriteIds.contains(listingId)
 
                                     val categoryStr = data["category"]?.toString() ?: "Other"
+                                    val naText = stringResource(R.string.not_available_short)
+                                    val tonText = stringResource(R.string.unit_ton)
+                                    val acreText = stringResource(R.string.unit_acre)
                                     val priceLabel = when (categoryStr.uppercase()) {
-                                        "PRAWNS" -> "₹${data["rateValue"] ?: "N/A"}/${data["rateType"]?.toString()?.lowercase() ?: "paise"}"
-                                        "FEED" -> "₹${data["ratePerTon"] ?: "N/A"}/ton"
-                                        "BUSINESS" -> if (data["businessSubCategory"] == "Feed") "₹${data["ratePerTon"] ?: "N/A"}/ton" else "₹${data["price"] ?: data["rateValue"] ?: "N/A"}"
-                                        "JOBS" -> "₹${data["salary"] ?: "N/A"}"
-                                        "TANKS" -> "₹${data["estPricePerAcre"] ?: "N/A"}/acre"
-                                        else -> "₹${data["price"] ?: data["rateValue"] ?: "N/A"}"
+                                        "PRAWNS" -> "₹${data["rateValue"] ?: naText}/${data["rateType"]?.toString()?.lowercase() ?: stringResource(R.string.unit_paise)}"
+                                        "FEED" -> "₹${data["ratePerTon"] ?: naText}/$tonText"
+                                        "BUSINESS" -> if (data["businessSubCategory"] == "Feed") "₹${data["ratePerTon"] ?: naText}/$tonText" else "₹${data["price"] ?: data["rateValue"] ?: naText}"
+                                        "JOBS" -> "₹${data["salary"] ?: naText}"
+                                        "TANKS" -> "₹${data["estPricePerAcre"] ?: naText}/$acreText"
+                                        else -> "₹${data["price"] ?: data["rateValue"] ?: naText}"
                                     }
 
                                     MarketItem(
@@ -425,56 +530,6 @@ fun DashboardScreen(
                         item { FooterSection() }
                     }
                 } else if (selectedItem == 2) {
-                    item {
-                        Text(
-                            stringResource(R.string.chats), 
-                            fontWeight = FontWeight.Bold, 
-                            fontSize = 18.sp, 
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                            color = DarkBlueText
-                        )
-                    }
-
-                    item {
-                        TextField(
-                            value = chatSearchText,
-                            onValueChange = { chatSearchText = it },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 8.dp)
-                                .heightIn(min = 50.dp),
-                            placeholder = { Text(stringResource(R.string.search_conversations), fontSize = 14.sp) },
-                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = GrayText) },
-                            colors = TextFieldDefaults.colors(
-                                focusedContainerColor = Color(0xFFF5F5F5),
-                                unfocusedContainerColor = Color(0xFFF5F5F5),
-                                focusedIndicatorColor = Color.Transparent,
-                                unfocusedIndicatorColor = Color.Transparent,
-                            ),
-                            shape = RoundedCornerShape(12.dp),
-                            singleLine = true
-                        )
-                    }
-
-                    item {
-                        TabRow(
-                            selectedTabIndex = chatSelectedTabIndex,
-                            containerColor = MaterialTheme.colorScheme.background,
-                            contentColor = AquaBlue,
-                            divider = { HorizontalDivider(color = Color(0xFFEEEEEE)) }
-                        ) {
-                            Tab(selected = chatSelectedTabIndex == 0, onClick = { chatSelectedTabIndex = 0 }) {
-                                Text(stringResource(R.string.all), modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold)
-                            }
-                            Tab(selected = chatSelectedTabIndex == 1, onClick = { chatSelectedTabIndex = 1 }) {
-                                Text(stringResource(R.string.buying), modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold)
-                            }
-                            Tab(selected = chatSelectedTabIndex == 2, onClick = { chatSelectedTabIndex = 2 }) {
-                                Text(stringResource(R.string.selling), modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    }
-
                     if (isLoadingChats) {
                         item {
                             Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
@@ -694,23 +749,23 @@ fun AquaRatesSection(onRateClick: (AquaRate) -> Unit) {
         db.collection("aqua_rates")
             .addSnapshotListener { value, _ ->
                 if (value != null) {
-                    val fetchedMap = value.documents.associateBy({ it.id }, { doc ->
+                    val fetchedMap = value.documents.associateBy({ it.id.lowercase(java.util.Locale.ROOT) }, { doc ->
                         val price = doc.getString("price") ?: "--"
                         val change = doc.getString("change") ?: context.getString(R.string.no_change)
                         val trendStr = doc.getString("trend") ?: "FLAT"
                         val trend = try { RateTrend.valueOf(trendStr) } catch (_: Exception) { RateTrend.FLAT }
-                        val isPrawn = doc.getBoolean("isPrawn") ?: (doc.id == "Prawns")
+                        val isPrawn = doc.getBoolean("isPrawn") ?: (doc.id.lowercase(java.util.Locale.ROOT) == "prawns")
                         
                         AquaRate(doc.id, price, change, trend, isPrawn)
                     })
 
                     // Merge with the fixed list of fish types
                     rates = fishTypes.map { fish ->
-                        fetchedMap[fish] ?: AquaRate(fish, "--", context.getString(R.string.no_change), RateTrend.FLAT, isPrawn = fish == "Prawns")
+                        fetchedMap[fish.lowercase(java.util.Locale.ROOT)] ?: AquaRate(fish, "--", context.getString(R.string.no_change), RateTrend.FLAT, isPrawn = fish.lowercase(java.util.Locale.ROOT) == "prawns")
                     }
                 }
                 
-                if (rates.isEmpty()) {
+                if (rates.all { it.price == "--" }) {
                     rates = listOf(
                         AquaRate("Prawns", "₹280-1000", context.getString(R.string.view_all_prices), RateTrend.FLAT, isPrawn = true),
                         AquaRate("Rohu", "₹160/kg", "+₹5 (3%)", RateTrend.UP)
@@ -827,7 +882,7 @@ fun RateCard(
                         color = Color.Black
                     )
                     Text(
-                        text = if (rate.isPrawn) "100 Count" else rate.getDisplayName(),
+                        text = if (rate.isPrawn) stringResource(R.string.count_label, "100") else rate.getDisplayName(),
                         fontSize = 12.sp,
                         color = GrayText
                     )

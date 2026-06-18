@@ -36,6 +36,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.google.android.gms.maps.model.LatLng
 import android.content.Context
+import android.net.Uri
 import com.tejashaqua.app.data.model.ListingCategory
 import com.tejashaqua.app.ui.components.LoadingOverlay
 import com.tejashaqua.app.ui.theme.AquaBlue
@@ -44,6 +45,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.intl.LocaleList
 import java.util.Locale
 import com.tejashaqua.app.utils.LocaleHelper
+import com.tejashaqua.app.utils.ImageUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -111,12 +113,15 @@ fun EditListingScreen(
     val postState by listingViewModel.postState.collectAsState()
     val context = LocalContext.current
 
+    var tempCameraUri by remember { mutableStateOf<Uri?>(null) }
     val cameraLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.TakePicturePreview()
-    ) { bitmap ->
-        if (bitmap != null) {
-            // Processing camera thumbnail isn't ideal, but if we have to use it:
-            selectedPhotos = selectedPhotos + bitmap
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success) {
+            tempCameraUri?.let { uri ->
+                selectedPhotos = selectedPhotos + uri.toString()
+                photoError = false
+            }
         }
     }
 
@@ -162,7 +167,11 @@ fun EditListingScreen(
                         modifier = Modifier.clickable {
                             keyboardController?.hide()
                             showPhotoOptions = false
-                            cameraLauncher.launch()
+                            val uri = ImageUtils.createImageUri(context)
+                            tempCameraUri = uri
+                            if (uri != null) {
+                                cameraLauncher.launch(uri)
+                            }
                         }
                     )
                     ListItem(
@@ -1226,7 +1235,7 @@ fun TankFields(
     accentColor: Color = AquaBlue
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        ListingDropdown(label = "Type", value = tankType, options = listOf(stringResource(R.string.tank_lease), stringResource(R.string.tank_sell)), onSelectionChange = onTankTypeChange, isError = errors["tankType"] == true, accentColor = accentColor)
+        ListingDropdown(label = stringResource(R.string.type_label), value = tankType, options = listOf(stringResource(R.string.tank_lease), stringResource(R.string.tank_sell)), onSelectionChange = onTankTypeChange, isError = errors["tankType"] == true, accentColor = accentColor)
         ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true, keyboardOptions = keyboardOptions, accentColor = accentColor)
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(modifier = Modifier.weight(1f)) {

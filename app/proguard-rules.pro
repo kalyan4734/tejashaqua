@@ -16,6 +16,14 @@
 # debugging stack traces.
 #-keepattributes SourceFile,LineNumberTable
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# Firebase Installations Service
+-keep class com.google.firebase.installations.** { *; }
+
+# Firebase Messaging
+-keep class com.google.firebase.messaging.** { *; }
+
+# Firebase Common
+-keep class com.google.firebase.** { *; }
+-keepattributes *Annotation*
+-keepattributes Signature
+

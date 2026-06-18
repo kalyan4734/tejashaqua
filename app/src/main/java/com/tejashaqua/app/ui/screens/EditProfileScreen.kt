@@ -31,7 +31,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.intl.LocaleList
+import android.net.Uri
 import com.tejashaqua.app.utils.LocaleHelper
+import com.tejashaqua.app.utils.ImageUtils
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -81,11 +83,14 @@ fun EditProfileScreen(
         }
     }
 
+    var tempCameraUri by remember { mutableStateOf<Uri?>(null) }
     val cameraLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.TakePicturePreview()
-    ) { bitmap ->
-        if (bitmap != null) {
-            profileImage = bitmap
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success) {
+            tempCameraUri?.let { uri ->
+                profileImage = uri.toString()
+            }
         }
     }
 
@@ -111,7 +116,11 @@ fun EditProfileScreen(
                         modifier = Modifier.clickable {
                             keyboardController?.hide()
                             showPhotoOptions = false
-                            cameraLauncher.launch()
+                            val uri = ImageUtils.createImageUri(context)
+                            tempCameraUri = uri
+                            if (uri != null) {
+                                cameraLauncher.launch(uri)
+                            }
                         }
                     )
                     ListItem(

@@ -6,10 +6,25 @@ import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.media.ExifInterface
 import android.net.Uri
+import androidx.core.content.FileProvider
+import java.io.File
 import java.io.InputStream
 import java.io.IOException
 
 object ImageUtils {
+    fun createImageUri(context: Context): Uri? {
+        val imageFolder = File(context.cacheDir, "images")
+        if (!imageFolder.exists()) {
+            imageFolder.mkdirs()
+        }
+        val file = File(imageFolder, "camera_photo_${System.currentTimeMillis()}.jpg")
+        return FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            file
+        )
+    }
+
     fun getCorrectlyOrientedBitmap(context: Context, uri: Uri): Bitmap? {
         return try {
             var inputStream: InputStream? = context.contentResolver.openInputStream(uri)

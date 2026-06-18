@@ -3,6 +3,8 @@ package com.tejashaqua.app
 import android.app.Application
 import com.google.android.libraries.places.api.Places
 import com.google.firebase.FirebaseApp
+import com.google.firebase.appcheck.FirebaseAppCheck
+import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderFactory
 import com.google.firebase.messaging.FirebaseMessaging
 import com.tejashaqua.app.utils.LocaleHelper
 import java.util.Locale
@@ -14,6 +16,10 @@ class TejashAquaApplication : Application() {
         
         // Initialize Firebase
         FirebaseApp.initializeApp(this)
+        val firebaseAppCheck = FirebaseAppCheck.getInstance()
+        firebaseAppCheck.installAppCheckProviderFactory(
+            PlayIntegrityAppCheckProviderFactory.getInstance()
+        )
 
         // Subscribe to all_listings topic for push notifications
         FirebaseMessaging.getInstance().subscribeToTopic("all_listings")

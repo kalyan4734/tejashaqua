@@ -198,6 +198,7 @@ fun LoginScreen(
         val annotatedText = buildAnnotatedString {
             withStyle(style = SpanStyle(color = Color.Black)) {
                 append(stringResource(R.string.agree_terms_prefix))
+                append(" ")
             }
 
             val linkStyle = TextLinkStyles(
@@ -217,7 +218,9 @@ fun LoginScreen(
             }
 
             withStyle(style = SpanStyle(color = Color.Black)) {
+                append(" ")
                 append(stringResource(R.string.and))
+                append(" ")
             }
 
             withLink(

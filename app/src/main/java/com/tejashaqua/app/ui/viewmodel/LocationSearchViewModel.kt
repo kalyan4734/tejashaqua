@@ -42,25 +42,47 @@ class LocationSearchViewModel(application: Application) : AndroidViewModel(appli
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
 
+    var isManualSelection = false
+        private set
+
     fun onPermissionDenied() {
+        if (isManualSelection) return
         _currentLocationName.value = getApplication<Application>().getString(R.string.location_permission_denied)
     }
 
-    fun fetchCurrentLocation() {
+    fun setManualLocation(name: String, sub: String, latLng: LatLng?) {
+        isManualSelection = true
+        _currentLocationName.value = name
+        _currentSubLocation.value = sub
+        _currentLatLng.value = latLng
+    }
+
+    fun fetchCurrentLocation(force: Boolean = false) {
+        if (force) isManualSelection = false
+
         Log.d("LocationVM", "fetchCurrentLocation called")
-        _currentLocationName.value = getApplication<Application>().getString(R.string.fetching_location)
+        if (!isManualSelection) {
+            _currentLocationName.value = getApplication<Application>().getString(R.string.fetching_location)
+        }
+
         try {
             fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
                 .addOnSuccessListener { currentLoc ->
                     Log.d("LocationVM", "getCurrentLocation success: $currentLoc")
                     if (currentLoc != null) {
-                        updateLocationData(currentLoc.latitude, currentLoc.longitude)
+                        if (!isManualSelection) {
+                            _currentLatLng.value = LatLng(currentLoc.latitude, currentLoc.longitude)
+                            updateLocationData(currentLoc.latitude, currentLoc.longitude)
+                        }
                     } else {
                         Log.d("LocationVM", "getCurrentLocation was null, trying lastLocation")
                         fusedLocationClient.lastLocation.addOnSuccessListener { location ->
                             if (location != null) {
-                                updateLocationData(location.latitude, location.longitude)
-                            } else {
+                                if (!isManualSelection) {
+                                    _currentLatLng.value = LatLng(location.latitude, location.longitude)
+                                    updateLocationData(location.latitude, location.longitude)
+                                }
+                            } else if (!isManualSelection) {
                                 _currentLocationName.value = getApplication<Application>().getString(R.string.location_not_found)
                             }
                         }
@@ -68,11 +90,15 @@ class LocationSearchViewModel(application: Application) : AndroidViewModel(appli
                 }
                 .addOnFailureListener { e ->
                     Log.e("LocationVM", "getCurrentLocation failure", e)
-                    _currentLocationName.value = getApplication<Application>().getString(R.string.failed_get_location)
+                    if (!isManualSelection) {
+                        _currentLocationName.value = getApplication<Application>().getString(R.string.failed_get_location)
+                    }
                 }
         } catch (e: SecurityException) {
             Log.e("LocationVM", "SecurityException: permission denied", e)
-            _currentLocationName.value = getApplication<Application>().getString(R.string.location_permission_denied)
+            if (!isManualSelection) {
+                _currentLocationName.value = getApplication<Application>().getString(R.string.location_permission_denied)
+            }
         }
     }
 

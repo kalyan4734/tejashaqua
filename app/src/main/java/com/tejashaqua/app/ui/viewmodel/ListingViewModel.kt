@@ -3,9 +3,11 @@ package com.tejashaqua.app.ui.viewmodel
 import android.app.Application
 import android.graphics.Bitmap
 import android.net.Uri
+import android.os.Bundle
 import androidx.core.net.toUri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
 import com.tejashaqua.app.R
@@ -21,6 +23,7 @@ import java.util.UUID
 class ListingViewModel(application: Application) : AndroidViewModel(application) {
     private val db = FirebaseFirestore.getInstance()
     private val storage = FirebaseStorage.getInstance()
+    private val analytics = FirebaseAnalytics.getInstance(application)
 
     private val _postState = MutableStateFlow<PostState>(PostState.Idle)
     val postState: StateFlow<PostState> = _postState
@@ -70,6 +73,12 @@ class ListingViewModel(application: Application) : AndroidViewModel(application)
 
                 db.collection("listings").document(listingId).set(finalData).await()
                 
+                val bundle = Bundle()
+                bundle.putString(FirebaseAnalytics.Param.ITEM_ID, listingId)
+                bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, title)
+                bundle.putString(FirebaseAnalytics.Param.CONTENT_TYPE, data["category"]?.toString() ?: "unknown")
+                analytics.logEvent(FirebaseAnalytics.Event.SELECT_CONTENT, bundle)
+
                 // Show local notification for feedback
                 NotificationUtils.showLocalNotification(
                     getApplication(),
@@ -94,7 +103,7 @@ class ListingViewModel(application: Application) : AndroidViewModel(application)
                 when (item) {
                     is Bitmap -> {
                         val baos = ByteArrayOutputStream()
-                        item.compress(Bitmap.CompressFormat.JPEG, 70, baos)
+                        item.compress(Bitmap.CompressFormat.JPEG, 100, baos)
                         val data = baos.toByteArray()
                         ref.putBytes(data).await()
                     }
@@ -103,7 +112,7 @@ class ListingViewModel(application: Application) : AndroidViewModel(application)
                         val rotatedBitmap = ImageUtils.getCorrectlyOrientedBitmap(getApplication(), uri)
                         if (rotatedBitmap != null) {
                             val baos = ByteArrayOutputStream()
-                            rotatedBitmap.compress(Bitmap.CompressFormat.JPEG, 70, baos)
+                            rotatedBitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos)
                             val data = baos.toByteArray()
                             ref.putBytes(data).await()
                             rotatedBitmap.recycle()
@@ -115,7 +124,7 @@ class ListingViewModel(application: Application) : AndroidViewModel(application)
                         val rotatedBitmap = ImageUtils.getCorrectlyOrientedBitmap(getApplication(), item)
                         if (rotatedBitmap != null) {
                             val baos = ByteArrayOutputStream()
-                            rotatedBitmap.compress(Bitmap.CompressFormat.JPEG, 70, baos)
+                            rotatedBitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos)
                             val data = baos.toByteArray()
                             ref.putBytes(data).await()
                             rotatedBitmap.recycle()
