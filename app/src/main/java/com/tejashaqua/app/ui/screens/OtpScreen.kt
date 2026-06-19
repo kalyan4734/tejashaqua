@@ -1,6 +1,7 @@
 package com.tejashaqua.app.ui.screens
 
 import android.app.Activity
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -12,6 +13,7 @@ import com.google.android.gms.auth.api.phone.SmsRetriever
 import com.google.android.gms.common.api.CommonStatusCodes
 import com.google.android.gms.common.api.Status
 import com.tejashaqua.app.utils.AppSignatureHelper
+import com.google.android.gms.tasks.Task
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -66,12 +68,12 @@ fun OtpScreen(
         hintLocales = if (currentLang == "te") LocaleList("te") else null
     )
 
+    // Launcher for the "Allow" popup
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK && result.data != null) {
             val message = result.data?.getStringExtra(SmsRetriever.EXTRA_SMS_MESSAGE)
-            Log.d("OtpScreen", "Consent Result Message: $message")
             message?.let {
                 val otpPattern = Regex("\\b(\\d{6})\\b")
                 val match = otpPattern.find(it)
@@ -88,68 +90,84 @@ fun OtpScreen(
         }
     }
 
+    // Log hash once for debugging and start SMS User Consent
     DisposableEffect(Unit) {
         val appSignatureHelper = AppSignatureHelper(context)
         Log.d("OtpScreen", "App Hash for SMS Retriever: ${appSignatureHelper.appSignatures}")
 
-        // Start both listeners
-        SmsRetriever.getClient(context).startSmsRetriever()
-        SmsRetriever.getClient(context).startSmsUserConsent(null)
+        // Start SMS User Consent API safely
+        try {
+            val task: Task<Void> = SmsRetriever.getClient(context).startSmsUserConsent(null)
+            task.addOnSuccessListener { Log.d("OtpScreen", "SMS User Consent started successfully") }
+            task.addOnFailureListener { e -> Log.e("OtpScreen", "Failed to start SMS User Consent", e) }
+        } catch (e: Exception) {
+            Log.e("OtpScreen", "Error starting SMS User Consent", e)
+        }
 
-        val smsReceiver = object : android.content.BroadcastReceiver() {
+        val smsReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
-                Log.d("OtpScreen", "onReceive: ${intent?.action}")
-                if (SmsRetriever.SMS_RETRIEVED_ACTION == intent?.action) {
-                    val extras = intent.extras
-                    val status = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        extras?.getParcelable(SmsRetriever.EXTRA_STATUS, Status::class.java)
-                    } else {
-                        @Suppress("DEPRECATION")
-                        extras?.getParcelable(SmsRetriever.EXTRA_STATUS)
-                    }
+                try {
+                    if (SmsRetriever.SMS_RETRIEVED_ACTION == intent?.action) {
+                        val extras = intent.extras ?: return
+                        
+                        // IF Firebase Auth's zzafa class is present in the extras, we ignore this broadcast.
+                        // This prevents the NullPointerException in their internal matcher.
+                        if (extras.containsKey("com.google.android.gms.auth.api.phone.EXTRA_SMS_MESSAGE")) {
+                             // This is likely the hash-based retriever message which Firebase handles.
+                             // To avoid the NPE crash in Firebase, we should not touch this if it's already being processed.
+                             Log.d("OtpScreen", "Ignoring hash-based broadcast to prevent Firebase NPE crash")
+                             return 
+                        }
 
-                    Log.d("OtpScreen", "SMS Retrieval Status: ${status?.statusCode}")
+                        val status = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            extras.getParcelable(SmsRetriever.EXTRA_STATUS, Status::class.java)
+                        } else {
+                            @Suppress("DEPRECATION")
+                            extras.getParcelable(SmsRetriever.EXTRA_STATUS)
+                        }
 
-                    when (status?.statusCode) {
-                        CommonStatusCodes.SUCCESS -> {
-                            // Try reading message directly (SMS Retriever / Hash based)
-                            val message = extras?.getString(SmsRetriever.EXTRA_SMS_MESSAGE)
-                            if (message != null) {
-                                Log.d("OtpScreen", "Retriever Message: $message")
-                                val otpPattern = Regex("\\b(\\d{6})\\b")
-                                val match = otpPattern.find(message)
-                                match?.let { m -> otpValue = m.value }
-                            } else {
-                                // Try getting consent intent (SMS User Consent)
+                        when (status?.statusCode) {
+                            CommonStatusCodes.SUCCESS -> {
                                 val consentIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                    extras?.getParcelable(SmsRetriever.EXTRA_CONSENT_INTENT, Intent::class.java)
+                                    extras.getParcelable(SmsRetriever.EXTRA_CONSENT_INTENT, Intent::class.java)
                                 } else {
                                     @Suppress("DEPRECATION")
-                                    extras?.getParcelable(SmsRetriever.EXTRA_CONSENT_INTENT)
+                                    extras.getParcelable(SmsRetriever.EXTRA_CONSENT_INTENT)
                                 }
-                                
-                                if (consentIntent != null) {
-                                    Log.d("OtpScreen", "Launching Consent Intent")
-                                    launcher.launch(consentIntent)
-                                } else {
-                                    Log.d("OtpScreen", "No message and no consent intent found")
+                                try {
+                                    consentIntent?.let { launcher.launch(it) }
+                                } catch (e: Exception) {
+                                    Log.e("OtpScreen", "Error launching consent intent", e)
+                                }
+                            }
+                            CommonStatusCodes.TIMEOUT -> {
+                                Log.d("OtpScreen", "SMS Retrieval Timeout - Restarting Consent")
+                                context?.let { 
+                                    try {
+                                        SmsRetriever.getClient(it).startSmsUserConsent(null)
+                                    } catch (e: Exception) {
+                                        Log.e("OtpScreen", "Error restarting consent on timeout", e)
+                                    }
                                 }
                             }
                         }
-                        CommonStatusCodes.TIMEOUT -> {
-                            Log.d("OtpScreen", "SMS Retrieval Timeout")
-                        }
                     }
+                } catch (e: Exception) {
+                    // CATCH EVERYTHING to prevent crash on main thread
+                    Log.e("OtpScreen", "CRITICAL: Suppressed exception in onReceive to prevent crash", e)
                 }
             }
         }
 
         val intentFilter = IntentFilter(SmsRetriever.SMS_RETRIEVED_ACTION)
-        
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            context.registerReceiver(smsReceiver, intentFilter, Context.RECEIVER_EXPORTED)
-        } else {
-            context.registerReceiver(smsReceiver, intentFilter)
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                context.registerReceiver(smsReceiver, intentFilter, Context.RECEIVER_EXPORTED)
+            } else {
+                context.registerReceiver(smsReceiver, intentFilter)
+            }
+        } catch (e: Exception) {
+            Log.e("OtpScreen", "Error registering receiver", e)
         }
 
         onDispose {
@@ -272,6 +290,8 @@ fun OtpScreen(
                 if (timerSeconds == 0 && !isLoading) {
                     onResendClick()
                     timerSeconds = 24
+                    // Re-trigger User Consent on resend
+                    SmsRetriever.getClient(context).startSmsUserConsent(null)
                 }
             },
             contentPadding = PaddingValues(0.dp),

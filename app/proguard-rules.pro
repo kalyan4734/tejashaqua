@@ -27,3 +27,7 @@
 -keepattributes *Annotation*
 -keepattributes Signature
 
+# Google Play Services Auth (Required for SMS Retriever/Consent API)
+-keep class com.google.android.gms.auth.api.phone.** { *; }
+-keep class com.google.android.gms.common.api.** { *; }
+
