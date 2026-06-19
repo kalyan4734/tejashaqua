@@ -46,7 +46,8 @@ fun OtpScreen(
     mobileNumber: String,
     onVerifyClick: (String) -> Unit,
     onResendClick: () -> Unit,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    isLoading: Boolean = false
 ) {
     var otpValue by remember { mutableStateOf("") }
     var timerSeconds by remember { mutableIntStateOf(24) }
@@ -81,28 +82,40 @@ fun OtpScreen(
             onOtpReceived = { otp -> otpValue = otp },
             onConsentIntentReceived = { intent -> launcher.launch(intent) }
         )
-        
+
         val intentFilter = IntentFilter(SmsRetriever.SMS_RETRIEVED_ACTION)
-        
+
         // Version-safe registration
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            context.registerReceiver(
-                smsReceiver,
-                intentFilter,
-                SmsRetriever.SEND_PERMISSION,
-                null,
-                Context.RECEIVER_EXPORTED
-            )
-        } else {
-            // For API 32 and below, the exported flag is not required and will crash if used
-            context.registerReceiver(
-                smsReceiver,
-                intentFilter,
-                SmsRetriever.SEND_PERMISSION,
-                null
-            )
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                context.registerReceiver(
+                    smsReceiver,
+                    intentFilter,
+                    SmsRetriever.SEND_PERMISSION,
+                    null,
+                    Context.RECEIVER_EXPORTED
+                )
+            } else {
+                context.registerReceiver(
+                    smsReceiver,
+                    intentFilter,
+                    SmsRetriever.SEND_PERMISSION,
+                    null
+                )
+            }
+        } catch (e: Exception) {
+            // Fallback to no permission if registration fails
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    context.registerReceiver(smsReceiver, intentFilter, Context.RECEIVER_EXPORTED)
+                } else {
+                    context.registerReceiver(smsReceiver, intentFilter)
+                }
+            } catch (e2: Exception) {
+                e2.printStackTrace()
+            }
         }
-        
+
         onDispose {
             try {
                 context.unregisterReceiver(smsReceiver)
@@ -197,7 +210,7 @@ fun OtpScreen(
                             else -> otpValue[index].toString()
                         }
                         val isFocused = otpValue.length == index
-                        
+
                         Box(
                             modifier = Modifier
                                 .weight(1f)
@@ -219,14 +232,15 @@ fun OtpScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         TextButton(
-            onClick = { 
-                if (timerSeconds == 0) {
+            onClick = {
+                if (timerSeconds == 0 && !isLoading) {
                     onResendClick()
                     timerSeconds = 24
                     SmsRetriever.getClient(context).startSmsUserConsent(null)
                 }
             },
-            contentPadding = PaddingValues(0.dp)
+            contentPadding = PaddingValues(0.dp),
+            enabled = timerSeconds == 0 && !isLoading
         ) {
             Text(
                 text = if (timerSeconds > 0) stringResource(R.string.resend_otp_in, timerSeconds) else stringResource(R.string.resend_otp),
@@ -239,18 +253,26 @@ fun OtpScreen(
         Spacer(modifier = Modifier.height(32.dp))
 
         Button(
-            onClick = { 
+            onClick = {
                 keyboardController?.hide()
-                if (otpValue.length == 6) onVerifyClick(otpValue) 
+                if (otpValue.length == 6) onVerifyClick(otpValue)
             },
             modifier = Modifier.fillMaxWidth().height(56.dp),
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(containerColor = AquaBlue),
-            enabled = otpValue.length == 6
+            enabled = otpValue.length == 6 && !isLoading
         ) {
-            Text(text = stringResource(R.string.verify_continue), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            if (isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(24.dp),
+                    color = Color.White,
+                    strokeWidth = 2.dp
+                )
+            } else {
+                Text(text = stringResource(R.string.verify_continue), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            }
         }
-        
+
         Spacer(modifier = Modifier.height(24.dp))
     }
 }

@@ -32,6 +32,7 @@ import com.tejashaqua.app.ui.theme.AquaBlue
 import com.tejashaqua.app.ui.theme.GrayText
 import com.tejashaqua.app.ui.components.LoadingOverlay
 import com.tejashaqua.app.R
+import com.tejashaqua.app.utils.CurrencyUtils
 
 data class UserListing(
     val id: String = "",
@@ -103,12 +104,23 @@ fun MyListingsScreen(
                             val tonText = context.getString(R.string.unit_ton)
                             val acreText = context.getString(R.string.unit_acre)
                             val priceLabel = when (categoryStr.uppercase()) {
-                                "PRAWNS" -> "${doc.get("rateValue") ?: naText}/${doc.getString("rateType")?.lowercase() ?: context.getString(R.string.unit_paise)}"
-                                "FEED" -> "${doc.get("ratePerTon") ?: naText}/$tonText"
-                                "BUSINESS" -> if (doc.getString("businessSubCategory") == "Feed") "${doc.get("ratePerTon") ?: naText}/$tonText" else "${doc.get("price") ?: doc.get("rateValue") ?: naText}"
-                                "JOBS" -> "${doc.get("salary") ?: naText}"
-                                "TANKS" -> "${doc.get("estPricePerAcre") ?: naText}/$acreText"
-                                else -> "${doc.get("price") ?: doc.get("rateValue") ?: naText}"
+                                "PRAWNS" -> {
+                                    val rate = doc.get("rateValue")?.toString() ?: naText
+                                    val formattedRate = CurrencyUtils.formatPrice(rate)
+                                    val type = doc.getString("rateType") ?: "Paise"
+                                    if (type.contains("Paise", ignoreCase = true)) "$formattedRate Paise/Seed" else "₹$formattedRate/Seed"
+                                }
+                                "FEED" -> "₹${CurrencyUtils.formatPrice(doc.get("ratePerTon") ?: naText)}/$tonText"
+                                "BUSINESS" -> {
+                                    if (doc.getString("businessSubCategory") == "Feed") {
+                                        "₹${CurrencyUtils.formatPrice(doc.get("ratePerTon") ?: naText)}/$tonText"
+                                    } else {
+                                        "₹${CurrencyUtils.formatPrice(doc.get("price") ?: doc.get("rateValue") ?: naText)}"
+                                    }
+                                }
+                                "JOBS" -> "₹${CurrencyUtils.formatPrice(doc.get("salary") ?: naText)}"
+                                "TANKS" -> "₹${CurrencyUtils.formatPrice(doc.get("estPricePerAcre") ?: naText)}/$acreText"
+                                else -> "₹${CurrencyUtils.formatPrice(doc.get("price") ?: doc.get("rateValue") ?: naText)}"
                             }
 
                             UserListing(
@@ -224,7 +236,7 @@ fun ListingCard(
                         Text(text = listing.category, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp), color = Color(0xFF3F51B5), fontSize = 10.sp, fontWeight = FontWeight.Medium)
                     }
                     Text(text = listing.title, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1, color = Color.Black)
-                    Text(text = "₹${listing.price}", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, color = Color.Black)
+                    Text(text = listing.price, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, color = Color.Black)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Outlined.LocationOn, contentDescription = null, tint = GrayText, modifier = Modifier.size(14.dp))
                         val context = androidx.compose.ui.platform.LocalContext.current

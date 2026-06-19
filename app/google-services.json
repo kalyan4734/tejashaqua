@@ -23,6 +23,14 @@
           }
         },
         {
+          "client_id": "887054237997-g5b3hkk7qkav2s2i6l0pkaka0424a7pc.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.tejashaqua.app",
+            "certificate_hash": "1413913e87e88b27aebde88eb3de6baa8a5747bc"
+          }
+        },
+        {
           "client_id": "887054237997-vi835sc1pa9iqmvhcjt4v54c4ma5r1e7.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {

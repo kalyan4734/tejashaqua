@@ -26,6 +26,7 @@ import androidx.compose.ui.res.stringResource
 import com.google.firebase.firestore.FirebaseFirestore
 import com.tejashaqua.app.ui.theme.AquaBlue
 import com.tejashaqua.app.ui.theme.GrayText
+import com.tejashaqua.app.utils.CurrencyUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -204,7 +205,7 @@ fun PrawnRatesScreen(onBackClick: () -> Unit) {
                             ) {
                                 Text(count, color = Color.Black, modifier = Modifier.weight(1f))
                                 Box(modifier = Modifier.width(1.dp).height(20.dp).background(Color.LightGray.copy(alpha = 0.5f)))
-                                Text(if (price == "--") price else "₹$price", color = AquaBlue, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f).padding(start = 16.dp))
+                                Text(if (price == "--") price else "₹${CurrencyUtils.formatPrice(price)}", color = AquaBlue, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f).padding(start = 16.dp))
                             }
                             if (index < counts.size - 1) {
                                 HorizontalDivider(color = Color(0xFFEEEEEE))

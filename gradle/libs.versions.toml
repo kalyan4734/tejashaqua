@@ -15,10 +15,11 @@ okhttp = "4.12.0"
 lifecycleCompose = "2.8.7"
 playServicesLocation = "21.3.0"
 playServicesAuthPhone = "18.1.0"
-firebaseBom = "34.0.0"
+firebaseBom = "33.5.1"
 coil = "2.6.0"
 googleMaps = "19.0.0"
 mapsCompose = "4.4.1"
+
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }

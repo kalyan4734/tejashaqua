@@ -182,6 +182,20 @@
     <string name="desc_tank_acres_prefix">ట్యాంక్: %s ఎకరాలు</string>
     <string name="limit_reached_error">మీరు గరిష్టంగా 2 పోస్ట్‌లను మాత్రమే చేయగలరు. కొత్త పోస్ట్ చేయడానికి పాత దానిని తొలగించండి.</string>
 
+    <string name="report_listing">రిపోర్ట్ లిస్టింగ్</string>
+    <string name="block_user">వినియోగదారుని బ్లాక్ చేయండి</string>
+    <string name="report_reason">రిపోర్ట్ చేయడానికి కారణం</string>
+    <string name="report_submitted">రిపోర్ట్ సమర్పించబడింది. మేము త్వరలో సమీక్షిస్తాము.</string>
+    <string name="user_blocked">వినియోగదారు బ్లాక్ చేయబడ్డారు.</string>
+    <string name="block_user_confirm">మీరు ఖచ్చితంగా ఈ వినియోగదారుని బ్లాక్ చేయాలనుకుంటున్నారా? మీరు ఇకపై వారి జాబితాలను లేదా సందేశాలను చూడలేరు.</string>
+    <string name="report_user">వినియోగదారుని రిపోర్ట్ చేయండి</string>
+    <string name="report">రిపోర్ట్</string>
+    <string name="block">బ్లాక్</string>
+    <string name="report_inappropriate">అనుచిత కంటెంట్</string>
+    <string name="report_scam">మోసం లేదా ఫ్రాడ్</string>
+    <string name="report_spam">స్పామ్</string>
+    <string name="report_other">ఇతర</string>
+    <string name="select_reason">కారణాన్ని ఎంచుకోండి</string>
     <string name="about_app_desc">తేజశ్ ఆక్వా ఆక్వాకల్చర్ పరిశ్రమ కోసం భారతదేశపు అగ్రగామి మార్కెట్‌ప్లేస్. ఆక్వా రంగంలో వ్యాపారాన్ని మరియు వృద్ధిని సులభతరం చేయడానికి మేము రైతులను, హేచరీలను మరియు సరఫరాదారులను కలుపుతాము.</string>
     <string name="app_version">యాప్ వెర్షన్</string>
     <string name="developed_by">తేజశ్ ఆక్వా టీమ్ ద్వారా అభివృద్ధి చేయబడింది</string>
@@ -375,6 +389,8 @@
     <string name="rupees_per_kg_label">₹/కేజీ</string>
     <string name="count_label">కౌంట్ %s</string>
     <string name="no_internet_connection">ఇంటర్నెట్ కనెక్షన్ లేదు</string>
+    <string name="no_internet_title">ఇంటర్నెట్ లేదు</string>
+    <string name="no_internet_desc">దయచేసి మీ ఇంటర్నెట్ కనెక్షన్‌ని తనిఖీ చేసి, మళ్లీ ప్రయత్నించండి.</string>
     <string name="location_disclosure_title">స్థాన అనుమతి (Location Permission)</string>
     <string name="location_disclosure_desc">మీ ప్రాంతంలోని సంబంధిత ఆక్వా మార్కెట్‌ప్లేస్ జాబితాలను చూపడానికి మరియు మీ పోస్ట్‌ల కోసం స్థానాలను ఎంచుకోవడానికి తేజశ్ ఆక్వాకు మీ స్థానం (Location) అవసరం.</string>
     <string name="ok">సరే</string>

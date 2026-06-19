@@ -39,10 +39,18 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import com.tejashaqua.app.data.model.ListingCategory
 import com.tejashaqua.app.R
+import com.tejashaqua.app.utils.CurrencyUtils
 import com.tejashaqua.app.ui.components.MarketItem
 import com.tejashaqua.app.ui.theme.AquaBlue
 import com.tejashaqua.app.ui.theme.GrayText
 import java.util.Locale
+
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.tejashaqua.app.ui.viewmodel.UserActionViewModel
+import android.widget.Toast
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.Report
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,19 +58,48 @@ fun DetailedPageScreen(
     listingData: Map<String, Any>,
     currentUserId: String,
     onBackClick: () -> Unit,
-    onChatClick: (Map<String, Any>) -> Unit
+    onChatClick: (Map<String, Any>) -> Unit,
+    userActionViewModel: UserActionViewModel = viewModel()
 ) {
     val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
+
+    var showMenu by remember { mutableStateOf(false) }
+    var showReportDialog by remember { mutableStateOf(false) }
+    var showBlockDialog by remember { mutableStateOf(false) }
+    val reportReasons = listOf(
+        stringResource(R.string.report_inappropriate),
+        stringResource(R.string.report_scam),
+        stringResource(R.string.report_spam),
+        stringResource(R.string.report_other)
+    )
+    var selectedReason by remember { mutableStateOf(reportReasons[0]) }
     
     val naText = stringResource(R.string.not_available_short)
     val tonText = stringResource(R.string.unit_ton)
     val acreText = stringResource(R.string.unit_acre)
 
     val title = listingData["title"]?.toString() ?: stringResource(R.string.no_title)
-    val priceValue = listingData["price"] ?: listingData["rateValue"] ?: stringResource(R.string.not_available_short)
-    val price = "₹$priceValue"
     val categoryString = listingData["category"]?.toString() ?: stringResource(R.string.fish_others)
+    val priceLabel = when (categoryString.uppercase()) {
+        "PRAWNS" -> {
+            val rate = listingData["rateValue"]?.toString() ?: naText
+            val formattedRate = CurrencyUtils.formatPrice(rate)
+            val type = listingData["rateType"]?.toString() ?: "Paise"
+            if (type.contains("Paise", ignoreCase = true)) "$formattedRate Paise/Seed" else "₹$formattedRate/Seed"
+        }
+        "FEED" -> "₹${CurrencyUtils.formatPrice(listingData["ratePerTon"] ?: naText)}/$tonText"
+        "BUSINESS" -> {
+            if (listingData["businessSubCategory"] == "Feed") {
+                "₹${CurrencyUtils.formatPrice(listingData["ratePerTon"] ?: naText)}/$tonText"
+            } else {
+                "₹${CurrencyUtils.formatPrice(listingData["price"] ?: listingData["rateValue"] ?: naText)}"
+            }
+        }
+        "JOBS" -> "₹${CurrencyUtils.formatPrice(listingData["salary"] ?: naText)}"
+        "TANKS" -> "₹${CurrencyUtils.formatPrice(listingData["estPricePerAcre"] ?: naText)}/$acreText"
+        else -> "₹${CurrencyUtils.formatPrice(listingData["price"] ?: listingData["rateValue"] ?: naText)}"
+    }
     val category = try { ListingCategory.valueOf(categoryString.uppercase()) } catch (e: Exception) { null }
     val fullLocation = listingData["location"]?.toString() ?: stringResource(R.string.unknown_location)
     // Use the first part of the address (Locality) as the main location
@@ -164,6 +201,29 @@ fun DetailedPageScreen(
                             tint = if (isFavorited) Color.Red else Color.White
                         )
                     }
+                    if (!isOwnListing) {
+                        IconButton(onClick = { showMenu = true }) {
+                            Icon(Icons.Default.MoreVert, contentDescription = "Menu", tint = Color.White)
+                        }
+                        DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.report_listing)) },
+                                leadingIcon = { Icon(Icons.Default.Report, contentDescription = null) },
+                                onClick = {
+                                    showMenu = false
+                                    showReportDialog = true
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.block_user)) },
+                                leadingIcon = { Icon(Icons.Default.Block, contentDescription = null) },
+                                onClick = {
+                                    showMenu = false
+                                    showBlockDialog = true
+                                }
+                            )
+                        }
+                    }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = AquaBlue)
             )
@@ -195,6 +255,61 @@ fun DetailedPageScreen(
             }
         }
     ) { innerPadding ->
+        if (showReportDialog) {
+            AlertDialog(
+                onDismissRequest = { showReportDialog = false },
+                title = { Text(stringResource(R.string.report_listing)) },
+                text = {
+                    Column {
+                        Text(stringResource(R.string.select_reason), modifier = Modifier.padding(bottom = 8.dp))
+                        reportReasons.forEach { reason ->
+                            Row(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clickable { selectedReason = reason }
+                                    .padding(vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(selected = (selectedReason == reason), onClick = { selectedReason = reason })
+                                Text(reason, modifier = Modifier.padding(start = 8.dp))
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        userActionViewModel.reportListing(listingId, currentUserId, selectedReason) {
+                            Toast.makeText(context, context.getString(R.string.report_submitted), Toast.LENGTH_SHORT).show()
+                            showReportDialog = false
+                        }
+                    }) { Text(stringResource(R.string.report)) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showReportDialog = false }) { Text(stringResource(R.string.cancel)) }
+                }
+            )
+        }
+
+        if (showBlockDialog) {
+            AlertDialog(
+                onDismissRequest = { showBlockDialog = false },
+                title = { Text(stringResource(R.string.block_user)) },
+                text = { Text(stringResource(R.string.block_user_confirm)) },
+                confirmButton = {
+                    TextButton(onClick = {
+                        userActionViewModel.blockUser(listingUserId) {
+                            Toast.makeText(context, context.getString(R.string.user_blocked), Toast.LENGTH_SHORT).show()
+                            showBlockDialog = false
+                            onBackClick()
+                        }
+                    }) { Text(stringResource(R.string.block)) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showBlockDialog = false }) { Text(stringResource(R.string.cancel)) }
+                }
+            )
+        }
+
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -263,17 +378,6 @@ fun DetailedPageScreen(
                     
                     Text(text = title, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                     
-                    val priceLabel = when(category) {
-                        ListingCategory.PRAWNS -> {
-                            val rate = listingData["rateValue"] ?: naText
-                            val unit = listingData["rateType"]?.toString()?.lowercase() ?: stringResource(R.string.unit_kgs)
-                            "₹$rate/$unit"
-                        }
-                        ListingCategory.FEED -> "₹${listingData["ratePerTon"] ?: naText}/$tonText"
-                        ListingCategory.BUSINESS -> if (listingData["businessSubCategory"] == "Feed") "₹${listingData["ratePerTon"] ?: naText}/$tonText" else price
-                        ListingCategory.JOBS -> "₹${listingData["salary"] ?: naText}"
-                        else -> price
-                    }
                     Text(text = priceLabel, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = AquaBlue)
                     
                     Spacer(modifier = Modifier.height(12.dp))
@@ -332,18 +436,18 @@ fun DetailedPageScreen(
                             DetailRowItem(stringResource(R.string.size_label), "${listingData["sizeValue"] ?: ""} ${listingData["sizeType"] ?: ""}")
                             DetailRowItem(stringResource(R.string.fish_age_label), stringResource(R.string.months_suffix, listingData["fishAge"] ?: ""))
                             DetailRowItem(stringResource(R.string.quantity_label), "${listingData["quantity"] ?: ""} ${listingData["unitType"] ?: ""}")
-                            DetailRowItem(stringResource(R.string.price_label), price)
+                            DetailRowItem(stringResource(R.string.price_label), priceLabel)
                         }
                         ListingCategory.PRAWNS -> {
                             DetailRowItem(stringResource(R.string.hatchery_name_label), listingData["hatcheryName"]?.toString() ?: stringResource(R.string.not_available_short))
                             DetailRowItem(stringResource(R.string.prawn_type_label), listingData["prawnType"]?.toString() ?: stringResource(R.string.not_available_short))
                             DetailRowItem(stringResource(R.string.pl_days_label), listingData["plDays"]?.toString() ?: stringResource(R.string.not_available_short))
                             DetailRowItem(stringResource(R.string.quantity_label), "${listingData["quantity"] ?: ""} ${listingData["unitType"] ?: ""}")
-                            DetailRowItem(stringResource(R.string.rate_label), "₹${listingData["rateValue"] ?: stringResource(R.string.not_available_short)}/${listingData["rateType"] ?: ""}")
+                            DetailRowItem(stringResource(R.string.rate_label), priceLabel)
                         }
                         ListingCategory.EQUIPMENTS -> {
                             DetailRowItem(stringResource(R.string.equipment_type_label), listingData["equipmentType"]?.toString() ?: stringResource(R.string.not_available_short))
-                            DetailRowItem(stringResource(R.string.price_label), price)
+                            DetailRowItem(stringResource(R.string.price_label), priceLabel)
                         }
                         ListingCategory.VEHICLES -> {
                             DetailRowItem(stringResource(R.string.vehicle_name_label), listingData["vehicleName"]?.toString() ?: stringResource(R.string.not_available_short))
@@ -353,16 +457,17 @@ fun DetailedPageScreen(
                         ListingCategory.FEED -> {
                             DetailRowItem(stringResource(R.string.feed_name_label), listingData["feedName"]?.toString() ?: stringResource(R.string.not_available_short))
                             DetailRowItem(stringResource(R.string.business_type_label), listingData["businessType"]?.toString() ?: stringResource(R.string.not_available_short))
-                            DetailRowItem(stringResource(R.string.rate_per_ton_label), "₹${listingData["ratePerTon"] ?: stringResource(R.string.not_available_short)}")
+                            DetailRowItem(stringResource(R.string.rate_per_ton_label), priceLabel)
                         }
                         ListingCategory.BUSINESS -> {
                             DetailRowItem(stringResource(R.string.business_category), listingData["businessSubCategory"]?.toString() ?: stringResource(R.string.not_available_short))
                             DetailRowItem(stringResource(R.string.type_label), listingData["businessType"]?.toString() ?: stringResource(R.string.not_available_short))
                             if (listingData["businessSubCategory"] == "Feed") {
                                 DetailRowItem(stringResource(R.string.feed_name_label), listingData["feedName"]?.toString() ?: stringResource(R.string.not_available_short))
-                                DetailRowItem(stringResource(R.string.rate_per_ton_label), "₹${listingData["ratePerTon"] ?: stringResource(R.string.not_available_short)}")
+                                DetailRowItem(stringResource(R.string.rate_per_ton_label), priceLabel)
                             } else if (listingData["businessSubCategory"] == "Medicine") {
                                 DetailRowItem(stringResource(R.string.medicine_name_label), listingData["medicineName"]?.toString() ?: stringResource(R.string.not_available_short))
+                                DetailRowItem(stringResource(R.string.price_label), priceLabel)
                             }
                         }
                         ListingCategory.SERVICES -> {
@@ -378,18 +483,18 @@ fun DetailedPageScreen(
                         }
                         ListingCategory.TANKS -> {
                             DetailRowItem(stringResource(R.string.tank_acres_label), stringResource(R.string.acres_suffix, listingData["tankAcres"] ?: stringResource(R.string.not_available_short)))
-                            DetailRowItem(stringResource(R.string.est_price_per_acre_label), "₹${listingData["estPricePerAcre"] ?: stringResource(R.string.not_available_short)}")
+                            DetailRowItem(stringResource(R.string.est_price_per_acre_label), priceLabel)
                             DetailRowItem(stringResource(R.string.tank_location_label), listingData["tankLocation"]?.toString() ?: stringResource(R.string.not_available_short))
                         }
                         ListingCategory.JOBS -> {
                             DetailRowItem(stringResource(R.string.job_type_label), listingData["jobType"]?.toString() ?: stringResource(R.string.not_available_short))
-                            DetailRowItem(stringResource(R.string.salary_label), "₹${listingData["salary"] ?: stringResource(R.string.not_available_short)}")
+                            DetailRowItem(stringResource(R.string.salary_label), priceLabel)
                             DetailRowItem(stringResource(R.string.tank_acres_label), listingData["tankAcres"]?.toString() ?: stringResource(R.string.not_available_short))
                             DetailRowItem(stringResource(R.string.work_location_label), listingData["tankLocation"]?.toString() ?: stringResource(R.string.not_available_short))
                         }
                         else -> {
                             DetailRowItem(stringResource(R.string.category_label), categoryString)
-                            DetailRowItem(stringResource(R.string.price_label), price)
+                            DetailRowItem(stringResource(R.string.price_label), priceLabel)
                         }
                     }
                     DetailRowItem(stringResource(R.string.posted_location), location)
@@ -507,17 +612,29 @@ fun DetailedPageScreen(
                                 val isSimFav = favoriteIds.contains(simId)
 
                                 val categoryStr = data["category"]?.toString() ?: "Other"
-                                val priceLabel = when (categoryStr.uppercase()) {
-                                    "PRAWNS" -> "₹${data["rateValue"] ?: naText}/${data["rateType"]?.toString()?.lowercase() ?: stringResource(R.string.unit_paise)}"
-                                    "FEED" -> "₹${data["ratePerTon"] ?: naText}/$tonText"
-                                    "JOBS" -> "₹${data["salary"] ?: naText}"
-                                    "TANKS" -> "₹${data["estPricePerAcre"] ?: naText}/$acreText"
-                                    else -> "₹${data["price"] ?: data["rateValue"] ?: naText}"
+                                val simPriceLabel = when (categoryStr.uppercase()) {
+                                    "PRAWNS" -> {
+                                        val rate = data["rateValue"]?.toString() ?: naText
+                                        val formattedRate = CurrencyUtils.formatPrice(rate)
+                                        val type = data["rateType"]?.toString() ?: "Paise"
+                                        if (type.contains("Paise", ignoreCase = true)) "$formattedRate Paise/Seed" else "₹$formattedRate/Seed"
+                                    }
+                                    "FEED" -> "₹${CurrencyUtils.formatPrice(data["ratePerTon"] ?: naText)}/$tonText"
+                                    "BUSINESS" -> {
+                                        if (data["businessSubCategory"] == "Feed") {
+                                            "₹${CurrencyUtils.formatPrice(data["ratePerTon"] ?: naText)}/$tonText"
+                                        } else {
+                                            "₹${CurrencyUtils.formatPrice(data["price"] ?: data["rateValue"] ?: naText)}"
+                                        }
+                                    }
+                                    "JOBS" -> "₹${CurrencyUtils.formatPrice(data["salary"] ?: naText)}"
+                                    "TANKS" -> "₹${CurrencyUtils.formatPrice(data["estPricePerAcre"] ?: naText)}/$acreText"
+                                    else -> "₹${CurrencyUtils.formatPrice(data["price"] ?: data["rateValue"] ?: naText)}"
                                 }
 
                                 MarketItem(
                                     title = data["title"]?.toString()?.takeIf { it.isNotBlank() } ?: "No Title",
-                                    price = priceLabel,
+                                    price = simPriceLabel,
                                     category = categoryStr,
                                     location = data["location"]?.toString() ?: "Unknown",
                                     posterName = data["posterName"]?.toString() ?: "User",

@@ -49,6 +49,14 @@ import com.google.firebase.firestore.Query
 import com.tejashaqua.app.R
 import com.tejashaqua.app.ui.theme.AquaBlue
 import com.tejashaqua.app.ui.theme.GrayText
+import com.tejashaqua.app.utils.CurrencyUtils
+
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.tejashaqua.app.ui.viewmodel.UserActionViewModel
+import android.widget.Toast
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.Report
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,10 +70,22 @@ fun ChatScreen(
     currentUserPhone: String,
     currentUserLocation: String,
     onBackClick: () -> Unit,
-    sendInitialMessage: Boolean = false
+    sendInitialMessage: Boolean = false,
+    userActionViewModel: UserActionViewModel = viewModel()
 ) {
     val db = FirebaseFirestore.getInstance()
     var listingDetails by remember { mutableStateOf(listingData) }
+
+    var showMenu by remember { mutableStateOf(false) }
+    var showReportDialog by remember { mutableStateOf(false) }
+    var showBlockDialog by remember { mutableStateOf(false) }
+    val reportReasons = listOf(
+        stringResource(R.string.report_inappropriate),
+        stringResource(R.string.report_scam),
+        stringResource(R.string.report_spam),
+        stringResource(R.string.report_other)
+    )
+    var selectedReason by remember { mutableStateOf(reportReasons[0]) }
     
     // Update listingDetails if parent passes new listingData
     LaunchedEffect(listingData) {
@@ -92,18 +112,24 @@ fun ChatScreen(
     
     val categoryStr = listingDetails["category"]?.toString() ?: ""
     val price = when {
+        categoryStr.uppercase() == "PRAWNS" -> {
+            if (priceValue == stringResource(R.string.not_available_short)) priceValue else {
+                val type = listingDetails["rateType"]?.toString() ?: "Paise"
+                val formattedRate = CurrencyUtils.formatPrice(priceValue)
+                if (type.contains("Paise", ignoreCase = true)) "$formattedRate Paise/Seed" else "₹$formattedRate/Seed"
+            }
+        }
         categoryStr.uppercase() == "FEED" || (listingDetails["businessSubCategory"] == "Feed") -> {
-            if (priceValue == stringResource(R.string.not_available_short)) priceValue else "₹$priceValue/ton"
+            if (priceValue == stringResource(R.string.not_available_short)) priceValue else "₹${CurrencyUtils.formatPrice(priceValue)}/ton"
         }
         categoryStr.uppercase() == "JOBS" -> {
-            if (priceValue == stringResource(R.string.not_available_short)) priceValue else "₹$priceValue"
+            if (priceValue == stringResource(R.string.not_available_short)) priceValue else "₹${CurrencyUtils.formatPrice(priceValue)}"
         }
-        categoryStr.uppercase() == "PRAWNS" -> {
-            val unit = listingDetails["rateType"]?.toString()?.lowercase() ?: "paise"
-            if (priceValue == stringResource(R.string.not_available_short)) priceValue else "₹$priceValue/$unit"
+        categoryStr.uppercase() == "TANKS" -> {
+            if (priceValue == stringResource(R.string.not_available_short)) priceValue else "₹${CurrencyUtils.formatPrice(listingDetails["estPricePerAcre"] ?: priceValue)}/acre"
         }
         else -> {
-            if (priceValue == stringResource(R.string.not_available_short)) priceValue else "₹$priceValue"
+            if (priceValue == stringResource(R.string.not_available_short)) priceValue else "₹${CurrencyUtils.formatPrice(priceValue)}"
         }
     }
     val fullLocation = listingDetails["location"]?.toString() ?: listingDetails["listingLocation"]?.toString() ?: "Unknown"
@@ -251,6 +277,29 @@ fun ChatScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
                     }
                 },
+                actions = {
+                    IconButton(onClick = { showMenu = true }) {
+                        Icon(Icons.Default.MoreVert, contentDescription = "Menu", tint = Color.White)
+                    }
+                    DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.report_user)) },
+                            leadingIcon = { Icon(Icons.Default.Report, contentDescription = null) },
+                            onClick = {
+                                showMenu = false
+                                showReportDialog = true
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.block_user)) },
+                            leadingIcon = { Icon(Icons.Default.Block, contentDescription = null) },
+                            onClick = {
+                                showMenu = false
+                                showBlockDialog = true
+                            }
+                        )
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = AquaBlue)
             )
         },
@@ -350,6 +399,61 @@ fun ChatScreen(
             }
         }
     ) { innerPadding ->
+        if (showReportDialog) {
+            AlertDialog(
+                onDismissRequest = { showReportDialog = false },
+                title = { Text(stringResource(R.string.report_user)) },
+                text = {
+                    Column {
+                        Text(stringResource(R.string.select_reason), modifier = Modifier.padding(bottom = 8.dp))
+                        reportReasons.forEach { reason ->
+                            Row(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clickable { selectedReason = reason }
+                                    .padding(vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(selected = (selectedReason == reason), onClick = { selectedReason = reason })
+                                Text(reason, modifier = Modifier.padding(start = 8.dp))
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        userActionViewModel.reportUser(sellerUserId, currentUserId, selectedReason) {
+                            Toast.makeText(context, context.getString(R.string.report_submitted), Toast.LENGTH_SHORT).show()
+                            showReportDialog = false
+                        }
+                    }) { Text(stringResource(R.string.report)) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showReportDialog = false }) { Text(stringResource(R.string.cancel)) }
+                }
+            )
+        }
+
+        if (showBlockDialog) {
+            AlertDialog(
+                onDismissRequest = { showBlockDialog = false },
+                title = { Text(stringResource(R.string.block_user)) },
+                text = { Text(stringResource(R.string.block_user_confirm)) },
+                confirmButton = {
+                    TextButton(onClick = {
+                        userActionViewModel.blockUser(sellerUserId) {
+                            Toast.makeText(context, context.getString(R.string.user_blocked), Toast.LENGTH_SHORT).show()
+                            showBlockDialog = false
+                            onBackClick()
+                        }
+                    }) { Text(stringResource(R.string.block)) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showBlockDialog = false }) { Text(stringResource(R.string.cancel)) }
+                }
+            )
+        }
+
         Column(
             modifier = Modifier
                 .padding(innerPadding)

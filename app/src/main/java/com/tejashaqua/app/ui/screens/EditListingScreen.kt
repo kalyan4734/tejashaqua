@@ -921,17 +921,17 @@ fun FishFields(
                 stringResource(R.string.fish_pulasa), stringResource(R.string.fish_crab), 
                 stringResource(R.string.fish_others)
             ), 
-            onSelectionChange = onFishTypeChange, 
+            onSelectionChange = onFishTypeChange,
             isError = errors["fishType"] == true,
             accentColor = accentColor
         )
         ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true, keyboardOptions = keyboardOptions, accentColor = accentColor)
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(modifier = Modifier.weight(1f)) {
-                ListingDropdown(label = stringResource(R.string.size_label), value = sizeType, options = listOf(stringResource(R.string.unit_inches), stringResource(R.string.unit_cms)), onSelectionChange = onSizeTypeChange, accentColor = accentColor)
+                ListingTextField(label = stringResource(R.string.size_label), value = sizeValue, onValueChange = onSizeValueChange, isError = errors["sizeValue"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Decimal), accentColor = accentColor)
             }
             Box(modifier = Modifier.weight(1f)) {
-                ListingTextField(label = stringResource(R.string.size_value_label), value = sizeValue, onValueChange = onSizeValueChange, isError = errors["sizeValue"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Decimal), accentColor = accentColor)
+                ListingDropdown(label = stringResource(R.string.unit_label), value = sizeType, options = listOf(stringResource(R.string.unit_inches), stringResource(R.string.unit_cms)), onSelectionChange = onSizeTypeChange, accentColor = accentColor)
             }
         }
         ListingTextField(label = stringResource(R.string.fish_age_label), value = fishAge, onValueChange = onFishAgeChange, isError = errors["fishAge"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number), accentColor = accentColor)

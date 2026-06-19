@@ -182,6 +182,20 @@
     <string name="desc_tank_acres_prefix">Tank: %s Acres</string>
     <string name="limit_reached_error">You can only post up to 2 listings. Please delete an existing one to add a new listing.</string>
 
+    <string name="report_listing">Report Listing</string>
+    <string name="block_user">Block User</string>
+    <string name="report_reason">Reason for reporting</string>
+    <string name="report_submitted">Report submitted. We will review it shortly.</string>
+    <string name="user_blocked">User has been blocked.</string>
+    <string name="block_user_confirm">Are you sure you want to block this user? You will no longer see their listings or messages.</string>
+    <string name="report_user">Report User</string>
+    <string name="report">Report</string>
+    <string name="block">Block</string>
+    <string name="report_inappropriate">Inappropriate content</string>
+    <string name="report_scam">Scam or Fraud</string>
+    <string name="report_spam">Spam</string>
+    <string name="report_other">Other</string>
+    <string name="select_reason">Select a reason</string>
     <string name="about_app_desc">Tejash Aqua is India\'s leading marketplace for the aquaculture industry. We connect farmers, hatcheries, and suppliers to facilitate trade and growth in the aqua sector.</string>
     <string name="app_version">App Version</string>
     <string name="developed_by">Developed by Tejash Aqua Team</string>
@@ -332,7 +346,7 @@ TejashAqua (\"we,\" \"our,\" or \"us\") is committed to protecting your privacy.
 We do not sell your personal data. Your name, location, and contact number (if provided in a listing) will be visible to other users of the marketplace to facilitate transactions.
 
 4. Security
-We use industry-standard security (Firebase/Google Cloud) to protect your data, but no method of transmission over the internet is 100% secure.
+We use industry-standard security (Firebase/Google Cloud) to protect your data, but no method of transmission over the internet is 100%% secure.
 
 5. Changes to This Policy
 We may update our Privacy Policy from time to time. You are advised to review this page periodically for any changes.
@@ -375,6 +389,8 @@ These terms shall be governed by and construed in accordance with the laws of In
     <string name="rupees_per_kg_label">₹/kg</string>
     <string name="count_label">Count %s</string>
     <string name="no_internet_connection">No Internet Connection</string>
+    <string name="no_internet_title">No Internet</string>
+    <string name="no_internet_desc">Please check your internet connection and try again.</string>
     <string name="location_disclosure_title">Location Permission</string>
     <string name="location_disclosure_desc">Tejash Aqua needs your location to show you relevant aqua marketplace listings in your area and help you select locations for your posts.</string>
     <string name="ok">OK</string>

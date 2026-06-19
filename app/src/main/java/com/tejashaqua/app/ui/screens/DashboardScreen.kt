@@ -43,6 +43,7 @@ import com.tejashaqua.app.R
 import com.tejashaqua.app.data.model.AquaRate
 import com.tejashaqua.app.data.model.RateTrend
 import com.tejashaqua.app.ui.viewmodel.LocationSearchViewModel
+import com.tejashaqua.app.utils.CurrencyUtils
 import com.tejashaqua.app.ui.theme.*
 import com.tejashaqua.app.ui.components.MarketItem
 import com.tejashaqua.app.ui.components.RateGraphBottomSheet
@@ -108,12 +109,25 @@ fun DashboardScreen(
     val db = remember { FirebaseFirestore.getInstance() }
     var listings by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
     var favoriteIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var blockedUsers by remember { mutableStateOf<Set<String>>(emptySet()) }
     var isLoadingListings by remember { mutableStateOf(true) }
+
+    LaunchedEffect(currentUserId) {
+        if (currentUserId.isNotEmpty()) {
+            db.collection("users").document(currentUserId)
+                .addSnapshotListener { snapshot, _ ->
+                    if (snapshot != null && snapshot.exists()) {
+                        val blocked = snapshot.get("blockedUsers") as? List<*>
+                        blockedUsers = blocked?.mapNotNull { it?.toString() }?.toSet() ?: emptySet()
+                    }
+                }
+        }
+    }
 
     LaunchedEffect(Unit) {
         db.collection("listings")
             .orderBy("timestamp", Query.Direction.DESCENDING)
-            .limit(50)
+            .limit(100)
             .addSnapshotListener { value, error ->
                 if (value != null) {
                     listings = value.documents.map { 
@@ -146,7 +160,10 @@ fun DashboardScreen(
                 val title = (data["title"] as? String)?.lowercase() ?: ""
                 val location = (data["location"] as? String)?.lowercase() ?: ""
                 val category = (data["category"] as? String) ?: ""
+                val userId = (data["userId"] as? String) ?: ""
                 
+                if (blockedUsers.contains(userId)) return@filter false
+
                 val matchesSearch = productSearchText.isBlank() || 
                     title.contains(productSearchText.lowercase()) || 
                     location.contains(productSearchText.lowercase()) ||
@@ -489,12 +506,23 @@ fun DashboardScreen(
                                     val tonText = stringResource(R.string.unit_ton)
                                     val acreText = stringResource(R.string.unit_acre)
                                     val priceLabel = when (categoryStr.uppercase()) {
-                                        "PRAWNS" -> "₹${data["rateValue"] ?: naText}/${data["rateType"]?.toString()?.lowercase() ?: stringResource(R.string.unit_paise)}"
-                                        "FEED" -> "₹${data["ratePerTon"] ?: naText}/$tonText"
-                                        "BUSINESS" -> if (data["businessSubCategory"] == "Feed") "₹${data["ratePerTon"] ?: naText}/$tonText" else "₹${data["price"] ?: data["rateValue"] ?: naText}"
-                                        "JOBS" -> "₹${data["salary"] ?: naText}"
-                                        "TANKS" -> "₹${data["estPricePerAcre"] ?: naText}/$acreText"
-                                        else -> "₹${data["price"] ?: data["rateValue"] ?: naText}"
+                                        "PRAWNS" -> {
+                                            val rate = data["rateValue"]?.toString() ?: naText
+                                            val formattedRate = CurrencyUtils.formatPrice(rate)
+                                            val type = data["rateType"]?.toString() ?: "Paise"
+                                            if (type.contains("Paise", ignoreCase = true)) "$formattedRate Paise/Seed" else "₹$formattedRate/Seed"
+                                        }
+                                        "FEED" -> "₹${CurrencyUtils.formatPrice(data["ratePerTon"] ?: naText)}/$tonText"
+                                        "BUSINESS" -> {
+                                            if (data["businessSubCategory"] == "Feed") {
+                                                "₹${CurrencyUtils.formatPrice(data["ratePerTon"] ?: naText)}/$tonText"
+                                            } else {
+                                                "₹${CurrencyUtils.formatPrice(data["price"] ?: data["rateValue"] ?: naText)}"
+                                            }
+                                        }
+                                        "JOBS" -> "₹${CurrencyUtils.formatPrice(data["salary"] ?: naText)}"
+                                        "TANKS" -> "₹${CurrencyUtils.formatPrice(data["estPricePerAcre"] ?: naText)}/$acreText"
+                                        else -> "₹${CurrencyUtils.formatPrice(data["price"] ?: data["rateValue"] ?: naText)}"
                                     }
 
                                     MarketItem(

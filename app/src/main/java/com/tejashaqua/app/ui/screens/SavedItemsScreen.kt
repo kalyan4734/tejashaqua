@@ -25,6 +25,7 @@ import com.tejashaqua.app.ui.theme.AquaBlue
 import com.tejashaqua.app.ui.theme.GrayText
 import com.tejashaqua.app.ui.components.LoadingOverlay
 import com.tejashaqua.app.ui.components.MarketItem
+import com.tejashaqua.app.utils.CurrencyUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -98,12 +99,23 @@ fun SavedItemsScreen(
                         
                         val categoryStr = data["category"]?.toString() ?: "Other"
                         val priceLabel = when (categoryStr.uppercase()) {
-                            "PRAWNS" -> "₹${data["rateValue"] ?: naText}/${data["rateType"]?.toString()?.lowercase() ?: stringResource(R.string.unit_paise)}"
-                            "FEED" -> "₹${data["ratePerTon"] ?: naText}/$tonText"
-                            "BUSINESS" -> if (data["businessSubCategory"] == "Feed") "₹${data["ratePerTon"] ?: naText}/$tonText" else "₹${data["price"] ?: data["rateValue"] ?: naText}"
-                            "JOBS" -> "₹${data["salary"] ?: naText}"
-                            "TANKS" -> "₹${data["estPricePerAcre"] ?: naText}/$acreText"
-                            else -> "₹${data["price"] ?: data["rateValue"] ?: naText}"
+                            "PRAWNS" -> {
+                                val rate = data["rateValue"]?.toString() ?: naText
+                                val formattedRate = CurrencyUtils.formatPrice(rate)
+                                val type = data["rateType"]?.toString() ?: "Paise"
+                                if (type.contains("Paise", ignoreCase = true)) "$formattedRate Paise/Seed" else "₹$formattedRate/Seed"
+                            }
+                            "FEED" -> "₹${CurrencyUtils.formatPrice(data["ratePerTon"] ?: naText)}/$tonText"
+                            "BUSINESS" -> {
+                                if (data["businessSubCategory"] == "Feed") {
+                                    "₹${CurrencyUtils.formatPrice(data["ratePerTon"] ?: naText)}/$tonText"
+                                } else {
+                                    "₹${CurrencyUtils.formatPrice(data["price"] ?: data["rateValue"] ?: naText)}"
+                                }
+                            }
+                            "JOBS" -> "₹${CurrencyUtils.formatPrice(data["salary"] ?: naText)}"
+                            "TANKS" -> "₹${CurrencyUtils.formatPrice(data["estPricePerAcre"] ?: naText)}/$acreText"
+                            else -> "₹${CurrencyUtils.formatPrice(data["price"] ?: data["rateValue"] ?: naText)}"
                         }
 
                         MarketItem(

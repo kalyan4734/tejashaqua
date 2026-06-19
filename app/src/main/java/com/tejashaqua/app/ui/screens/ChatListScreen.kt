@@ -53,6 +53,20 @@ fun ChatListScreen(
     var isLoading by remember { mutableStateOf(true) }
     val keyboardController = LocalSoftwareKeyboardController.current
     val context = LocalContext.current
+    var blockedUsers by remember { mutableStateOf<Set<String>>(emptySet()) }
+
+    LaunchedEffect(currentUserId) {
+        if (currentUserId.isNotEmpty()) {
+            db.collection("users").document(currentUserId)
+                .addSnapshotListener { snapshot, _ ->
+                    if (snapshot != null && snapshot.exists()) {
+                        val blocked = snapshot.get("blockedUsers") as? List<*>
+                        blockedUsers = blocked?.mapNotNull { it?.toString() }?.toSet() ?: emptySet()
+                    }
+                }
+        }
+    }
+
     val currentLang = LocaleHelper.getSelectedLanguage(context) ?: "en"
     val keyboardOptions = KeyboardOptions(
         imeAction = ImeAction.Search,
@@ -101,6 +115,9 @@ fun ChatListScreen(
     }
 
     val filteredChats = chats.filter {
+        val otherUserId = it.fullData["userId"]?.toString() ?: ""
+        if (blockedUsers.contains(otherUserId)) return@filter false
+
         (it.name.contains(searchText, ignoreCase = true) || it.listingInfo.contains(searchText, ignoreCase = true)) &&
         when (selectedTabIndex) {
             1 -> it.type == "Buying"

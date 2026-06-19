@@ -40,7 +40,8 @@ import com.tejashaqua.app.utils.LocaleHelper
 fun LoginScreen(
     onSendOtp: (String) -> Unit,
     onPrivacyPolicyClick: () -> Unit,
-    onTermsClick: () -> Unit
+    onTermsClick: () -> Unit,
+    isLoading: Boolean = false
 ) {
     var mobileNumber by remember { mutableStateOf("") }
     var isError by remember { mutableStateOf(value = false) }
@@ -187,9 +188,18 @@ fun LoginScreen(
                 .fillMaxWidth()
                 .height(56.dp),
             shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = AquaBlue)
+            colors = ButtonDefaults.buttonColors(containerColor = AquaBlue),
+            enabled = !isLoading
         ) {
-            Text(text = stringResource(R.string.send_otp), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            if (isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(24.dp),
+                    color = Color.White,
+                    strokeWidth = 2.dp
+                )
+            } else {
+                Text(text = stringResource(R.string.send_otp), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            }
         }
 
         Spacer(modifier = Modifier.height(20.dp))

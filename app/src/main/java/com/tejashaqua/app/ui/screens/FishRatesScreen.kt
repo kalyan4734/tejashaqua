@@ -27,6 +27,7 @@ import com.tejashaqua.app.data.model.RateTrend
 import com.tejashaqua.app.ui.theme.AquaBlue
 import com.tejashaqua.app.ui.theme.GrayText
 import com.tejashaqua.app.ui.components.RateGraphBottomSheet
+import com.tejashaqua.app.utils.CurrencyUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -178,7 +179,7 @@ fun FishRatesScreen(onBackClick: () -> Unit) {
                                         ) {
                                             Column {
                                                 Text(
-                                                    text = if (rate.price == "--") "N/A" else rate.price, 
+                                                    text = if (rate.price == "--") "N/A" else "₹${CurrencyUtils.formatPrice(rate.price)}",
                                                     color = AquaBlue, 
                                                     fontWeight = FontWeight.Bold, 
                                                     fontSize = 14.sp

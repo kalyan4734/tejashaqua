@@ -107,6 +107,7 @@ class MainActivity : AppCompatActivity() {
                 val authViewModel: AuthViewModel = viewModel()
                 val locationViewModel: LocationSearchViewModel = viewModel()
                 val authState by authViewModel.authState.collectAsState()
+                val deviceLatLng by locationViewModel.currentLatLng.collectAsState()
                 val context = LocalContext.current
                 
                 val networkObserver = remember { NetworkObserver(context) }
@@ -136,6 +137,14 @@ class MainActivity : AppCompatActivity() {
                 var shouldSendInitialChatMessage by remember { mutableStateOf(false) }
 
                 var dashboardTab by remember { mutableStateOf(0) }
+                var showNoInternetDialog by remember { mutableStateOf(false) }
+
+                // Reset dialog when internet returns
+                LaunchedEffect(networkStatus) {
+                    if (networkStatus == NetworkObserver.Status.Available) {
+                        showNoInternetDialog = false
+                    }
+                }
 
                 LaunchedEffect(currentScreen) {
                     val bundle = Bundle()
@@ -417,6 +426,19 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 Box(modifier = Modifier.fillMaxSize()) {
+                    if (showNoInternetDialog) {
+                        AlertDialog(
+                            onDismissRequest = { showNoInternetDialog = false },
+                            title = { Text(stringResource(R.string.no_internet_title)) },
+                            text = { Text(stringResource(R.string.no_internet_desc)) },
+                            confirmButton = {
+                                TextButton(onClick = { showNoInternetDialog = false }) {
+                                    Text(stringResource(R.string.ok))
+                                }
+                            }
+                        )
+                    }
+
                     if (showLocationDisclosure) {
                         AlertDialog(
                             onDismissRequest = { 
@@ -497,22 +519,34 @@ class MainActivity : AppCompatActivity() {
                                 } else null)
 
                             "login" -> LoginScreen(onSendOtp = { number ->
+                                if (networkStatus != NetworkObserver.Status.Available) {
+                                    showNoInternetDialog = true
+                                    return@LoginScreen
+                                }
                                 mobileNumber = number
                                 authViewModel.sendOtp(number, this@MainActivity)
                             }, onPrivacyPolicyClick = {
                                 currentScreen = "privacy_policy"
                             }, onTermsClick = {
                                 currentScreen = "terms_conditions"
-                            })
+                            }, isLoading = authState is AuthState.Loading)
 
                             "otp" -> OtpScreen(mobileNumber = mobileNumber, onVerifyClick = { otp ->
+                                if (networkStatus != NetworkObserver.Status.Available) {
+                                    showNoInternetDialog = true
+                                    return@OtpScreen
+                                }
                                 authViewModel.verifyOtp(otp)
                             }, onResendClick = {
+                                if (networkStatus != NetworkObserver.Status.Available) {
+                                    showNoInternetDialog = true
+                                    return@OtpScreen
+                                }
                                 authViewModel.sendOtp(mobileNumber, this@MainActivity)
                             }, onBackClick = {
                                 authViewModel.resetState()
                                 currentScreen = "login"
-                            })
+                            }, isLoading = authState is AuthState.Loading)
 
                             "dashboard" -> DashboardScreen(
                                 currentUserId = userId,
@@ -668,6 +702,10 @@ class MainActivity : AppCompatActivity() {
                                     currentScreen = "dashboard"
                                 },
                                 onCategorySelect = { category ->
+                                    if (networkStatus != NetworkObserver.Status.Available) {
+                                        showNoInternetDialog = true
+                                        return@SelectCategoryScreen
+                                    }
                                     selectedCategory = category
                                     isEditMode = false
                                     selectedListingId = null
@@ -682,7 +720,7 @@ class MainActivity : AppCompatActivity() {
                                 userMobileNumber = mobileNumber,
                                 initialLocation = pickedListingLocation?.first
                                     ?: if (currentSubLocation.isNotEmpty()) "$currentLocationName, $currentSubLocation" else currentLocationName,
-                                initialLatLng = pickedListingLocation?.second,
+                                initialLatLng = pickedListingLocation?.second ?: if (!isEditMode) deviceLatLng else null,
                                 onBackClick = {
                                     currentScreen =
                                         if (isEditMode) "my_listings" else "select_category"
@@ -755,6 +793,10 @@ class MainActivity : AppCompatActivity() {
                                 currentPhone = mobileNumber,
                                 onBackClick = { currentScreen = "profile" },
                                 onProfileUpdated = { newName ->
+                                    if (networkStatus != NetworkObserver.Status.Available) {
+                                        showNoInternetDialog = true
+                                        return@EditProfileScreen
+                                    }
                                     userName = newName
                                 })
 
