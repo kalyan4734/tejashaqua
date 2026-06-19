@@ -2,10 +2,16 @@ package com.tejashaqua.app.ui.screens
 
 import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import com.google.android.gms.auth.api.phone.SmsRetriever
+import com.google.android.gms.common.api.CommonStatusCodes
+import com.google.android.gms.common.api.Status
+import com.tejashaqua.app.utils.AppSignatureHelper
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -34,9 +40,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.google.android.gms.auth.api.phone.SmsRetriever
 import com.tejashaqua.app.R
-import com.tejashaqua.app.SmsReceiver
 import com.tejashaqua.app.ui.theme.AquaBlue
 import com.tejashaqua.app.ui.theme.GrayText
 import kotlinx.coroutines.delay
@@ -67,59 +71,91 @@ fun OtpScreen(
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK && result.data != null) {
             val message = result.data?.getStringExtra(SmsRetriever.EXTRA_SMS_MESSAGE)
+            Log.d("OtpScreen", "Consent Result Message: $message")
             message?.let {
-                val otpPattern = Regex("(\\d{6})")
+                val otpPattern = Regex("\\b(\\d{6})\\b")
                 val match = otpPattern.find(it)
                 match?.let { m -> otpValue = m.value }
             }
         }
     }
 
+    // Automatically verify when OTP is complete (6 digits)
+    LaunchedEffect(otpValue) {
+        if (otpValue.length == 6 && !isLoading) {
+            keyboardController?.hide()
+            onVerifyClick(otpValue)
+        }
+    }
+
     DisposableEffect(Unit) {
+        val appSignatureHelper = AppSignatureHelper(context)
+        Log.d("OtpScreen", "App Hash for SMS Retriever: ${appSignatureHelper.appSignatures}")
+
+        // Start both listeners
+        SmsRetriever.getClient(context).startSmsRetriever()
         SmsRetriever.getClient(context).startSmsUserConsent(null)
 
-        val smsReceiver = SmsReceiver(
-            onOtpReceived = { otp -> otpValue = otp },
-            onConsentIntentReceived = { intent -> launcher.launch(intent) }
-        )
+        val smsReceiver = object : android.content.BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                Log.d("OtpScreen", "onReceive: ${intent?.action}")
+                if (SmsRetriever.SMS_RETRIEVED_ACTION == intent?.action) {
+                    val extras = intent.extras
+                    val status = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        extras?.getParcelable(SmsRetriever.EXTRA_STATUS, Status::class.java)
+                    } else {
+                        @Suppress("DEPRECATION")
+                        extras?.getParcelable(SmsRetriever.EXTRA_STATUS)
+                    }
+
+                    Log.d("OtpScreen", "SMS Retrieval Status: ${status?.statusCode}")
+
+                    when (status?.statusCode) {
+                        CommonStatusCodes.SUCCESS -> {
+                            // Try reading message directly (SMS Retriever / Hash based)
+                            val message = extras?.getString(SmsRetriever.EXTRA_SMS_MESSAGE)
+                            if (message != null) {
+                                Log.d("OtpScreen", "Retriever Message: $message")
+                                val otpPattern = Regex("\\b(\\d{6})\\b")
+                                val match = otpPattern.find(message)
+                                match?.let { m -> otpValue = m.value }
+                            } else {
+                                // Try getting consent intent (SMS User Consent)
+                                val consentIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                    extras?.getParcelable(SmsRetriever.EXTRA_CONSENT_INTENT, Intent::class.java)
+                                } else {
+                                    @Suppress("DEPRECATION")
+                                    extras?.getParcelable(SmsRetriever.EXTRA_CONSENT_INTENT)
+                                }
+                                
+                                if (consentIntent != null) {
+                                    Log.d("OtpScreen", "Launching Consent Intent")
+                                    launcher.launch(consentIntent)
+                                } else {
+                                    Log.d("OtpScreen", "No message and no consent intent found")
+                                }
+                            }
+                        }
+                        CommonStatusCodes.TIMEOUT -> {
+                            Log.d("OtpScreen", "SMS Retrieval Timeout")
+                        }
+                    }
+                }
+            }
+        }
 
         val intentFilter = IntentFilter(SmsRetriever.SMS_RETRIEVED_ACTION)
-
-        // Version-safe registration
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                context.registerReceiver(
-                    smsReceiver,
-                    intentFilter,
-                    SmsRetriever.SEND_PERMISSION,
-                    null,
-                    Context.RECEIVER_EXPORTED
-                )
-            } else {
-                context.registerReceiver(
-                    smsReceiver,
-                    intentFilter,
-                    SmsRetriever.SEND_PERMISSION,
-                    null
-                )
-            }
-        } catch (e: Exception) {
-            // Fallback to no permission if registration fails
-            try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    context.registerReceiver(smsReceiver, intentFilter, Context.RECEIVER_EXPORTED)
-                } else {
-                    context.registerReceiver(smsReceiver, intentFilter)
-                }
-            } catch (e2: Exception) {
-                e2.printStackTrace()
-            }
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            context.registerReceiver(smsReceiver, intentFilter, Context.RECEIVER_EXPORTED)
+        } else {
+            context.registerReceiver(smsReceiver, intentFilter)
         }
 
         onDispose {
             try {
                 context.unregisterReceiver(smsReceiver)
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // Ignore
             }
         }
@@ -236,11 +272,10 @@ fun OtpScreen(
                 if (timerSeconds == 0 && !isLoading) {
                     onResendClick()
                     timerSeconds = 24
-                    SmsRetriever.getClient(context).startSmsUserConsent(null)
                 }
             },
             contentPadding = PaddingValues(0.dp),
-            enabled = timerSeconds == 0 && !isLoading
+            enabled = (timerSeconds == 0) && !isLoading
         ) {
             Text(
                 text = if (timerSeconds > 0) stringResource(R.string.resend_otp_in, timerSeconds) else stringResource(R.string.resend_otp),
