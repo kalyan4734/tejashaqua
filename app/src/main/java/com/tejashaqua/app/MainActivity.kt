@@ -140,6 +140,8 @@ class MainActivity : AppCompatActivity() {
                 var dashboardTab by remember { mutableStateOf(0) }
                 var showNoInternetDialog by remember { mutableStateOf(false) }
 
+                var lastBackPressTime by remember { mutableLongStateOf(0L) }
+
                 // Reset dialog when internet returns
                 LaunchedEffect(networkStatus) {
                     if (networkStatus == NetworkObserver.Status.Available) {
@@ -243,51 +245,55 @@ class MainActivity : AppCompatActivity() {
                         }
                 }
 
-                BackHandler(enabled = currentScreen != "dashboard" && currentScreen != "login" && currentScreen != "splash") {
-                    when (currentScreen) {
-                        "otp" -> {
-                            authViewModel.resetState()
-                            currentScreen = "login"
+                BackHandler(enabled = true) {
+                    if (currentScreen == "dashboard" || currentScreen == "login" || currentScreen == "splash") {
+                        val currentTime = System.currentTimeMillis()
+                        if (currentTime - lastBackPressTime < 2000) {
+                            finish()
+                        } else {
+                            lastBackPressTime = currentTime
+                            Toast.makeText(context, context.getString(R.string.press_back_again), Toast.LENGTH_SHORT).show()
                         }
-
-                        "aqua_rates" -> currentScreen = "dashboard"
-                        "fish_rates" -> currentScreen = "dashboard"
-                        "select_category" -> currentScreen = "dashboard"
-                        "edit_listing" -> {
-                            currentScreen = if (isEditMode) "my_listings" else "select_category"
-                        }
-
-                        "profile" -> currentScreen = "dashboard"
-                        "edit_profile" -> currentScreen = "profile"
-                        "about_app" -> currentScreen = "profile"
-                        "my_listings" -> currentScreen = "profile"
-                        "saved_items" -> currentScreen = "profile"
-                        "prawn_rates" -> currentScreen = "dashboard"
-                        "detailed_page" -> currentScreen = detailedPageSource
-                        "chat" -> currentScreen = chatSourceScreen
-                        "chat_list" -> currentScreen = "profile"
-                        "admin_dashboard" -> currentScreen = "dashboard"
-                        "privacy_policy" -> {
-                            currentScreen =
-                                if (authViewModel.authState.value is AuthState.Success) "profile" else "login"
-                        }
-
-                        "terms_conditions" -> {
-                            currentScreen =
-                                if (authViewModel.authState.value is AuthState.Success) "profile" else "login"
-                        }
-
-                        "select_location" -> {
-                            currentScreen =
-                                if (locationPickerSource == "listing") "edit_listing" else "dashboard"
-                        }
-
-                        "language_selection" -> {
-                            if (languageSelectionSource == "profile") {
-                                currentScreen = "profile"
-                            } else {
-                                // Close the app if it's the first time language selection
-                                finish()
+                    } else {
+                        when (currentScreen) {
+                            "otp" -> {
+                                authViewModel.resetState()
+                                currentScreen = "login"
+                            }
+                            "aqua_rates" -> currentScreen = "dashboard"
+                            "fish_rates" -> currentScreen = "dashboard"
+                            "select_category" -> currentScreen = "dashboard"
+                            "edit_listing" -> {
+                                currentScreen = if (isEditMode) "my_listings" else "select_category"
+                            }
+                            "profile" -> currentScreen = "dashboard"
+                            "edit_profile" -> currentScreen = "profile"
+                            "about_app" -> currentScreen = "profile"
+                            "my_listings" -> currentScreen = "profile"
+                            "saved_items" -> currentScreen = "profile"
+                            "prawn_rates" -> currentScreen = "dashboard"
+                            "detailed_page" -> currentScreen = detailedPageSource
+                            "chat" -> currentScreen = chatSourceScreen
+                            "chat_list" -> currentScreen = "profile"
+                            "admin_dashboard" -> currentScreen = "dashboard"
+                            "privacy_policy" -> {
+                                currentScreen =
+                                    if (authViewModel.authState.value is AuthState.Success) "profile" else "login"
+                            }
+                            "terms_conditions" -> {
+                                currentScreen =
+                                    if (authViewModel.authState.value is AuthState.Success) "profile" else "login"
+                            }
+                            "select_location" -> {
+                                currentScreen =
+                                    if (locationPickerSource == "listing") "edit_listing" else "dashboard"
+                            }
+                            "language_selection" -> {
+                                if (languageSelectionSource == "profile") {
+                                    currentScreen = "profile"
+                                } else {
+                                    finish()
+                                }
                             }
                         }
                     }

@@ -533,6 +533,8 @@ fun DashboardScreen(
                                         posterName = data["posterName"]?.toString() ?: "User",
                                         imageUrl = images?.firstOrNull(),
                                         isFavorited = isFavorited,
+                                        timestamp = (data["timestamp"] as? com.google.firebase.Timestamp)?.toDate()?.time ?: 
+                                                    (data["timestamp"] as? Long) ?: 0L,
                                         onFavoriteClick = {
                                             if (currentUserId.isNotEmpty() && listingId.isNotEmpty()) {
                                                 val favRef = db.collection("users").document(currentUserId)
@@ -911,8 +913,9 @@ fun RateCard(
                     )
                     Text(
                         text = if (rate.isPrawn) stringResource(R.string.count_label, "100") else rate.getDisplayName(),
-                        fontSize = 12.sp,
-                        color = GrayText
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (rate.isPrawn) Color(0xFF3F51B5) else Color(0xFF009688)
                     )
                 }
 

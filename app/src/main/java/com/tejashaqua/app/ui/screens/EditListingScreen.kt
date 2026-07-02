@@ -420,7 +420,6 @@ fun EditListingScreen(
                                 if (prawnType.isBlank()) errors["prawnType"] = true
                                 if (title.isBlank()) errors["title"] = true
                                 if (hatcheryName.isBlank()) errors["hatcheryName"] = true
-                                if (plDays.isBlank()) errors["plDays"] = true
                                 if (rateValue.isBlank()) errors["rateValue"] = true
                                 if (quantity.isBlank()) errors["quantity"] = true
                             }
@@ -501,7 +500,7 @@ fun EditListingScreen(
                             val data = buildListingMap(
                                 listingId, category, title, finalDescription, price, location, latLng, userMobileNumber,
                                 userName, selectedServiceType, fishType, sizeType, sizeValue, fishAge, quantity,
-                                unitType, prawnType, hatcheryName, rateType, rateValue, plDays, equipmentType, 
+                                unitType, prawnType, hatcheryName, rateType, rateValue, "", equipmentType,
                                 vehicleName, vehicleCapacity, businessType, feedName, ratePerTon, 
                                 medicineName, businessSubCategory,
                                 boreWellType, tankAcres, estPricePerAcre, tankLocation, jobType, salary, netType, 
@@ -900,49 +899,101 @@ fun FishFields(
     sizeValue: String, onSizeValueChange: (String) -> Unit,
     fishAge: String, onFishAgeChange: (String) -> Unit,
     quantity: String, onQuantityChange: (String) -> Unit,
-    unitType: String, onUnitTypeChange: (String) -> Unit,
+    @Suppress("UNUSED_PARAMETER") unitType: String, @Suppress("UNUSED_PARAMETER") onUnitTypeChange: (String) -> Unit,
     price: String, onPriceChange: (String) -> Unit,
     errors: Map<String, Boolean> = emptyMap(),
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     accentColor: Color = AquaBlue
 ) {
+    val othersStr = stringResource(R.string.fish_others)
+    val rohu = stringResource(R.string.fish_rohu)
+    val katla = stringResource(R.string.fish_katla)
+    val karamosu = stringResource(R.string.fish_karamosu)
+    val gaddiChepa = stringResource(R.string.fish_gaddi_chepa)
+    val pangasius = stringResource(R.string.fish_pangasius)
+    val roopchand = stringResource(R.string.fish_roopchand)
+    val panduGappa = stringResource(R.string.fish_pandu_gappa)
+    val tilapia = stringResource(R.string.fish_tilapia)
+    val chitala = stringResource(R.string.fish_chitala)
+    val koramenu = stringResource(R.string.fish_koramenu)
+    val valuga = stringResource(R.string.fish_valuga)
+    val engilayi = stringResource(R.string.fish_engilayi)
+    val jalla = stringResource(R.string.fish_jalla)
+    val tuna = stringResource(R.string.fish_tuna)
+    val pulasa = stringResource(R.string.fish_pulasa)
+    val crab = stringResource(R.string.fish_crab)
+
+    val options = remember { listOf(rohu, katla, karamosu, gaddiChepa, pangasius, roopchand, panduGappa, tilapia, chitala, koramenu, valuga, engilayi, jalla, tuna, pulasa, crab, othersStr) }
+    
+    var isOthers by remember { mutableStateOf(fishType.isNotEmpty() && !options.filter { it != othersStr }.contains(fishType)) }
+    var otherName by remember { mutableStateOf(if (isOthers) fishType else "") }
+
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         SearchableListingDropdown(
             label = stringResource(R.string.fish_type_label), 
-            value = fishType, 
-            options = listOf(
-                stringResource(R.string.fish_rohu), stringResource(R.string.fish_katla), 
-                stringResource(R.string.fish_karamosu), stringResource(R.string.fish_gaddi_chepa), 
-                stringResource(R.string.fish_pangasius), stringResource(R.string.fish_roopchand), 
-                stringResource(R.string.fish_pandu_gappa), stringResource(R.string.fish_tilapia), 
-                stringResource(R.string.fish_chitala), stringResource(R.string.fish_koramenu), 
-                stringResource(R.string.fish_valuga), stringResource(R.string.fish_engilayi), 
-                stringResource(R.string.fish_jalla), stringResource(R.string.fish_tuna), 
-                stringResource(R.string.fish_pulasa), stringResource(R.string.fish_crab), 
-                stringResource(R.string.fish_others)
-            ), 
-            onSelectionChange = onFishTypeChange,
+            value = if (isOthers) othersStr else fishType, 
+            options = options, 
+            onSelectionChange = {
+                if (it == othersStr) {
+                    isOthers = true
+                    onFishTypeChange(otherName)
+                } else {
+                    isOthers = false
+                    onFishTypeChange(it)
+                }
+            },
             isError = errors["fishType"] == true,
             accentColor = accentColor
         )
+
+        if (isOthers) {
+            ListingTextField(
+                label = stringResource(R.string.others_mention),
+                value = otherName,
+                onValueChange = {
+                    otherName = it
+                    onFishTypeChange(it)
+                },
+                isRequired = true,
+                isError = errors["fishType"] == true,
+                keyboardOptions = keyboardOptions,
+                accentColor = accentColor
+            )
+        }
+
         ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true, keyboardOptions = keyboardOptions, accentColor = accentColor)
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(modifier = Modifier.weight(1f)) {
                 ListingTextField(label = stringResource(R.string.size_label), value = sizeValue, onValueChange = onSizeValueChange, isError = errors["sizeValue"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Decimal), accentColor = accentColor)
             }
             Box(modifier = Modifier.weight(1f)) {
-                ListingDropdown(label = stringResource(R.string.unit_label), value = sizeType, options = listOf(stringResource(R.string.unit_inches), stringResource(R.string.unit_cms)), onSelectionChange = onSizeTypeChange, accentColor = accentColor)
+                ListingDropdown(label = stringResource(R.string.unit_label), value = sizeType, options = listOf(stringResource(R.string.unit_inches), stringResource(R.string.size_kilo_label)), onSelectionChange = onSizeTypeChange, accentColor = accentColor)
             }
         }
         ListingTextField(label = stringResource(R.string.fish_age_label), value = fishAge, onValueChange = onFishAgeChange, isError = errors["fishAge"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number), accentColor = accentColor)
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Box(modifier = Modifier.weight(1f)) {
-                ListingTextField(label = stringResource(R.string.quantity_label), value = quantity, onValueChange = onQuantityChange, isError = errors["quantity"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number), accentColor = accentColor)
-            }
-            Box(modifier = Modifier.weight(1f)) {
-                ListingDropdown(label = stringResource(R.string.unit_label), value = unitType, options = listOf(stringResource(R.string.unit_lakhs), stringResource(R.string.unit_thousands), stringResource(R.string.unit_kgs)), onSelectionChange = onUnitTypeChange, accentColor = accentColor)
-            }
-        }
+        
+        ListingTextField(
+            label = stringResource(R.string.no_of_stock_label), 
+            value = quantity, 
+            onValueChange = { 
+                // Basic number formatting with commas
+                val clean = it.replace(",", "").replace(".", "")
+                if (clean.isEmpty()) {
+                    onQuantityChange("")
+                } else {
+                    try {
+                        val formatted = String.format(java.util.Locale.US, "%,d", clean.toLong())
+                        onQuantityChange(formatted)
+                    } catch (_: Exception) {
+                        onQuantityChange(it)
+                    }
+                }
+            }, 
+            isError = errors["quantity"] == true, 
+            keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number), 
+            accentColor = accentColor
+        )
+        
         ListingTextField(label = stringResource(R.string.price_label), value = price, onValueChange = onPriceChange, isError = errors["price"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number), accentColor = accentColor)
     }
 }
@@ -953,7 +1004,7 @@ fun PrawnFields(
     hatcheryName: String, onHatcheryNameChange: (String) -> Unit,
     rateType: String, onRateTypeChange: (String) -> Unit,
     rateValue: String, onRateValueChange: (String) -> Unit,
-    plDays: String, onPlDaysChange: (String) -> Unit,
+    @Suppress("UNUSED_PARAMETER") plDays: String, @Suppress("UNUSED_PARAMETER") onPlDaysChange: (String) -> Unit,
     quantity: String, onQuantityChange: (String) -> Unit,
     unitType: String, onUnitTypeChange: (String) -> Unit,
     title: String, onTitleChange: (String) -> Unit,
@@ -961,24 +1012,57 @@ fun PrawnFields(
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     accentColor: Color = AquaBlue
 ) {
+    val othersStr = stringResource(R.string.fish_others)
+    val g1 = stringResource(R.string.prawn_growth_line_plus)
+    val g2 = stringResource(R.string.prawn_growth_line)
+    val h1 = stringResource(R.string.prawn_hard_line)
+    val h2 = stringResource(R.string.prawn_hard_line_plus)
+    val sy = stringResource(R.string.prawn_sy_aqua)
+    val bm = stringResource(R.string.prawn_benchmark)
+    val cg = stringResource(R.string.prawn_cong)
+    val bg = stringResource(R.string.prawn_blue_genetic)
+
+    val options = remember { listOf(g1, g2, h1, h2, sy, bm, cg, bg, othersStr) }
+    
+    var isOthers by remember { mutableStateOf(prawnType.isNotEmpty() && !options.filter { it != othersStr }.contains(prawnType)) }
+    var otherName by remember { mutableStateOf(if (isOthers) prawnType else "") }
+
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         SearchableListingDropdown(
             label = stringResource(R.string.prawn_type_label), 
-            value = prawnType, 
-            options = listOf(
-                stringResource(R.string.prawn_growth_line_plus), stringResource(R.string.prawn_growth_line),
-                stringResource(R.string.prawn_hard_line), stringResource(R.string.prawn_hard_line_plus), 
-                stringResource(R.string.prawn_sy_aqua), stringResource(R.string.prawn_benchmark), 
-                stringResource(R.string.prawn_cong), stringResource(R.string.prawn_blue_genetic), 
-                stringResource(R.string.fish_others)
-            ), 
-            onSelectionChange = onPrawnTypeChange, 
+            value = if (isOthers) othersStr else prawnType, 
+            options = options,
+            onSelectionChange = {
+                if (it == othersStr) {
+                    isOthers = true
+                    onPrawnTypeChange(otherName)
+                } else {
+                    isOthers = false
+                    onPrawnTypeChange(it)
+                }
+            }, 
             isError = errors["prawnType"] == true,
             accentColor = accentColor
         )
+
+        if (isOthers) {
+            ListingTextField(
+                label = stringResource(R.string.others_mention),
+                value = otherName,
+                onValueChange = {
+                    otherName = it
+                    onPrawnTypeChange(it)
+                },
+                isRequired = true,
+                isError = errors["prawnType"] == true,
+                keyboardOptions = keyboardOptions,
+                accentColor = accentColor
+            )
+        }
+
         ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true, keyboardOptions = keyboardOptions, accentColor = accentColor)
         ListingTextField(label = stringResource(R.string.hatchery_name_label), value = hatcheryName, onValueChange = onHatcheryNameChange, isError = errors["hatcheryName"] == true, keyboardOptions = keyboardOptions, accentColor = accentColor)
-        ListingTextField(label = stringResource(R.string.pl_days_label), value = plDays, onValueChange = onPlDaysChange, isError = errors["plDays"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number), accentColor = accentColor)
+        
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(modifier = Modifier.weight(1f)) {
                 ListingTextField(label = stringResource(R.string.rate_label), value = rateValue, onValueChange = onRateValueChange, isError = errors["rateValue"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number), accentColor = accentColor)
@@ -989,10 +1073,10 @@ fun PrawnFields(
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(modifier = Modifier.weight(1f)) {
-                ListingTextField(label = stringResource(R.string.quantity_label), value = quantity, onValueChange = onQuantityChange, isError = errors["quantity"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number), accentColor = accentColor)
+                ListingTextField(label = stringResource(R.string.stock_label), value = quantity, onValueChange = onQuantityChange, isError = errors["quantity"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number), accentColor = accentColor)
             }
             Box(modifier = Modifier.weight(1f)) {
-                ListingDropdown(label = stringResource(R.string.unit_label), value = unitType, options = listOf(stringResource(R.string.unit_lakhs), stringResource(R.string.unit_thousands)), onSelectionChange = onUnitTypeChange, accentColor = accentColor)
+                ListingDropdown(label = stringResource(R.string.unit_label), value = unitType, options = listOf(stringResource(R.string.unit_lakhs), stringResource(R.string.unit_million)), onSelectionChange = onUnitTypeChange, accentColor = accentColor)
             }
         }
     }
@@ -1007,21 +1091,51 @@ fun EquipmentFields(
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     accentColor: Color = AquaBlue
 ) {
+    val othersStr = stringResource(R.string.fish_others)
+    val options = listOf(
+        stringResource(R.string.equip_aerators), stringResource(R.string.equip_motors), 
+        stringResource(R.string.equip_pump_motors), stringResource(R.string.equip_bore_motors), 
+        stringResource(R.string.equip_generators), stringResource(R.string.equip_pump_engines), 
+        stringResource(R.string.equip_boats), stringResource(R.string.equip_wires), 
+        othersStr
+    )
+    
+    var isOthers by remember { mutableStateOf(equipmentType.isNotEmpty() && !options.filter { it != othersStr }.contains(equipmentType)) }
+    var otherName by remember { mutableStateOf(if (isOthers) equipmentType else "") }
+
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         SearchableListingDropdown(
             label = stringResource(R.string.equipment_type_label), 
-            value = equipmentType, 
-            options = listOf(
-                stringResource(R.string.equip_aerators), stringResource(R.string.equip_motors), 
-                stringResource(R.string.equip_pump_motors), stringResource(R.string.equip_bore_motors), 
-                stringResource(R.string.equip_generators), stringResource(R.string.equip_pump_engines), 
-                stringResource(R.string.equip_boats), stringResource(R.string.equip_wires), 
-                stringResource(R.string.fish_others)
-            ), 
-            onSelectionChange = onEquipmentTypeChange, 
+            value = if (isOthers) othersStr else equipmentType, 
+            options = options, 
+            onSelectionChange = {
+                if (it == othersStr) {
+                    isOthers = true
+                    onEquipmentTypeChange(otherName)
+                } else {
+                    isOthers = false
+                    onEquipmentTypeChange(it)
+                }
+            }, 
             isError = errors["equipmentType"] == true,
             accentColor = accentColor
         )
+
+        if (isOthers) {
+            ListingTextField(
+                label = stringResource(R.string.others_mention),
+                value = otherName,
+                onValueChange = {
+                    otherName = it
+                    onEquipmentTypeChange(it)
+                },
+                isRequired = true,
+                isError = errors["equipmentType"] == true,
+                keyboardOptions = keyboardOptions,
+                accentColor = accentColor
+            )
+        }
+
         ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true, keyboardOptions = keyboardOptions, accentColor = accentColor)
         ListingTextField(label = stringResource(R.string.price_label), value = price, onValueChange = onPriceChange, isError = errors["price"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number), accentColor = accentColor)
     }
@@ -1064,6 +1178,8 @@ fun BusinessFields(
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     accentColor: Color = AquaBlue
 ) {
+    val othersStr = stringResource(R.string.fish_others)
+
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         val fishFeed = stringResource(R.string.biz_fish_feed)
         val prawnFeed = stringResource(R.string.biz_prawn_feed)
@@ -1073,16 +1189,21 @@ fun BusinessFields(
         SearchableListingDropdown(
             label = stringResource(R.string.business_type_label),
             value = if (businessType.isNotEmpty()) businessType else businessSubCategory,
-            options = listOf(fishFeed, prawnFeed, fishMed, prawnMed),
+            options = listOf(fishFeed, prawnFeed, fishMed, prawnMed, othersStr),
             onSelectionChange = {
-                onBusinessTypeChange(it)
-                if (it == fishFeed || it == prawnFeed) {
-                    onBusinessSubCategoryChange("Feed")
-                    onMedicineNameChange("")
+                if (it == othersStr) {
+                    onBusinessSubCategoryChange("Others")
+                    onBusinessTypeChange(othersStr)
                 } else {
-                    onBusinessSubCategoryChange("Medicine")
-                    onFeedNameChange("")
-                    onRatePerTonChange("")
+                    onBusinessTypeChange(it)
+                    if (it == fishFeed || it == prawnFeed) {
+                        onBusinessSubCategoryChange("Feed")
+                        onMedicineNameChange("")
+                    } else {
+                        onBusinessSubCategoryChange("Medicine")
+                        onFeedNameChange("")
+                        onRatePerTonChange("")
+                    }
                 }
             },
             isError = errors["businessType"] == true,
@@ -1090,13 +1211,51 @@ fun BusinessFields(
         )
 
         if (businessSubCategory == "Feed") {
-            if (businessType != prawnFeed) {
-                SearchableListingDropdown(
-                    label = stringResource(R.string.feed_name_label),
-                    value = feedName,
-                    options = listOf(stringResource(R.string.feed_rice_bran), stringResource(R.string.feed_fine_rice_bran), stringResource(R.string.feed_pellets), stringResource(R.string.fish_others)),
-                    onSelectionChange = onFeedNameChange,
+            val feedOptions = if (businessType == prawnFeed) {
+                listOf(
+                    stringResource(R.string.feed_avanti), 
+                    stringResource(R.string.feed_cp), 
+                    stringResource(R.string.feed_growel), 
+                    stringResource(R.string.feed_ifeed), 
+                    stringResource(R.string.feed_godrej_agrovet), 
+                    stringResource(R.string.feed_sandhya), 
+                    othersStr
+                )
+            } else {
+                listOf(stringResource(R.string.feed_rice_bran), stringResource(R.string.feed_fine_rice_bran), stringResource(R.string.feed_pellets), othersStr)
+            }
+
+            var isOtherFeed by remember { mutableStateOf(feedName.isNotEmpty() && !feedOptions.filter { it != othersStr }.contains(feedName)) }
+            var otherFeedName by remember { mutableStateOf(if (isOtherFeed) feedName else "") }
+
+            SearchableListingDropdown(
+                label = stringResource(R.string.feed_name_label),
+                value = if (isOtherFeed) othersStr else feedName,
+                options = feedOptions,
+                onSelectionChange = {
+                    if (it == othersStr) {
+                        isOtherFeed = true
+                        onFeedNameChange(otherFeedName)
+                    } else {
+                        isOtherFeed = false
+                        onFeedNameChange(it)
+                    }
+                },
+                isError = errors["feedName"] == true,
+                accentColor = accentColor
+            )
+
+            if (isOtherFeed) {
+                ListingTextField(
+                    label = stringResource(R.string.others_mention),
+                    value = otherFeedName,
+                    onValueChange = {
+                        otherFeedName = it
+                        onFeedNameChange(it)
+                    },
+                    isRequired = true,
                     isError = errors["feedName"] == true,
+                    keyboardOptions = keyboardOptions,
                     accentColor = accentColor
                 )
             }
@@ -1138,11 +1297,20 @@ fun BusinessFields(
             )
 
             ListingTextField(
-                label = stringResource(R.string.rate_per_ton_label),
+                label = stringResource(R.string.medicine_rate_label),
                 value = ratePerTon,
                 onValueChange = onRatePerTonChange,
                 isError = errors["ratePerTon"] == true,
                 keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number),
+                accentColor = accentColor
+            )
+        } else if (businessSubCategory == "Others") {
+             ListingTextField(
+                label = stringResource(R.string.others_mention),
+                value = title,
+                onValueChange = onTitleChange,
+                isError = errors["title"] == true,
+                keyboardOptions = keyboardOptions,
                 accentColor = accentColor
             )
         }
@@ -1179,6 +1347,12 @@ fun ServiceFields(
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     accentColor: Color = AquaBlue
 ) {
+    val othersStr = stringResource(R.string.fish_others)
+    val serviceOptions = listOf(stringResource(R.string.service_bore_well), stringResource(R.string.service_live_fish_vehicles), stringResource(R.string.service_nets), othersStr)
+    
+    var isOthers by remember { mutableStateOf(serviceType.isNotEmpty() && !serviceOptions.filter { it != othersStr }.contains(serviceType)) }
+    var otherName by remember { mutableStateOf(if (isOthers) serviceType else "") }
+
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         val boreWell = stringResource(R.string.service_bore_well)
         val fishVehicles = stringResource(R.string.service_live_fish_vehicles)
@@ -1186,12 +1360,35 @@ fun ServiceFields(
 
         SearchableListingDropdown(
             label = stringResource(R.string.service_type_label),
-            value = serviceType,
-            options = listOf(boreWell, fishVehicles, nets, stringResource(R.string.fish_others)),
-            onSelectionChange = onServiceTypeChange,
+            value = if (isOthers) othersStr else serviceType,
+            options = serviceOptions,
+            onSelectionChange = {
+                if (it == othersStr) {
+                    isOthers = true
+                    onServiceTypeChange(otherName)
+                } else {
+                    isOthers = false
+                    onServiceTypeChange(it)
+                }
+            },
             isError = errors["serviceType"] == true,
             accentColor = accentColor
         )
+
+        if (isOthers) {
+            ListingTextField(
+                label = stringResource(R.string.others_mention),
+                value = otherName,
+                onValueChange = {
+                    otherName = it
+                    onServiceTypeChange(it)
+                },
+                isRequired = true,
+                isError = errors["serviceType"] == true,
+                keyboardOptions = keyboardOptions,
+                accentColor = accentColor
+            )
+        }
 
         when (serviceType) {
             boreWell -> {
@@ -1260,20 +1457,51 @@ fun JobFields(
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     accentColor: Color = AquaBlue
 ) {
+    val othersStr = stringResource(R.string.fish_others)
+    val options = listOf(
+        stringResource(R.string.job_watchman),
+        stringResource(R.string.job_supervisor),
+        stringResource(R.string.job_electrician),
+        stringResource(R.string.job_technician),
+        othersStr
+    )
+    
+    var isOthers by remember { mutableStateOf(jobType.isNotEmpty() && !options.filter { it != othersStr }.contains(jobType)) }
+    var otherName by remember { mutableStateOf(if (isOthers) jobType else "") }
+
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         SearchableListingDropdown(
             label = stringResource(R.string.job_type_label),
-            value = jobType,
-            options = listOf(
-                stringResource(R.string.job_watchman),
-                stringResource(R.string.job_supervisor),
-                stringResource(R.string.job_electrician),
-                stringResource(R.string.job_technician)
-            ),
-            onSelectionChange = onJobTypeChange,
+            value = if (isOthers) othersStr else jobType,
+            options = options,
+            onSelectionChange = {
+                if (it == othersStr) {
+                    isOthers = true
+                    onJobTypeChange(otherName)
+                } else {
+                    isOthers = false
+                    onJobTypeChange(it)
+                }
+            },
             isError = errors["jobType"] == true,
             accentColor = accentColor
         )
+
+        if (isOthers) {
+            ListingTextField(
+                label = stringResource(R.string.others_mention),
+                value = otherName,
+                onValueChange = {
+                    otherName = it
+                    onJobTypeChange(it)
+                },
+                isRequired = true,
+                isError = errors["jobType"] == true,
+                keyboardOptions = keyboardOptions,
+                accentColor = accentColor
+            )
+        }
+
         ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true, keyboardOptions = keyboardOptions, accentColor = accentColor)
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(modifier = Modifier.weight(1f)) {

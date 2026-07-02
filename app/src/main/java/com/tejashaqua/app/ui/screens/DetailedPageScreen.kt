@@ -504,6 +504,21 @@ fun DetailedPageScreen(
             // 6. Location Section with Map Tile
             item {
                 Column(modifier = Modifier.padding(16.dp)) {
+                    // User details above map
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 12.dp)) {
+                        Box(
+                            modifier = Modifier.size(36.dp).background(Color(0xFFE0F7FA), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(text = posterName.take(1).uppercase(), fontWeight = FontWeight.Bold, color = Color(0xFF0097A7), fontSize = 14.sp)
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
+                            Text(text = posterName, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Text(text = stringResource(R.string.member_since_label, stringResource(R.string.may_2024)), fontSize = 10.sp, color = GrayText)
+                        }
+                    }
+
                     Text(text = stringResource(R.string.posted_location), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                     Spacer(modifier = Modifier.height(12.dp))
                     

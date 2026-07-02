@@ -90,34 +90,6 @@ fun PrawnRatesScreen(onBackClick: () -> Unit) {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Info Box
-            item {
-                Surface(
-                    color = Color(0xFFE3F2FD).copy(alpha = 0.5f),
-                    shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, Color(0xFF2196F3).copy(alpha = 0.5f))
-                ) {
-                    Row(
-                        modifier = Modifier.padding(12.dp),
-                        verticalAlignment = Alignment.Top
-                    ) {
-                        Icon(
-                            Icons.Default.Info, 
-                            contentDescription = null, 
-                            tint = Color(0xFF1976D2),
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = stringResource(R.string.prawn_info_text),
-                            fontSize = 13.sp,
-                            color = Color(0xFF1565C0),
-                            lineHeight = 18.sp
-                        )
-                    }
-                }
-            }
-
             // Market Selection
             item {
                 Column {
@@ -164,9 +136,14 @@ fun PrawnRatesScreen(onBackClick: () -> Unit) {
             // Date and Variation Text
             item {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.DateRange, null, tint = GrayText, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("${if (lastUpdatedDate.isNotEmpty()) lastUpdatedDate else "--"} • ${stringResource(R.string.rates_vary)}", fontSize = 12.sp, color = GrayText)
+                    Icon(Icons.Default.DateRange, null, tint = Color.Black, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = if (lastUpdatedDate.isNotEmpty()) lastUpdatedDate else "--",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
+                    )
                 }
             }
 

@@ -83,7 +83,7 @@
     <string name="post_listing">జాబితాను పోస్ట్ చేయండి</string>
     <string name="description_label">వివరణ</string>
     <string name="location_label">స్థానం</string>
-    <string name="photos_label">ఫోటోలు (గరిష్టంగా 3)</string>
+    <string name="photos_label">ఫోటోలు (గరిష్టంగా 5)</string>
     <string name="change_btn">మార్చండి</string>
     <string name="delete_listing_title">జాబితాను తొలగించండి</string>
     <string name="delete_listing_confirm">మీరు ఖచ్చితంగా ఈ జాబితాను తొలగించాలనుకుంటున్నారా? ఈ చర్యను వెనక్కి తీసుకోలేము.</string>
@@ -98,11 +98,14 @@
     <string name="size_value_label">పరిమాణం విలువ</string>
     <string name="fish_age_label">చేపల వయస్సు (నెలల్లో)</string>
     <string name="quantity_label">పరిమాణం (Quantity)</string>
+    <string name="stock_label">స్టాక్</string>
+    <string name="no_of_stock_label">చేపల సంఖ్య</string>
     <string name="unit_label">యూనిట్</string>
     <string name="price_label">ధర (₹ లలో)</string>
     <string name="hatchery_name_label">హేచరీ పేరు</string>
     <string name="pl_days_label">PL రోజులు</string>
     <string name="rate_label">ధర (Rate)</string>
+    <string name="medicine_rate_label">ధర</string>
     <string name="vehicle_name_label">వాహనం పేరు</string>
     <string name="vehicle_capacity_label">వాహన సామర్థ్యం</string>
     <string name="rate_per_ton_label">టన్నుకు ధర</string>
@@ -225,6 +228,8 @@
     <string name="unit_lakhs">లక్షలు</string>
     <string name="unit_thousands">వేలు</string>
     <string name="unit_kgs">కిలోలు (Kgs)</string>
+    <string name="unit_million">మిలియన్</string>
+    <string name="size_kilo_label">కిలోకు చేపల సంఖ్య</string>
     <string name="unit_paise">పైసలు</string>
     <string name="unit_rupees">రూపాయలు</string>
 
@@ -404,6 +409,15 @@
     <string name="buyer_label">కొనుగోలుదారు</string>
     <string name="one_kg">1 కిలో</string>
     <string name="one_hr">1 గంట</string>
+    <string name="one_min">1 నిమిషం</string>
+    <string name="press_back_again">నిష్క్రమించడానికి మళ్ళీ వెనుకకు నొక్కండి</string>
+    <string name="others_mention">ఇతరులు (పేరు తెలపండి)</string>
+    <string name="feed_avanti">అవంతి ఫీడ్స్ (Avanti Feeds)</string>
+    <string name="feed_cp">సిపి ఆక్వాకల్చర్ (CP Aquaculture)</string>
+    <string name="feed_growel">గ్రోయెల్ ఫీడ్స్ (Growel Feeds)</string>
+    <string name="feed_ifeed">ఐఫీడ్ (Ifeed)</string>
+    <string name="feed_godrej_agrovet">గోద్రెజ్ ఆగ్రోవెట్ (Godrej Agrovet)</string>
+    <string name="feed_sandhya">సంధ్యా ఆక్వా (Sandhya Aqua)</string>
     <string name="may_2024">మే 2024</string>
     <string name="market_bhimavaram">భీమవరం</string>
     <string name="market_nellore">నెల్లూరు</string>

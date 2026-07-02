@@ -98,11 +98,14 @@
     <string name="size_value_label">Size Value</string>
     <string name="fish_age_label">Fish Age (in Months)</string>
     <string name="quantity_label">Quantity</string>
+    <string name="stock_label">Stock</string>
+    <string name="no_of_stock_label">No of stock</string>
     <string name="unit_label">Unit</string>
     <string name="price_label">Price (in ₹)</string>
     <string name="hatchery_name_label">Hatchery Name</string>
     <string name="pl_days_label">PL Days</string>
     <string name="rate_label">Rate</string>
+    <string name="medicine_rate_label">Rate</string>
     <string name="vehicle_name_label">Vehicle Name</string>
     <string name="vehicle_capacity_label">Vehicle Capacity</string>
     <string name="rate_per_ton_label">Rate per ton</string>
@@ -225,6 +228,8 @@
     <string name="unit_lakhs">Lakhs</string>
     <string name="unit_thousands">Thousands</string>
     <string name="unit_kgs">Kgs</string>
+    <string name="unit_million">Million</string>
+    <string name="size_kilo_label">No of fish per kilo</string>
     <string name="unit_paise">Paise</string>
     <string name="unit_rupees">Rupees</string>
 
@@ -404,6 +409,15 @@ These terms shall be governed by and construed in accordance with the laws of In
     <string name="buyer_label">Buyer</string>
     <string name="one_kg">1 kg</string>
     <string name="one_hr">1 hr</string>
+    <string name="one_min">1 min</string>
+    <string name="press_back_again">Press back again to exit</string>
+    <string name="others_mention">Others (mention the name)</string>
+    <string name="feed_avanti">Avanti Feeds</string>
+    <string name="feed_cp">CP Aquaculture</string>
+    <string name="feed_growel">Growel Feeds</string>
+    <string name="feed_ifeed">Ifeed</string>
+    <string name="feed_godrej_agrovet">Godrej Agrovet</string>
+    <string name="feed_sandhya">Sandhya Aqua</string>
     <string name="may_2024">May 2024</string>
     <string name="market_bhimavaram">Bhimavaram</string>
     <string name="market_nellore">Nellore</string>

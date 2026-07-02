@@ -10,6 +10,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -38,10 +39,25 @@ fun MarketItem(
     imageUrl: String?,
     modifier: Modifier = Modifier,
     isFavorited: Boolean = false,
+    timestamp: Long = 0L,
     onFavoriteClick: (() -> Unit)? = null
 ) {
+    val context = LocalContext.current
     val displayLocation = remember(location) {
         location.split(",").firstOrNull()?.trim() ?: location
+    }
+
+    val timeAgo = remember(timestamp) {
+        if (timestamp == 0L) "" else {
+            val now = System.currentTimeMillis()
+            val diff = now - timestamp
+            when {
+                diff < 60000 -> context.getString(R.string.just_now)
+                diff < 3600000 -> context.getString(R.string.mins_ago, diff / 60000)
+                diff < 86400000 -> context.getString(R.string.hours_ago, diff / 3600000)
+                else -> context.getString(R.string.days_ago, diff / 86400000)
+            }
+        }
     }
 
     val categoryColor = remember(category) {
@@ -122,7 +138,10 @@ fun MarketItem(
                 Text(price, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp, color = Color.Black)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.LocationOn, null, tint = GrayText, modifier = Modifier.size(10.dp))
-                    Text(displayLocation, color = GrayText, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(displayLocation, color = GrayText, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                    if (timeAgo.isNotEmpty()) {
+                        Text(timeAgo, color = GrayText, fontSize = 9.sp, fontWeight = FontWeight.Medium)
+                    }
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
