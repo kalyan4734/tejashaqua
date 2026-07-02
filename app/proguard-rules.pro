@@ -31,3 +31,34 @@
 -keep class com.google.android.gms.auth.api.phone.** { *; }
 -keep class com.google.android.gms.common.api.** { *; }
 
+# Retrofit & OkHttp
+-keepattributes Signature, InnerClasses, EnclosingMethod
+-keepattributes RuntimeVisibleAnnotations, RuntimeVisibleParameterAnnotations
+-keepattributes RuntimeInvisibleAnnotations, RuntimeVisibleParameterAnnotations
+-keep class retrofit2.** { *; }
+-keep class okhttp3.** { *; }
+-dontwarn retrofit2.**
+-dontwarn okhttp3.**
+
+# Gson
+-keep class com.google.gson.** { *; }
+-keep class com.google.gson.reflect.TypeToken
+-keep class * implements com.google.gson.TypeAdapterFactory
+-keep class * implements com.google.gson.JsonSerializer
+-keep class * implements com.google.gson.JsonDeserializer
+-keepclassmembers class * {
+    @com.google.gson.annotations.SerializedName <fields>;
+}
+
+# Keep your data models (Ensures Gson can parse them in Release)
+-keep class com.tejashaqua.app.data.model.** { *; }
+
+# Coil
+-keep class coil.** { *; }
+-dontwarn coil.**
+
+# Google Maps & Places
+-keep class com.google.android.libraries.places.** { *; }
+-keep class com.google.android.gms.maps.** { *; }
+-dontwarn com.google.android.libraries.places.**
+

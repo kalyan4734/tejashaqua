@@ -32,7 +32,7 @@ android {
         applicationId = "com.tejashaqua.app"
         minSdk = 24
         targetSdk = 35
-        versionCode = 7
+        versionCode = 10
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -95,7 +95,6 @@ dependencies {
     implementation(libs.google.places)
     implementation(libs.play.services.location)
     implementation(libs.play.services.maps)
-    implementation(libs.play.services.auth.api.phone)
     implementation(libs.maps.compose)
     
     // Networking

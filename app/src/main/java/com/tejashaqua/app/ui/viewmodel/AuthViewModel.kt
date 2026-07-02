@@ -70,6 +70,12 @@ class AuthViewModel(application: android.app.Application) : AndroidViewModel(app
         loadingTimeoutJob = null
     }
 
+    fun clearVerificationData() {
+        verificationId = ""
+        resendToken = null
+        _authState.value = AuthState.Idle
+    }
+
     fun sendOtp(phoneNumber: String, activity: Activity) {
         if (phoneNumber.length != 10) {
             _authState.value = AuthState.Error("Please enter a valid 10-digit phone number.")

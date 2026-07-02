@@ -15,6 +15,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -518,18 +519,26 @@ class MainActivity : AppCompatActivity() {
                                     { currentScreen = "profile" }
                                 } else null)
 
-                            "login" -> LoginScreen(onSendOtp = { number ->
-                                if (networkStatus != NetworkObserver.Status.Available) {
-                                    showNoInternetDialog = true
-                                    return@LoginScreen
+                            "login" -> {
+                                // Clear any stale verification data when entering login screen
+                                DisposableEffect(Unit) {
+                                    authViewModel.clearVerificationData()
+                                    onDispose {}
                                 }
-                                mobileNumber = number
-                                authViewModel.sendOtp(number, this@MainActivity)
-                            }, onPrivacyPolicyClick = {
-                                currentScreen = "privacy_policy"
-                            }, onTermsClick = {
-                                currentScreen = "terms_conditions"
-                            }, isLoading = authState is AuthState.Loading)
+                                
+                                LoginScreen(onSendOtp = { number ->
+                                    if (networkStatus != NetworkObserver.Status.Available) {
+                                        showNoInternetDialog = true
+                                        return@LoginScreen
+                                    }
+                                    mobileNumber = number
+                                    authViewModel.sendOtp(number, this@MainActivity)
+                                }, onPrivacyPolicyClick = {
+                                    currentScreen = "privacy_policy"
+                                }, onTermsClick = {
+                                    currentScreen = "terms_conditions"
+                                }, isLoading = authState is AuthState.Loading)
+                            }
 
                             "otp" -> OtpScreen(mobileNumber = mobileNumber, onVerifyClick = { otp ->
                                 if (networkStatus != NetworkObserver.Status.Available) {
