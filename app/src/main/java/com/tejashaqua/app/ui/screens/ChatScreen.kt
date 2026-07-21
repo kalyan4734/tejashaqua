@@ -184,7 +184,9 @@ fun ChatScreen(
 
         db.collection("chats").document(chatRoomId).collection("messages").add(messageData)
         
-        val listingSellerId = listingData["userId"]?.toString() ?: ""
+        val listingSellerId = listingData["sellerId"]?.toString() 
+            ?: listingData["userId"]?.toString() 
+            ?: ""
         val isMeSeller = currentUserId == listingSellerId
         
         val buyerId = if (isMeSeller) sellerUserId else currentUserId
@@ -310,48 +312,6 @@ fun ChatScreen(
                     .navigationBarsPadding()
                     .imePadding()
             ) {
-                val context = LocalContext.current
-                val listingSellerId = listingDetails["userId"]?.toString() ?: ""
-                val isMeSeller = currentUserId == listingSellerId
-
-                val buyerSuggestions = listOf(
-                    stringResource(R.string.is_available),
-                    stringResource(R.string.best_price),
-                    "Where is the location?",
-                    "Can I call you?"
-                )
-
-                val sellerSuggestions = listOf(
-                    "Yes, it is available.",
-                    "Price is slightly negotiable.",
-                    "Price is fixed.",
-                    "Please call me for details."
-                )
-
-                val currentSuggestions = if (isMeSeller) sellerSuggestions else buyerSuggestions
-                val sentMessagesTexts = chatMessages.filter { it.isFromMe }.map { it.text }
-                val visibleSuggestions = currentSuggestions.filter { it !in sentMessagesTexts }
-
-                if (visibleSuggestions.isNotEmpty()) {
-                    Row(
-                        modifier = Modifier
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
-                            .fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        visibleSuggestions.take(3).forEach { suggestion ->
-                            SuggestionChip(
-                                onClick = {
-                                    keyboardController?.hide()
-                                    sendMessage(suggestion)
-                                },
-                                label = { Text(suggestion, fontSize = 12.sp) },
-                                colors = SuggestionChipDefaults.suggestionChipColors(containerColor = Color(0xFFE3F2FD))
-                            )
-                        }
-                    }
-                }
-                
                 Row(
                     modifier = Modifier
                         .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
@@ -499,7 +459,10 @@ fun ChatScreen(
                     
                     Column {
                         Surface(color = Color(0xFFE8F5E9), shape = RoundedCornerShape(4.dp)) {
-                            val isBuying = currentUserId != sellerUserId
+                            val listingSellerId = listingDetails["sellerId"]?.toString() 
+                                ?: listingDetails["userId"]?.toString() ?: ""
+                            val isMeSeller = currentUserId == listingSellerId
+                            val isBuying = !isMeSeller
                             Text(
                                 if (isBuying) stringResource(R.string.buying) else stringResource(R.string.selling),
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),

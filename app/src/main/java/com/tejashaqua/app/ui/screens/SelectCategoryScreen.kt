@@ -209,7 +209,9 @@ fun CategoryCard(item: CategoryItem, onClick: () -> Unit) {
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
-                        color = tintColor
+                        color = tintColor,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                     )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
@@ -218,7 +220,10 @@ fun CategoryCard(item: CategoryItem, onClick: () -> Unit) {
                     fontSize = 11.sp,
                     color = GrayText,
                     fontWeight = FontWeight.Normal,
-                    lineHeight = 16.sp
+                    lineHeight = 16.sp,
+                    minLines = 2,
+                    maxLines = 2,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
             }
         }

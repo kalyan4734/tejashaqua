@@ -46,6 +46,8 @@ import androidx.compose.ui.text.intl.LocaleList
 import java.util.Locale
 import com.tejashaqua.app.utils.LocaleHelper
 import com.tejashaqua.app.utils.ImageUtils
+import com.tejashaqua.app.utils.CurrencyUtils
+import androidx.compose.ui.text.input.VisualTransformation
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -77,15 +79,19 @@ fun EditListingScreen(
     var selectedPhotos by remember { mutableStateOf(listOf<Any>()) }
 
     // Specific fields
+    val defaultSizeType = stringResource(R.string.unit_inches)
+    val defaultUnitType = stringResource(R.string.unit_lakhs)
+    val defaultRateType = stringResource(R.string.unit_paise)
+
     var fishType by remember { mutableStateOf("") }
-    var sizeType by remember { mutableStateOf("Inches") }
+    var sizeType by remember { mutableStateOf(defaultSizeType) }
     var sizeValue by remember { mutableStateOf("") }
     var fishAge by remember { mutableStateOf("") }
     var quantity by remember { mutableStateOf("") }
-    var unitType by remember { mutableStateOf("Lakhs") }
+    var unitType by remember { mutableStateOf(defaultUnitType) }
     var prawnType by remember { mutableStateOf("") }
     var hatcheryName by remember { mutableStateOf("") }
-    var rateType by remember { mutableStateOf("Paise") }
+    var rateType by remember { mutableStateOf(defaultRateType) }
     var rateValue by remember { mutableStateOf("") }
     var plDays by remember { mutableStateOf("") }
     var equipmentType by remember { mutableStateOf("") }
@@ -144,8 +150,77 @@ fun EditListingScreen(
         if (isGranted) {
             galleryLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
         } else {
-            Toast.makeText(context, "Storage permission is required to select photos", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.storage_permission_required), Toast.LENGTH_SHORT).show()
         }
+    }
+
+    var showStorageRationale by remember { mutableStateOf(false) }
+
+    if (showStorageRationale) {
+        val permission = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            android.Manifest.permission.READ_MEDIA_IMAGES
+        } else {
+            android.Manifest.permission.READ_EXTERNAL_STORAGE
+        }
+        AlertDialog(
+            onDismissRequest = { showStorageRationale = false },
+            title = { Text(stringResource(R.string.storage_permission_title)) },
+            text = { Text(stringResource(R.string.storage_permission_required)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showStorageRationale = false
+                    storagePermissionLauncher.launch(permission)
+                }) {
+                    Text(stringResource(R.string.ok))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showStorageRationale = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            val uri = ImageUtils.createImageUri(context)
+            tempCameraUri = uri
+            if (uri != null) {
+                try {
+                    cameraLauncher.launch(uri)
+                } catch (e: Exception) {
+                    Toast.makeText(context, context.getString(R.string.camera_permission_denied), Toast.LENGTH_SHORT).show()
+                }
+            }
+        } else {
+            Toast.makeText(context, context.getString(R.string.camera_permission_denied), Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    var showCameraRationale by remember { mutableStateOf(false) }
+
+    if (showCameraRationale) {
+        AlertDialog(
+            onDismissRequest = { showCameraRationale = false },
+            title = { Text(stringResource(R.string.camera_permission_title)) },
+            text = { Text(stringResource(R.string.camera_permission_required)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showCameraRationale = false
+                    cameraPermissionLauncher.launch(android.Manifest.permission.CAMERA)
+                }) {
+                    Text(stringResource(R.string.ok))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCameraRationale = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
     }
 
     var showPhotoOptions by remember { mutableStateOf(false) }
@@ -167,10 +242,22 @@ fun EditListingScreen(
                         modifier = Modifier.clickable {
                             keyboardController?.hide()
                             showPhotoOptions = false
-                            val uri = ImageUtils.createImageUri(context)
-                            tempCameraUri = uri
-                            if (uri != null) {
-                                cameraLauncher.launch(uri)
+                            
+                            val permission = android.Manifest.permission.CAMERA
+                            val isGranted = androidx.core.content.ContextCompat.checkSelfPermission(context, permission) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                            
+                            if (isGranted) {
+                                val uri = ImageUtils.createImageUri(context)
+                                tempCameraUri = uri
+                                if (uri != null) {
+                                    try {
+                                        cameraLauncher.launch(uri)
+                                    } catch (e: Exception) {
+                                        Toast.makeText(context, "Could not open camera app", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            } else {
+                                showCameraRationale = true
                             }
                         }
                     )
@@ -189,7 +276,7 @@ fun EditListingScreen(
                             if (androidx.core.content.ContextCompat.checkSelfPermission(context, permission) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
                                 galleryLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                             } else {
-                                storagePermissionLauncher.launch(permission)
+                                showStorageRationale = true
                             }
                         }
                     )
@@ -404,7 +491,7 @@ fun EditListingScreen(
                         // Validation logic with detailed error tracking
                         val errors = mutableMapOf<String, Boolean>()
                         
-                        if (title.isBlank() && category != ListingCategory.PRAWNS) errors["title"] = true
+                        // Title is hidden for all categories, so we don't validate it here
                         if (location.isBlank() || location == fetchingText) errors["location"] = true
                         if (selectedPhotos.isEmpty() && category != ListingCategory.JOBS) photoError = true else photoError = false
 
@@ -418,26 +505,22 @@ fun EditListingScreen(
                             }
                             ListingCategory.PRAWNS -> {
                                 if (prawnType.isBlank()) errors["prawnType"] = true
-                                if (title.isBlank()) errors["title"] = true
                                 if (hatcheryName.isBlank()) errors["hatcheryName"] = true
                                 if (rateValue.isBlank()) errors["rateValue"] = true
                                 if (quantity.isBlank()) errors["quantity"] = true
                             }
                             ListingCategory.EQUIPMENTS -> {
                                 if (equipmentType.isBlank()) errors["equipmentType"] = true
-                                if (title.isBlank()) errors["title"] = true
                                 if (price.isBlank()) errors["price"] = true
                             }
                             ListingCategory.VEHICLES -> {
                                 if (selectedServiceType.isBlank()) errors["serviceType"] = true
                                 if (vehicleName.isBlank()) errors["vehicleName"] = true
                                 if (vehicleCapacity.isBlank()) errors["vehicleCapacity"] = true
-                                if (title.isBlank()) errors["title"] = true
                             }
                             ListingCategory.FEED -> {
                                 if (businessType.isBlank()) errors["businessType"] = true
                                 if (feedName.isBlank()) errors["feedName"] = true
-                                if (title.isBlank()) errors["title"] = true
                                 if (ratePerTon.isBlank()) errors["ratePerTon"] = true
                             }
                             ListingCategory.BUSINESS -> {
@@ -445,12 +528,10 @@ fun EditListingScreen(
                                 if (businessSubCategory == "Feed") {
                                     if (businessType.isBlank()) errors["businessType"] = true
                                     if (feedName.isBlank()) errors["feedName"] = true
-                                    if (title.isBlank()) errors["title"] = true
                                     if (ratePerTon.isBlank()) errors["ratePerTon"] = true
                                 } else if (businessSubCategory == "Medicine") {
                                     if (businessType.isBlank()) errors["businessType"] = true
                                     if (medicineName.isBlank()) errors["medicineName"] = true
-                                    if (title.isBlank()) errors["title"] = true
                                 }
                             }
                             ListingCategory.SERVICES -> {
@@ -461,18 +542,15 @@ fun EditListingScreen(
                                     if (vehicleCapacity.isBlank()) errors["vehicleCapacity"] = true
                                 }
                                 if (selectedServiceType == "Nets" && netType.isBlank()) errors["netType"] = true
-                                if (title.isBlank()) errors["title"] = true
                             }
                             ListingCategory.TANKS -> {
                                 if (tankType.isBlank()) errors["tankType"] = true
-                                if (title.isBlank()) errors["title"] = true
                                 if (tankAcres.isBlank()) errors["tankAcres"] = true
                                 if (estPricePerAcre.isBlank()) errors["estPricePerAcre"] = true
                                 if (tankLocation.isBlank()) errors["tankLocation"] = true
                             }
                             ListingCategory.JOBS -> {
                                 if (jobType.isBlank()) errors["jobType"] = true
-                                if (title.isBlank()) errors["title"] = true
                                 if (tankAcres.isBlank()) errors["tankAcres"] = true
                                 if (salary.isBlank()) errors["salary"] = true
                                 if (tankLocation.isBlank()) errors["tankLocation"] = true
@@ -484,9 +562,25 @@ fun EditListingScreen(
                         if (errors.isNotEmpty() || photoError) {
                             Toast.makeText(context, context.getString(R.string.fill_mandatory_fields), Toast.LENGTH_SHORT).show()
                         } else {
+                            val finalTitle = if (title.isBlank()) {
+                                when (category) {
+                                    ListingCategory.FISH -> fishType
+                                    ListingCategory.PRAWNS -> prawnType
+                                    ListingCategory.EQUIPMENTS -> equipmentType
+                                    ListingCategory.VEHICLES -> vehicleName
+                                    ListingCategory.FEED -> feedName
+                                    ListingCategory.BUSINESS -> if (businessSubCategory == "Feed") feedName else if (businessSubCategory == "Medicine") medicineName else businessType
+                                    ListingCategory.SERVICES -> selectedServiceType
+                                    ListingCategory.TANKS -> tankType
+                                    ListingCategory.JOBS -> jobType
+                                }
+                            } else {
+                                title
+                            }
+
                             val finalDescription = if (description.isBlank()) {
                                 generateDefaultDescription(
-                                    context, category, title, price, fishType, sizeValue, sizeType,
+                                    context, category, finalTitle, price, fishType, sizeValue, sizeType,
                                     quantity, unitType, prawnType, hatcheryName, rateValue, rateType,
                                     equipmentType, vehicleName, vehicleCapacity, feedName, ratePerTon,
                                     businessType, medicineName, businessSubCategory,
@@ -498,7 +592,7 @@ fun EditListingScreen(
                             }
 
                             val data = buildListingMap(
-                                listingId, category, title, finalDescription, price, location, latLng, userMobileNumber,
+                                listingId, category, finalTitle, finalDescription, price, location, latLng, userMobileNumber,
                                 userName, selectedServiceType, fishType, sizeType, sizeValue, fishAge, quantity,
                                 unitType, prawnType, hatcheryName, rateType, rateValue, "", equipmentType,
                                 vehicleName, vehicleCapacity, businessType, feedName, ratePerTon, 
@@ -567,7 +661,6 @@ fun EditListingScreen(
                     when (category) {
                         ListingCategory.FISH -> FishFields(
                             fishType, { fishType = it },
-                            title, { title = it },
                             sizeType, { sizeType = it },
                             sizeValue, { sizeValue = it },
                             fishAge, { fishAge = it },
@@ -586,14 +679,12 @@ fun EditListingScreen(
                             plDays, { plDays = it },
                             quantity, { quantity = it },
                             unitType, { unitType = it },
-                            title, { title = it },
                             errors = fieldErrors,
                             keyboardOptions = keyboardOptionsBase,
                             accentColor = categoryColor
                         )
                         ListingCategory.EQUIPMENTS -> EquipmentFields(
                             equipmentType, { equipmentType = it },
-                            title, { title = it },
                             price, { price = it },
                             errors = fieldErrors,
                             keyboardOptions = keyboardOptionsBase,
@@ -603,7 +694,6 @@ fun EditListingScreen(
                             selectedServiceType, { selectedServiceType = it },
                             vehicleName, { vehicleName = it },
                             vehicleCapacity, { vehicleCapacity = it },
-                            title, { title = it },
                             errors = fieldErrors,
                             keyboardOptions = keyboardOptionsBase,
                             accentColor = categoryColor
@@ -611,7 +701,16 @@ fun EditListingScreen(
                         ListingCategory.FEED -> FeedFields(
                             businessType, { businessType = it },
                             feedName, { feedName = it },
-                            title, { title = it },
+                            ratePerTon, { ratePerTon = it },
+                            errors = fieldErrors,
+                            keyboardOptions = keyboardOptionsBase,
+                            accentColor = categoryColor
+                        )
+                        ListingCategory.BUSINESS -> BusinessFields(
+                            businessSubCategory, { businessSubCategory = it },
+                            businessType, { businessType = it },
+                            feedName, { feedName = it },
+                            medicineName, { medicineName = it },
                             ratePerTon, { ratePerTon = it },
                             errors = fieldErrors,
                             keyboardOptions = keyboardOptionsBase,
@@ -623,13 +722,11 @@ fun EditListingScreen(
                             vehicleName, { vehicleName = it },
                             vehicleCapacity, { vehicleCapacity = it },
                             netType, { netType = it },
-                            title, { title = it },
                             errors = fieldErrors,
                             keyboardOptions = keyboardOptionsBase,
                             accentColor = categoryColor
                         )
                         ListingCategory.TANKS -> TankFields(
-                            title, { title = it },
                             tankType, { tankType = it },
                             tankAcres, { tankAcres = it },
                             estPricePerAcre, { estPricePerAcre = it },
@@ -643,18 +740,6 @@ fun EditListingScreen(
                             tankAcres, { tankAcres = it },
                             tankLocation, { tankLocation = it },
                             salary, { salary = it },
-                            title, { title = it },
-                            errors = fieldErrors,
-                            keyboardOptions = keyboardOptionsBase,
-                            accentColor = categoryColor
-                        )
-                        ListingCategory.BUSINESS -> BusinessFields(
-                            businessSubCategory, { businessSubCategory = it },
-                            businessType, { businessType = it },
-                            feedName, { feedName = it },
-                            medicineName, { medicineName = it },
-                            title, { title = it },
-                            ratePerTon, { ratePerTon = it },
                             errors = fieldErrors,
                             keyboardOptions = keyboardOptionsBase,
                             accentColor = categoryColor
@@ -894,7 +979,6 @@ private fun buildListingMap(
 @Composable
 fun FishFields(
     fishType: String, onFishTypeChange: (String) -> Unit,
-    title: String, onTitleChange: (String) -> Unit,
     sizeType: String, onSizeTypeChange: (String) -> Unit,
     sizeValue: String, onSizeValueChange: (String) -> Unit,
     fishAge: String, onFishAgeChange: (String) -> Unit,
@@ -922,8 +1006,9 @@ fun FishFields(
     val tuna = stringResource(R.string.fish_tuna)
     val pulasa = stringResource(R.string.fish_pulasa)
     val crab = stringResource(R.string.fish_crab)
+    val bangaruTeega = stringResource(R.string.fish_bangaru_teega)
 
-    val options = remember { listOf(rohu, katla, karamosu, gaddiChepa, pangasius, roopchand, panduGappa, tilapia, chitala, koramenu, valuga, engilayi, jalla, tuna, pulasa, crab, othersStr) }
+    val options = remember { listOf(rohu, katla, karamosu, gaddiChepa, pangasius, roopchand, panduGappa, tilapia, chitala, koramenu, valuga, engilayi, jalla, tuna, pulasa, crab, bangaruTeega, othersStr) }
     
     var isOthers by remember { mutableStateOf(fishType.isNotEmpty() && !options.filter { it != othersStr }.contains(fishType)) }
     var otherName by remember { mutableStateOf(if (isOthers) fishType else "") }
@@ -961,7 +1046,6 @@ fun FishFields(
             )
         }
 
-        ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true, keyboardOptions = keyboardOptions, accentColor = accentColor)
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(modifier = Modifier.weight(1f)) {
                 ListingTextField(label = stringResource(R.string.size_label), value = sizeValue, onValueChange = onSizeValueChange, isError = errors["sizeValue"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Decimal), accentColor = accentColor)
@@ -975,20 +1059,7 @@ fun FishFields(
         ListingTextField(
             label = stringResource(R.string.no_of_stock_label), 
             value = quantity, 
-            onValueChange = { 
-                // Basic number formatting with commas
-                val clean = it.replace(",", "").replace(".", "")
-                if (clean.isEmpty()) {
-                    onQuantityChange("")
-                } else {
-                    try {
-                        val formatted = String.format(java.util.Locale.US, "%,d", clean.toLong())
-                        onQuantityChange(formatted)
-                    } catch (_: Exception) {
-                        onQuantityChange(it)
-                    }
-                }
-            }, 
+            onValueChange = onQuantityChange,
             isError = errors["quantity"] == true, 
             keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number), 
             accentColor = accentColor
@@ -1007,7 +1078,6 @@ fun PrawnFields(
     @Suppress("UNUSED_PARAMETER") plDays: String, @Suppress("UNUSED_PARAMETER") onPlDaysChange: (String) -> Unit,
     quantity: String, onQuantityChange: (String) -> Unit,
     unitType: String, onUnitTypeChange: (String) -> Unit,
-    title: String, onTitleChange: (String) -> Unit,
     errors: Map<String, Boolean> = emptyMap(),
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     accentColor: Color = AquaBlue
@@ -1060,7 +1130,6 @@ fun PrawnFields(
             )
         }
 
-        ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true, keyboardOptions = keyboardOptions, accentColor = accentColor)
         ListingTextField(label = stringResource(R.string.hatchery_name_label), value = hatcheryName, onValueChange = onHatcheryNameChange, isError = errors["hatcheryName"] == true, keyboardOptions = keyboardOptions, accentColor = accentColor)
         
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -1071,6 +1140,7 @@ fun PrawnFields(
                 ListingDropdown(label = stringResource(R.string.unit_label), value = rateType, options = listOf(stringResource(R.string.unit_paise), stringResource(R.string.unit_rupees)), onSelectionChange = onRateTypeChange, accentColor = accentColor)
             }
         }
+        
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(modifier = Modifier.weight(1f)) {
                 ListingTextField(label = stringResource(R.string.stock_label), value = quantity, onValueChange = onQuantityChange, isError = errors["quantity"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number), accentColor = accentColor)
@@ -1085,7 +1155,6 @@ fun PrawnFields(
 @Composable
 fun EquipmentFields(
     equipmentType: String, onEquipmentTypeChange: (String) -> Unit,
-    title: String, onTitleChange: (String) -> Unit,
     price: String, onPriceChange: (String) -> Unit,
     errors: Map<String, Boolean> = emptyMap(),
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
@@ -1107,7 +1176,7 @@ fun EquipmentFields(
         SearchableListingDropdown(
             label = stringResource(R.string.equipment_type_label), 
             value = if (isOthers) othersStr else equipmentType, 
-            options = options, 
+            options = options,
             onSelectionChange = {
                 if (it == othersStr) {
                     isOthers = true
@@ -1136,7 +1205,6 @@ fun EquipmentFields(
             )
         }
 
-        ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true, keyboardOptions = keyboardOptions, accentColor = accentColor)
         ListingTextField(label = stringResource(R.string.price_label), value = price, onValueChange = onPriceChange, isError = errors["price"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number), accentColor = accentColor)
     }
 }
@@ -1146,7 +1214,6 @@ fun VehicleFields(
     serviceType: String, onServiceTypeChange: (String) -> Unit,
     vehicleName: String, onVehicleNameChange: (String) -> Unit,
     vehicleCapacity: String, onVehicleCapacityChange: (String) -> Unit,
-    title: String, onTitleChange: (String) -> Unit,
     errors: Map<String, Boolean> = emptyMap(),
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     accentColor: Color = AquaBlue
@@ -1162,7 +1229,6 @@ fun VehicleFields(
         )
         ListingTextField(label = stringResource(R.string.vehicle_name_label), value = vehicleName, onValueChange = onVehicleNameChange, isError = errors["vehicleName"] == true, keyboardOptions = keyboardOptions, accentColor = accentColor)
         ListingTextField(label = stringResource(R.string.vehicle_capacity_label), value = vehicleCapacity, onValueChange = onVehicleCapacityChange, isError = errors["vehicleCapacity"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number), accentColor = accentColor)
-        ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true, keyboardOptions = keyboardOptions, accentColor = accentColor)
     }
 }
 
@@ -1172,7 +1238,6 @@ fun BusinessFields(
     businessType: String, onBusinessTypeChange: (String) -> Unit,
     feedName: String, onFeedNameChange: (String) -> Unit,
     medicineName: String, onMedicineNameChange: (String) -> Unit,
-    title: String, onTitleChange: (String) -> Unit,
     ratePerTon: String, onRatePerTonChange: (String) -> Unit,
     errors: Map<String, Boolean> = emptyMap(),
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
@@ -1261,15 +1326,6 @@ fun BusinessFields(
             }
 
             ListingTextField(
-                label = stringResource(R.string.title_label),
-                value = title,
-                onValueChange = onTitleChange,
-                isError = errors["title"] == true,
-                keyboardOptions = keyboardOptions,
-                accentColor = accentColor
-            )
-
-            ListingTextField(
                 label = stringResource(R.string.rate_per_ton_label),
                 value = ratePerTon,
                 onValueChange = onRatePerTonChange,
@@ -1288,29 +1344,11 @@ fun BusinessFields(
             )
 
             ListingTextField(
-                label = stringResource(R.string.title_label),
-                value = title,
-                onValueChange = onTitleChange,
-                isError = errors["title"] == true,
-                keyboardOptions = keyboardOptions,
-                accentColor = accentColor
-            )
-
-            ListingTextField(
                 label = stringResource(R.string.medicine_rate_label),
                 value = ratePerTon,
                 onValueChange = onRatePerTonChange,
                 isError = errors["ratePerTon"] == true,
                 keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number),
-                accentColor = accentColor
-            )
-        } else if (businessSubCategory == "Others") {
-             ListingTextField(
-                label = stringResource(R.string.others_mention),
-                value = title,
-                onValueChange = onTitleChange,
-                isError = errors["title"] == true,
-                keyboardOptions = keyboardOptions,
                 accentColor = accentColor
             )
         }
@@ -1321,7 +1359,6 @@ fun BusinessFields(
 fun FeedFields(
     businessType: String, onBusinessTypeChange: (String) -> Unit,
     feedName: String, onFeedNameChange: (String) -> Unit,
-    title: String, onTitleChange: (String) -> Unit,
     ratePerTon: String, onRatePerTonChange: (String) -> Unit,
     errors: Map<String, Boolean> = emptyMap(),
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
@@ -1330,7 +1367,6 @@ fun FeedFields(
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         ListingDropdown(label = stringResource(R.string.business_type_label), value = businessType, options = listOf(stringResource(R.string.biz_fish_feed), stringResource(R.string.biz_prawn_feed)), onSelectionChange = onBusinessTypeChange, isError = errors["businessType"] == true, accentColor = accentColor)
         ListingDropdown(label = stringResource(R.string.feed_name_label), value = feedName, options = listOf("Godrej", "CP", "Avanti"), onSelectionChange = onFeedNameChange, isError = errors["feedName"] == true, accentColor = accentColor)
-        ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true, keyboardOptions = keyboardOptions, accentColor = accentColor)
         ListingTextField(label = stringResource(R.string.rate_per_ton_label), value = ratePerTon, onValueChange = onRatePerTonChange, isError = errors["ratePerTon"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number), accentColor = accentColor)
     }
 }
@@ -1342,7 +1378,6 @@ fun ServiceFields(
     vehicleName: String, onVehicleNameChange: (String) -> Unit,
     vehicleCapacity: String, onVehicleCapacityChange: (String) -> Unit,
     netType: String, onNetTypeChange: (String) -> Unit,
-    title: String, onTitleChange: (String) -> Unit,
     errors: Map<String, Boolean> = emptyMap(),
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     accentColor: Color = AquaBlue
@@ -1416,13 +1451,11 @@ fun ServiceFields(
                 )
             }
         }
-        ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true, keyboardOptions = keyboardOptions, accentColor = accentColor)
     }
 }
 
 @Composable
 fun TankFields(
-    title: String, onTitleChange: (String) -> Unit,
     tankType: String, onTankTypeChange: (String) -> Unit,
     tankAcres: String, onTankAcresChange: (String) -> Unit,
     estPricePerAcre: String, onEstPricePerAcreChange: (String) -> Unit,
@@ -1433,7 +1466,6 @@ fun TankFields(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         ListingDropdown(label = stringResource(R.string.type_label), value = tankType, options = listOf(stringResource(R.string.tank_lease), stringResource(R.string.tank_sell)), onSelectionChange = onTankTypeChange, isError = errors["tankType"] == true, accentColor = accentColor)
-        ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true, keyboardOptions = keyboardOptions, accentColor = accentColor)
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(modifier = Modifier.weight(1f)) {
                 ListingTextField(label = stringResource(R.string.tank_acres_label), value = tankAcres, onValueChange = onTankAcresChange, isError = errors["tankAcres"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Decimal), accentColor = accentColor)
@@ -1452,7 +1484,6 @@ fun JobFields(
     tankAcres: String, onTankAcresChange: (String) -> Unit,
     tankLocation: String, onTankLocationChange: (String) -> Unit,
     salary: String, onSalaryChange: (String) -> Unit,
-    title: String, onTitleChange: (String) -> Unit,
     errors: Map<String, Boolean> = emptyMap(),
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     accentColor: Color = AquaBlue
@@ -1502,7 +1533,6 @@ fun JobFields(
             )
         }
 
-        ListingTextField(label = stringResource(R.string.title_label), value = title, onValueChange = onTitleChange, isError = errors["title"] == true, keyboardOptions = keyboardOptions, accentColor = accentColor)
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(modifier = Modifier.weight(1f)) {
                 ListingTextField(label = stringResource(R.string.tank_acres_label), value = tankAcres, onValueChange = onTankAcresChange, isError = errors["tankAcres"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Decimal), accentColor = accentColor)
@@ -1526,6 +1556,13 @@ fun ListingTextField(
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     accentColor: Color = AquaBlue
 ) {
+    val visualTransformation = if (keyboardOptions.keyboardType == KeyboardType.Number || 
+        keyboardOptions.keyboardType == KeyboardType.Decimal) {
+        CurrencyUtils.IndianNumberVisualTransformation()
+    } else {
+        VisualTransformation.None
+    }
+
     Column {
         Text(text = androidx.compose.ui.text.buildAnnotatedString {
             append(label)
@@ -1542,6 +1579,7 @@ fun ListingTextField(
             minLines = minLines,
             isError = isError,
             keyboardOptions = keyboardOptions,
+            visualTransformation = visualTransformation,
             colors = OutlinedTextFieldDefaults.colors(
                 unfocusedBorderColor = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline,
                 focusedBorderColor = if (isError) MaterialTheme.colorScheme.error else accentColor,
@@ -1810,7 +1848,7 @@ private fun generateDefaultDescription(
             if (fishType.isNotEmpty()) parts.add(fishType)
             if (title.isNotEmpty()) parts.add(title)
             if (sizeValue.isNotEmpty()) parts.add(context.getString(R.string.desc_size_prefix, "$sizeValue $sizeType"))
-            if (quantity.isNotEmpty()) parts.add(context.getString(R.string.desc_quantity_prefix, "$quantity $unitType"))
+            if (quantity.isNotEmpty()) parts.add(context.getString(R.string.desc_quantity_prefix, CurrencyUtils.formatPrice(quantity)))
             if (price.isNotEmpty()) parts.add(context.getString(R.string.desc_price_prefix, price))
         }
         ListingCategory.PRAWNS -> {

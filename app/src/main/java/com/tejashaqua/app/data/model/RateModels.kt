@@ -50,6 +50,7 @@ data class AquaRate(
             "crab" -> stringResource(R.string.fish_crab)
             "others" -> stringResource(R.string.fish_others)
             "prawns" -> stringResource(R.string.cat_prawns)
+            "fish" -> stringResource(R.string.cat_fish)
             else -> name
         }
     }

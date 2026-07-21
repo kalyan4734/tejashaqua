@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
@@ -15,6 +16,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -41,8 +43,11 @@ import com.tejashaqua.app.data.model.ListingCategory
 import com.tejashaqua.app.R
 import com.tejashaqua.app.utils.CurrencyUtils
 import com.tejashaqua.app.ui.components.MarketItem
+import com.tejashaqua.app.ui.components.SellerPostsDialog
 import com.tejashaqua.app.ui.theme.AquaBlue
 import com.tejashaqua.app.ui.theme.GrayText
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -59,6 +64,7 @@ fun DetailedPageScreen(
     currentUserId: String,
     onBackClick: () -> Unit,
     onChatClick: (Map<String, Any>) -> Unit,
+    onItemClick: (Map<String, Any>) -> Unit,
     userActionViewModel: UserActionViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -111,61 +117,93 @@ fun DetailedPageScreen(
     val listingUserId = listingData["userId"]?.toString() ?: ""
     val isOwnListing = currentUserId == listingUserId
     val listingId = listingData["id"]?.toString() ?: ""
-
-    var isFavorited by remember { mutableStateOf(false) }
-    var favoriteIds by remember { mutableStateOf<Set<String>>(emptySet()) }
-    val db = FirebaseFirestore.getInstance()
-
-    LaunchedEffect(listingId, currentUserId) {
-        if (currentUserId.isNotEmpty() && listingId.isNotEmpty()) {
-            db.collection("users").document(currentUserId)
-                .collection("favorites").document(listingId)
-                .addSnapshotListener { snapshot, _ ->
-                    isFavorited = snapshot != null && snapshot.exists()
+    
+    var sellerJoinedAt by remember { mutableLongStateOf(0L) }
+    val db = remember { FirebaseFirestore.getInstance() }
+    
+    var showSellerPostsDialog by remember { mutableStateOf(false) }
+    var sellerListings by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
+    
+    LaunchedEffect(listingUserId) {
+        if (listingUserId.isNotEmpty()) {
+            db.collection("users").document(listingUserId).get().addOnSuccessListener { doc ->
+                if (doc.exists()) {
+                    sellerJoinedAt = doc.getLong("joinedAt") ?: 0L
                 }
-        }
-    }
-
-    LaunchedEffect(currentUserId) {
-        if (currentUserId.isNotEmpty()) {
-            db.collection("users").document(currentUserId)
-                .collection("favorites")
-                .addSnapshotListener { snapshot, _ ->
-                    if (snapshot != null) {
-                        favoriteIds = snapshot.documents.map { it.id }.toSet()
+            }
+            
+            db.collection("listings")
+                .whereEqualTo("userId", listingUserId)
+                .get()
+                .addOnSuccessListener { snapshot ->
+                    sellerListings = snapshot.documents.map { doc ->
+                        val d = doc.data?.toMutableMap() ?: mutableMapOf()
+                        d["id"] = doc.id
+                        d
                     }
                 }
         }
     }
 
-    val toggleFavorite = { listing: Map<String, Any>, isFav: Boolean ->
-        val id = listing["id"]?.toString() ?: ""
-        if (currentUserId.isNotEmpty() && id.isNotEmpty()) {
-            val favRef = db.collection("users").document(currentUserId)
-                .collection("favorites").document(id)
-            if (isFav) {
-                favRef.delete()
-            } else {
-                favRef.set(listing)
+    key(listingId) {
+        var isFavorited by remember { mutableStateOf(false) }
+        var favoriteIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+        val listState = rememberLazyListState()
+
+        LaunchedEffect(listingId) {
+            listState.scrollToItem(0)
+        }
+
+        LaunchedEffect(listingId, currentUserId) {
+            if (currentUserId.isNotEmpty() && listingId.isNotEmpty()) {
+                db.collection("users").document(currentUserId)
+                    .collection("favorites").document(listingId)
+                    .addSnapshotListener { snapshot, _ ->
+                        isFavorited = snapshot != null && snapshot.exists()
+                    }
             }
         }
-    }
 
-    var similarListings by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
-
-    LaunchedEffect(categoryString, listingData["id"]) {
-        db.collection("listings")
-            .whereEqualTo("category", categoryString)
-            .limit(10)
-            .get()
-            .addOnSuccessListener { snapshot ->
-                similarListings = snapshot.documents.mapNotNull { doc ->
-                    val data = doc.data?.toMutableMap() ?: mutableMapOf()
-                    data["id"] = doc.id
-                    if (doc.id != listingData["id"]) data else null
-                }.take(5)
+        LaunchedEffect(currentUserId) {
+            if (currentUserId.isNotEmpty()) {
+                db.collection("users").document(currentUserId)
+                    .collection("favorites")
+                    .addSnapshotListener { snapshot, _ ->
+                        if (snapshot != null) {
+                            favoriteIds = snapshot.documents.map { it.id }.toSet()
+                        }
+                    }
             }
-    }
+        }
+
+        val toggleFavorite = { listing: Map<String, Any>, isFav: Boolean ->
+            val id = listing["id"]?.toString() ?: ""
+            if (currentUserId.isNotEmpty() && id.isNotEmpty()) {
+                val favRef = db.collection("users").document(currentUserId)
+                    .collection("favorites").document(id)
+                if (isFav) {
+                    favRef.delete()
+                } else {
+                    favRef.set(listing)
+                }
+            }
+        }
+
+        var similarListings by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
+
+        LaunchedEffect(categoryString, listingId) {
+            db.collection("listings")
+                .whereEqualTo("category", categoryString)
+                .limit(10)
+                .get()
+                .addOnSuccessListener { snapshot ->
+                    similarListings = snapshot.documents.mapNotNull { doc ->
+                        val data = doc.data?.toMutableMap() ?: mutableMapOf()
+                        data["id"] = doc.id
+                        if (doc.id != listingId) data else null
+                    }.take(5)
+                }
+        }
 
     val pagerState = rememberPagerState { if (images.isEmpty()) 1 else images.size }
     var showFullScreenPager by remember { mutableStateOf(false) }
@@ -311,6 +349,7 @@ fun DetailedPageScreen(
         }
 
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
@@ -403,27 +442,6 @@ fun DetailedPageScreen(
                 }
             }
 
-            // 4. Seller Info
-            item {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(text = stringResource(R.string.seller_label), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier.size(50.dp).background(Color(0xFFE0F7FA), CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(text = posterName.take(2).uppercase(), fontWeight = FontWeight.Bold, color = Color(0xFF0097A7))
-                        }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text(text = posterName, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                            Text(text = stringResource(R.string.member_since_label, stringResource(R.string.may_2024)) + " • ⚡ " + stringResource(R.string.responds_in_label, stringResource(R.string.one_hr)), fontSize = 12.sp, color = GrayText)
-                        }
-                    }
-                }
-            }
-
             // 5. Details section
             item {
                 Column(modifier = Modifier.padding(16.dp)) {
@@ -435,7 +453,7 @@ fun DetailedPageScreen(
                             DetailRowItem(stringResource(R.string.fish_type_label), listingData["fishType"]?.toString() ?: stringResource(R.string.not_available_short))
                             DetailRowItem(stringResource(R.string.size_label), "${listingData["sizeValue"] ?: ""} ${listingData["sizeType"] ?: ""}")
                             DetailRowItem(stringResource(R.string.fish_age_label), stringResource(R.string.months_suffix, listingData["fishAge"] ?: ""))
-                            DetailRowItem(stringResource(R.string.quantity_label), "${listingData["quantity"] ?: ""} ${listingData["unitType"] ?: ""}")
+                            DetailRowItem(stringResource(R.string.quantity_label), CurrencyUtils.formatPrice(listingData["quantity"]))
                             DetailRowItem(stringResource(R.string.price_label), priceLabel)
                         }
                         ListingCategory.PRAWNS -> {
@@ -504,18 +522,36 @@ fun DetailedPageScreen(
             // 6. Location Section with Map Tile
             item {
                 Column(modifier = Modifier.padding(16.dp)) {
+                    // Seller Details Header
+                    Text(text = stringResource(R.string.seller_label), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
                     // User details above map
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 12.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically, 
+                        modifier = Modifier
+                            .padding(bottom = 16.dp)
+                            .clickable { 
+                                if (sellerListings.isNotEmpty()) {
+                                    showSellerPostsDialog = true 
+                                }
+                            }
+                    ) {
                         Box(
-                            modifier = Modifier.size(36.dp).background(Color(0xFFE0F7FA), CircleShape),
+                            modifier = Modifier.size(44.dp).background(Color(0xFFE0F7FA), CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(text = posterName.take(1).uppercase(), fontWeight = FontWeight.Bold, color = Color(0xFF0097A7), fontSize = 14.sp)
+                            Text(text = posterName.take(1).uppercase(), fontWeight = FontWeight.Bold, color = Color(0xFF0097A7), fontSize = 18.sp)
                         }
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
                         Column {
-                            Text(text = posterName, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                            Text(text = stringResource(R.string.member_since_label, stringResource(R.string.may_2024)), fontSize = 10.sp, color = GrayText)
+                            Text(text = posterName, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                            val joinedDate = if (sellerJoinedAt > 0) {
+                                SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(Date(sellerJoinedAt))
+                            } else {
+                                stringResource(R.string.may_2024)
+                            }
+                            Text(text = stringResource(R.string.member_since_label, joinedDate), fontSize = 12.sp, color = GrayText)
                         }
                     }
 
@@ -656,6 +692,7 @@ fun DetailedPageScreen(
                                     imageUrl = simImages?.firstOrNull(),
                                     isFavorited = isSimFav,
                                     onFavoriteClick = { toggleFavorite(data, isSimFav) },
+                                    onClick = { onItemClick(data) },
                                     modifier = Modifier.width(160.dp)
                                 )
                             }
@@ -663,11 +700,25 @@ fun DetailedPageScreen(
                     }
                 }
             }
+            
+            if (showSellerPostsDialog) {
+                item {
+                    SellerPostsDialog(
+                        sellerName = posterName,
+                        sellerPosts = sellerListings,
+                        onDismiss = { showSellerPostsDialog = false },
+                        onItemClick = { onItemClick(it) }
+                    )
+                }
+            }
 
             item { Spacer(modifier = Modifier.height(80.dp)) }
         }
     }
+  }
 }
+
+
 
 @Composable
 fun FullScreenImageDialog(

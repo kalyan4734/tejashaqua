@@ -19,6 +19,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -133,11 +134,12 @@ class MainActivity : AppCompatActivity() {
                 var isEditMode by remember { mutableStateOf(false) }
                 var selectedListingId by remember { mutableStateOf<String?>(null) }
                 var selectedListingData by remember { mutableStateOf<Map<String, Any>?>(null) }
+                var listingBackStack by remember { mutableStateOf(listOf<Map<String, Any>>()) }
                 var detailedPageSource by remember { mutableStateOf("dashboard") }
                 var chatSourceScreen by remember { mutableStateOf("detailed_page") }
                 var shouldSendInitialChatMessage by remember { mutableStateOf(false) }
 
-                var dashboardTab by remember { mutableStateOf(0) }
+                var dashboardTab by remember { mutableIntStateOf(0) }
                 var showNoInternetDialog by remember { mutableStateOf(false) }
 
                 var lastBackPressTime by remember { mutableLongStateOf(0L) }
@@ -272,7 +274,15 @@ class MainActivity : AppCompatActivity() {
                             "my_listings" -> currentScreen = "profile"
                             "saved_items" -> currentScreen = "profile"
                             "prawn_rates" -> currentScreen = "dashboard"
-                            "detailed_page" -> currentScreen = detailedPageSource
+                            "detailed_page" -> {
+                                if (listingBackStack.isNotEmpty()) {
+                                    val previous = listingBackStack.last()
+                                    listingBackStack = listingBackStack.dropLast(1)
+                                    selectedListingData = previous
+                                } else {
+                                    currentScreen = detailedPageSource
+                                }
+                            }
                             "chat" -> currentScreen = chatSourceScreen
                             "chat_list" -> currentScreen = "profile"
                             "admin_dashboard" -> currentScreen = "dashboard"
@@ -583,10 +593,14 @@ class MainActivity : AppCompatActivity() {
                                 onItemClick = { data ->
                                     selectedListingData = data
                                     detailedPageSource = "dashboard"
+                                    listingBackStack = emptyList()
                                     currentScreen = "detailed_page"
                                 },
                                 onChatListClick = { data ->
-                                    val isBuying = data["buyerId"] == userId
+                                    val sellerId = data["sellerId"]?.toString() ?: ""
+                                    val buyerId = data["buyerId"]?.toString() ?: ""
+                                    val isBuying = if (sellerId.isNotEmpty()) sellerId != userId else buyerId == userId
+                                    
                                     val updatedData = data.toMutableMap()
                                     updatedData["id"] = data["listingId"] ?: ""
                                     updatedData["posterName"] = if (isBuying) data["sellerName"]
@@ -633,13 +647,28 @@ class MainActivity : AppCompatActivity() {
                                 DetailedPageScreen(
                                     listingData = data,
                                     currentUserId = userId,
-                                    onBackClick = { currentScreen = detailedPageSource },
+                                    onBackClick = { 
+                                        if (listingBackStack.isNotEmpty()) {
+                                            val previous = listingBackStack.last()
+                                            listingBackStack = listingBackStack.dropLast(1)
+                                            selectedListingData = previous
+                                        } else {
+                                            currentScreen = detailedPageSource 
+                                        }
+                                    },
                                     onChatClick = { updatedData ->
                                         selectedListingData = updatedData
                                         chatSourceScreen = "detailed_page"
                                         shouldSendInitialChatMessage = true
                                         currentScreen = "chat"
-                                    })
+                                    },
+                                    onItemClick = { newData ->
+                                        selectedListingData?.let { current ->
+                                            listingBackStack = listingBackStack + current
+                                        }
+                                        selectedListingData = newData
+                                    }
+                                )
                             }
 
                             "chat" -> selectedListingData?.let { data ->
@@ -666,7 +695,10 @@ class MainActivity : AppCompatActivity() {
                                 currentUserId = userId,
                                 onBackClick = { currentScreen = "profile" },
                                 onChatClick = { data ->
-                                    val isBuying = data["buyerId"] == userId
+                                    val sellerId = data["sellerId"]?.toString() ?: ""
+                                    val buyerId = data["buyerId"]?.toString() ?: ""
+                                    val isBuying = if (sellerId.isNotEmpty()) sellerId != userId else buyerId == userId
+
                                     val updatedData = data.toMutableMap()
                                     updatedData["id"] = data["listingId"] ?: ""
                                     updatedData["posterName"] = if (isBuying) data["sellerName"]
@@ -704,7 +736,10 @@ class MainActivity : AppCompatActivity() {
                             })
 
                             "aqua_rates" -> AquaRatesScreen(
-                                onBackClick = { currentScreen = "dashboard" })
+                                onBackClick = { currentScreen = "dashboard" },
+                                onFishRatesClick = { currentScreen = "fish_rates" },
+                                onPrawnsClick = { currentScreen = "prawn_rates" }
+                            )
 
                             "prawn_rates" -> PrawnRatesScreen(
                                 onBackClick = { currentScreen = "dashboard" })
@@ -800,6 +835,7 @@ class MainActivity : AppCompatActivity() {
                             }, onItemClick = { data ->
                                 selectedListingData = data
                                 detailedPageSource = "saved_items"
+                                listingBackStack = emptyList()
                                 currentScreen = "detailed_page"
                             })
 

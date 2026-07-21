@@ -28,7 +28,7 @@
     <string name="add">జోడించు</string>
     <string name="news">వార్తలు</string>
     <string name="profile">ప్రొఫైల్</string>
-    <string name="search_placeholder">శీర్షిక, స్థానం లేదా వస్తువు కోసం వెతకండి…</string>
+    <string name="search_placeholder">టైటిల్, స్థానం లేదా వస్తువు కోసం వెతకండి…</string>
     <string name="fresh_marketplace">మార్కెట్‌ప్లేస్‌లో కొత్తవి</string>
     <string name="items_count">%d వస్తువులు</string>
     <string name="no_listings">జాబితాలు ఏవీ లేవు</string>
@@ -93,14 +93,14 @@
     <string name="search_label">వెతకండి %s...</string>
     <string name="clear">క్లియర్</string>
     <string name="contact_number_label">సంప్రదింపు సంఖ్య</string>
-    <string name="title_label">శీర్షిక</string>
+    <string name="title_label">టైటిల్</string>
     <string name="size_label">పరిమాణం</string>
     <string name="size_value_label">పరిమాణం విలువ</string>
     <string name="fish_age_label">చేపల వయస్సు (నెలల్లో)</string>
     <string name="quantity_label">పరిమాణం (Quantity)</string>
     <string name="stock_label">స్టాక్</string>
     <string name="no_of_stock_label">చేపల సంఖ్య</string>
-    <string name="unit_label">యూనిట్</string>
+    <string name="unit_label">యూనిట్లు</string>
     <string name="price_label">ధర (₹ లలో)</string>
     <string name="hatchery_name_label">హేచరీ పేరు</string>
     <string name="pl_days_label">PL రోజులు</string>
@@ -220,6 +220,7 @@
     <string name="fish_tuna">ట్యూనా</string>
     <string name="fish_pulasa">పులస</string>
     <string name="fish_crab">పీత (Crab)</string>
+    <string name="fish_bangaru_teega">బంగారు తీగ</string>
     <string name="fish_others">ఇతరాలు</string>
 
     <!-- Units -->
@@ -291,20 +292,23 @@
     <string name="gallery">గ్యాలరీ</string>
     <string name="fill_mandatory_fields">దయచేసి ఎరుపు రంగులో ఉన్న అన్ని తప్పనిసరి ఫీల్డ్‌లను పూరించండి</string>
     <string name="storage_permission_required">ఫోటోలను ఎంచుకోవడానికి స్టోరేజ్ అనుమతి అవసరం</string>
+    <string name="camera_permission_title">కెమెరా అనుమతి (Camera Permission)</string>
+    <string name="camera_permission_required">ఫోటోలు తీయడానికి కెమెరా అనుమతి అవసరం</string>
+    <string name="camera_permission_denied">కెమెరా అనుమతి నిరాకరించబడింది. ఫోటోలు తీయడానికి దయచేసి సెట్టింగ్స్‌లో అనుమతించండి.</string>
     <string name="edit_profile">ప్రొఫైల్‌ను సవరించండి</string>
     <string name="user_name_label">వినియోగదారు పేరు</string>
     <string name="phone_number_label">ఫోన్ నంబర్</string>
     <string name="profile_updated">ప్రొఫైల్ నవీకరించబడింది</string>
     <string name="update_profile">ప్రొఫైల్‌ను అప్‌డేట్ చేయండి</string>
     <string name="updating_profile">ప్రొఫైల్‌ను అప్‌డేట్ చేస్తోంది…</string>
-    <string name="no_title">శీర్షిక లేదు</string>
+    <string name="no_title">టైటిల్ లేదు</string>
     <string name="not_available_short">సమాచారం లేదు</string>
     <string name="coming_soon">త్వరలో వస్తుంది</string>
     <string name="loading_marketplace">మార్కెట్‌ప్లేస్‌ను లోడ్ చేస్తోంది…</string>
     <string name="version_label">వెర్షన్ %s</string>
     <string name="contact_us">మమ్మల్ని సంప్రదించండి</string>
     <string name="website">వెబ్‌సైట్</string>
-    <string name="all_rights_reserved">© 2024 తేజశ్ ఆక్వా. అన్ని హక్కులు ప్రత్యేకించబడ్డాయి.</string>
+    <string name="all_rights_reserved">© 2026 తేజశ్ ఆక్వా. అన్ని హక్కులు ప్రత్యేకించబడ్డాయి.</string>
     <string name="choose_language">మీ భాషను ఎంచుకోండి</string>
     <string name="signing_in">మిమ్మల్ని లాగిన్ చేస్తోంది…</string>
     <string name="admin_portal">అడ్మిన్ పోర్టల్</string>
@@ -331,7 +335,7 @@
     <string name="acres_suffix">%s ఎకరాలు</string>
     <string name="privacy_policy_content">
 తేజశ్ ఆక్వా గోప్యతా విధానం (Privacy Policy)
-ప్రభావవంతమైన తేదీ: మే 20, 2026
+ప్రభావవంతమైన తేదీ: July 20, 2026
 
 తేజశ్ ఆక్వా (\"మేము,\" \"మా,\" లేదా \"మాకు\") మీ గోప్యతను రక్షించడానికి కట్టుబడి ఉంది. మీరు మా మొబైల్ అప్లికేషన్‌ను ఉపయోగించినప్పుడు మేము మీ సమాచారాన్ని ఎలా సేకరిస్తాము, ఉపయోగిస్తాము మరియు వెల్లడిస్తాము అనేది ఈ గోప్యతా విధానం వివరిస్తుంది.
 
@@ -366,7 +370,7 @@
 ఈ యాప్‌ను ఉపయోగించడానికి మీకు కనీసం 18 ఏళ్లు నిండి ఉండాలి లేదా తల్లిదండ్రుల పర్యవేక్షణ ఉండాలి.
 
 2. వినియోగదారు కంటెంట్
-మీ జాబితాల కంటెంట్ (శీర్షికలు, ధరలు, చిత్రాలు) కోసం మీరు మాత్రమే బాధ్యత వహిస్తారు. మీరు చట్టవిరుద్ధమైన, మోసపూరితమైన లేదా తప్పుదోవ పట్టించే సమాచారాన్ని పోస్ట్ చేయకూడదు.
+మీ జాబితాల కంటెంట్ (Title, ధరలు, చిత్రాలు) కోసం మీరు మాత్రమే బాధ్యత వహిస్తారు. మీరు చట్టవిరుద్ధమైన, మోసపూరితమైన లేదా తప్పుదోవ పట్టించే సమాచారాన్ని పోస్ట్ చేయకూడదు.
 
 3. లావాదేవీలు
 తేజశ్ ఆక్వా ఒక మార్కెట్‌ప్లేస్ ప్లాట్‌ఫారమ్. కొనుగోలుదారులు మరియు విక్రేతల మధ్య అసలు లావాదేవీలో మేము పాల్గొనము. ప్రకటన చేయబడిన వస్తువుల నాణ్యత, భద్రత లేదా చట్టబద్ధతకు మేము బాధ్యత వహించము.
@@ -395,6 +399,8 @@
     <string name="count_label">కౌంట్ %s</string>
     <string name="no_internet_connection">ఇంటర్నెట్ కనెక్షన్ లేదు</string>
     <string name="no_internet_title">ఇంటర్నెట్ లేదు</string>
+    <string name="notifications">నోటిఫికేషన్లు</string>
+    <string name="no_notifications">కొత్త నోటిఫికేషన్లు లేవు</string>
     <string name="no_internet_desc">దయచేసి మీ ఇంటర్నెట్ కనెక్షన్‌ని తనిఖీ చేసి, మళ్లీ ప్రయత్నించండి.</string>
     <string name="location_disclosure_title">స్థాన అనుమతి (Location Permission)</string>
     <string name="location_disclosure_desc">మీ ప్రాంతంలోని సంబంధిత ఆక్వా మార్కెట్‌ప్లేస్ జాబితాలను చూపడానికి మరియు మీ పోస్ట్‌ల కోసం స్థానాలను ఎంచుకోవడానికి తేజశ్ ఆక్వాకు మీ స్థానం (Location) అవసరం.</string>

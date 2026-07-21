@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarMonth
@@ -92,7 +93,12 @@ fun AdminDashboardScreen(onBackClick: () -> Unit) {
             )
         }
     ) { innerPadding ->
-        Column(modifier = Modifier.padding(innerPadding)) {
+        Column(
+            modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize()
+                .imePadding()
+        ) {
             TabRow(selectedTabIndex = selectedTab, containerColor = Color.White, contentColor = AquaBlue) {
                 tabs.forEachIndexed { index, title ->
                     Tab(
@@ -128,9 +134,7 @@ fun FishRatesAdmin(selectedDate: Long) {
     )
 
     val fishTypes = listOf(
-        "Prawns", "Rohu", "Katla", "Karamosu", "Gaddi chepa", "Pangasius", 
-        "Roopchand", "Pandu gappa", "Tilapia", "Chitala", "Koramenu", 
-        "Valuga", "Engilayi", "Jalla", "Tuna", "Pulasa", "Crab", "Others"
+        "Rohu", "Pangasius", "Roopchand"
     )
 
     // Fetch current rates and previous day rates
@@ -170,88 +174,95 @@ fun FishRatesAdmin(selectedDate: Long) {
         }
     }
 
-    LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        items(rates) { rate ->
-            var priceText by remember(rate.price) { mutableStateOf(rate.price) }
-            var changeText by remember(rate.change) { mutableStateOf(rate.change) }
-            var trendState by remember(rate.trend) { mutableStateOf(rate.trend) }
-
-            // Auto-calculate change and trend when price changes
-            LaunchedEffect(priceText) {
-                val prevPrice = previousRates[rate.name] ?: 0.0
-                val currentPrice = priceText.split("-").first().filter { it.isDigit() || it == '.' }.toDoubleOrNull() ?: 0.0
-                
-                if (prevPrice > 0 && currentPrice > 0) {
-                    val diff = (currentPrice - prevPrice).toInt()
-                    trendState = when {
-                        diff > 0 -> RateTrend.UP
-                        diff < 0 -> RateTrend.DOWN
-                        else -> RateTrend.FLAT
-                    }
-                    changeText = when {
-                        diff > 0 -> "+₹$diff"
-                        diff < 0 -> "-₹${Math.abs(diff)}"
-                        else -> "No Change"
-                    }
-                }
-            }
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(2.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(rate.getDisplayName(), fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            items(rates) { rate ->
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    elevation = CardDefaults.cardElevation(2.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(rate.getDisplayName(), fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Spacer(modifier = Modifier.height(12.dp))
                         OutlinedTextField(
-                            value = priceText,
-                            onValueChange = { priceText = it },
+                            value = rate.price,
+                            onValueChange = { newPrice ->
+                                val prevPrice = previousRates[rate.name] ?: 0.0
+                                val currentPrice = newPrice.split("-").first().filter { it.isDigit() || it == '.' }.toDoubleOrNull() ?: 0.0
+                                
+                                var newTrend = rate.trend
+                                var newChange = rate.change
+                                
+                                if (prevPrice > 0 && currentPrice > 0) {
+                                    val diff = (currentPrice - prevPrice).toInt()
+                                    newTrend = when {
+                                        diff > 0 -> RateTrend.UP
+                                        diff < 0 -> RateTrend.DOWN
+                                        else -> RateTrend.FLAT
+                                    }
+                                    newChange = when {
+                                        diff > 0 -> "+₹$diff"
+                                        diff < 0 -> "-₹${Math.abs(diff)}"
+                                        else -> "No Change"
+                                    }
+                                }
+                                
+                                rates = rates.map { 
+                                    if (it.name == rate.name) it.copy(price = newPrice, trend = newTrend, change = newChange) 
+                                    else it 
+                                }
+                            },
                             label = { Text(stringResource(R.string.price_placeholder)) },
                             modifier = Modifier.fillMaxWidth(),
                             keyboardOptions = keyboardOptions
                         )
                     }
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
-                        Button(
-                            onClick = {
-                                keyboardController?.hide()
-                                val data = mapOf(
-                                    "price" to priceText,
-                                    "change" to changeText,
-                                    "trend" to trendState.name,
-                                    "isPrawn" to rate.isPrawn,
-                                    "lastUpdated" to selectedDate
-                                )
-                                // Update current rate
-                                db.collection("aqua_rates").document(rate.name).set(data)
-                                    .addOnSuccessListener { 
-                                        // Save to history for the graph
-                                        val historyId = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date(selectedDate))
-                                        val cleanPrice = priceText.split("-").first().filter { it.isDigit() || it == '.' }
-                                        val priceVal = cleanPrice.toDoubleOrNull() ?: 0.0
-                                        if (priceVal > 0) {
-                                            val historyData = mapOf(
-                                                "price" to priceVal,
-                                                "timestamp" to selectedDate,
-                                                "displayPrice" to priceText
-                                            )
-                                            db.collection("aqua_rates").document(rate.name)
-                                                .collection("history").document(historyId).set(historyData)
-                                        }
-                                        Toast.makeText(context, context.getString(R.string.item_updated, rate.name), Toast.LENGTH_SHORT).show()
-                                    }
-                            }
-                        ) {
-                            Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(stringResource(R.string.save))
-                        }
-                    }
                 }
             }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(
+            onClick = {
+                keyboardController?.hide()
+                val batch = db.batch()
+                rates.forEach { rate ->
+                    val ref = db.collection("aqua_rates").document(rate.name)
+                    val data = mapOf(
+                        "price" to rate.price,
+                        "change" to rate.change,
+                        "trend" to rate.trend.name,
+                        "isPrawn" to rate.isPrawn,
+                        "lastUpdated" to selectedDate
+                    )
+                    batch.set(ref, data)
+                    
+                    // Save to history for the graph
+                    val historyId = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date(selectedDate))
+                    val cleanPrice = rate.price.split("-").first().filter { it.isDigit() || it == '.' }
+                    val priceVal = cleanPrice.toDoubleOrNull() ?: 0.0
+                    if (priceVal > 0) {
+                        val historyData = mapOf(
+                            "price" to priceVal,
+                            "timestamp" to selectedDate,
+                            "displayPrice" to rate.price
+                        )
+                        batch.set(ref.collection("history").document(historyId), historyData)
+                    }
+                }
+                batch.commit().addOnSuccessListener {
+                    Toast.makeText(context, "All Rates Updated Successfully", Toast.LENGTH_SHORT).show()
+                }
+            },
+            modifier = Modifier.fillMaxWidth().height(56.dp),
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = AquaBlue)
+        ) {
+            Icon(Icons.Default.Save, contentDescription = null)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("SAVE ALL RATES", fontWeight = FontWeight.Bold, fontSize = 16.sp)
         }
     }
 }
@@ -270,8 +281,9 @@ fun PrawnRatesAdmin(selectedDate: Long) {
     val markets = listOf("Bhimavaram", "Nellore", "Kakinada", "Machilipatnam")
     var expanded by remember { mutableStateOf(false) }
 
-    val counts = listOf("200", "100", "90", "80", "70", "60", "50", "45", "40", "35", "30")
+    val counts = listOf("100", "90", "80", "70", "60", "50", "47", "45", "40", "37", "35", "30", "25", "20", "200")
     var prices by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
+    var previousSummaryPrice by remember { mutableDoubleStateOf(0.0) }
 
     LaunchedEffect(selectedMarket) {
         db.collection("prawn_rates").document(selectedMarket).get().addOnSuccessListener { doc ->
@@ -282,6 +294,19 @@ fun PrawnRatesAdmin(selectedDate: Long) {
                 prices = emptyMap()
             }
         }
+    }
+
+    LaunchedEffect(selectedDate) {
+        val prevCal = Calendar.getInstance().apply {
+            time = Date(selectedDate)
+            add(Calendar.DAY_OF_YEAR, -1)
+        }
+        val prevId = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(prevCal.time)
+        
+        db.collection("aqua_rates").document("Prawns").collection("history").document(prevId).get()
+            .addOnSuccessListener { doc ->
+                previousSummaryPrice = doc.getDouble("price") ?: 0.0
+            }
     }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
@@ -316,37 +341,97 @@ fun PrawnRatesAdmin(selectedDate: Long) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             items(counts) { count ->
-                var price by remember(count, prices) { mutableStateOf(prices[count] ?: "") }
+                val price = prices[count] ?: ""
                 
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(stringResource(R.string.count_label, count), modifier = Modifier.width(80.dp), fontWeight = FontWeight.Bold)
                     OutlinedTextField(
                         value = price,
-                        onValueChange = { price = it },
+                        onValueChange = { newValue ->
+                            prices = prices.toMutableMap().apply { put(count, newValue) }
+                        },
                         label = { Text(stringResource(R.string.rupees_per_kg_label)) },
                         modifier = Modifier.weight(1f),
                         keyboardOptions = keyboardOptions
                     )
-                    IconButton(onClick = {
-                        keyboardController?.hide()
-                        val newPrices = prices.toMutableMap()
-                        newPrices[count] = price
-                        val data = mapOf(
-                            "rates" to newPrices,
-                            "lastUpdated" to selectedDate
-                        )
-                        db.collection("prawn_rates").document(selectedMarket).set(data)
-                            .addOnSuccessListener { 
-                                prices = newPrices
-                                Toast.makeText(context, context.getString(R.string.item_updated, "Count $count"), Toast.LENGTH_SHORT).show()
-                            }
-                    }) {
-                        Icon(Icons.Default.Save, contentDescription = null, tint = AquaBlue)
-                    }
                 }
             }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(
+            onClick = {
+                keyboardController?.hide()
+                val batch = db.batch()
+                
+                // 1. Update market-specific prawn rates
+                val marketRef = db.collection("prawn_rates").document(selectedMarket)
+                batch.set(marketRef, mapOf(
+                    "rates" to prices,
+                    "lastUpdated" to selectedDate
+                ))
+
+                // 2. Automatically update summary "Prawns" rate in aqua_rates
+                if (prices.containsKey("100")) {
+                    val summaryRef = db.collection("aqua_rates").document("Prawns")
+                    val price100 = prices["100"] ?: ""
+                    
+                    if (price100.isNotEmpty()) {
+                        val displayPrice = "₹$price100"
+                        val currentVal = price100.filter { it.isDigit() || it == '.' }.toDoubleOrNull() ?: 0.0
+                        
+                        var trend = RateTrend.FLAT
+                        var change = context.getString(R.string.no_change)
+                        
+                        if (previousSummaryPrice > 0 && currentVal > 0) {
+                            val diff = (currentVal - previousSummaryPrice).toInt()
+                            trend = when {
+                                diff > 0 -> RateTrend.UP
+                                diff < 0 -> RateTrend.DOWN
+                                else -> RateTrend.FLAT
+                            }
+                            change = when {
+                                diff > 0 -> "+₹$diff"
+                                diff < 0 -> "-₹${Math.abs(diff)}"
+                                else -> context.getString(R.string.no_change)
+                            }
+                        }
+
+                        batch.set(summaryRef, mapOf(
+                            "price" to displayPrice,
+                            "change" to change,
+                            "trend" to trend.name,
+                            "isPrawn" to true,
+                            "lastUpdated" to selectedDate
+                        ), com.google.firebase.firestore.SetOptions.merge())
+
+                        // 3. Save to history for the summary graph
+                        val historyId = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date(selectedDate))
+                        if (currentVal > 0) {
+                            val historyData = mapOf(
+                                "price" to currentVal,
+                                "timestamp" to selectedDate,
+                                "displayPrice" to displayPrice
+                            )
+                            batch.set(summaryRef.collection("history").document(historyId), historyData)
+                        }
+                    }
+                }
+
+                batch.commit().addOnSuccessListener { 
+                    Toast.makeText(context, "All Prawn Rates Updated Successfully", Toast.LENGTH_SHORT).show()
+                }
+            },
+            modifier = Modifier.fillMaxWidth().height(56.dp),
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = AquaBlue)
+        ) {
+            Icon(Icons.Default.Save, contentDescription = null)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("SAVE ALL PRAWN RATES", fontWeight = FontWeight.Bold, fontSize = 16.sp)
         }
     }
 }

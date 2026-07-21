@@ -198,11 +198,18 @@ class AuthViewModel(application: android.app.Application) : AndroidViewModel(app
             return
         }
         val phoneNumber = auth.currentUser?.phoneNumber?.removePrefix("+91") ?: ""
+        val adminNumbers = listOf("9359599599", "8014311143")
+        val isSuperAdmin = adminNumbers.contains(phoneNumber)
         
         _authState.value = AuthState.Loading
         db.collection("users").document(userId).get()
             .addOnSuccessListener { document ->
-                val isAdmin = document.getBoolean("isAdmin") ?: false
+                var isAdmin = document.getBoolean("isAdmin") ?: false
+                
+                if (isSuperAdmin && !isAdmin) {
+                    isAdmin = true
+                    db.collection("users").document(userId).update("isAdmin", true)
+                }
                 
                 if (document.exists()) {
                     val name = document.getString("name") ?: "User"
@@ -225,10 +232,10 @@ class AuthViewModel(application: android.app.Application) : AndroidViewModel(app
                         "phone" to phoneNumber,
                         "joinedAt" to now,
                         "onboardingComplete" to false,
-                        "isAdmin" to false
+                        "isAdmin" to isSuperAdmin
                     )
                     db.collection("users").document(userId).set(user)
-                    _authState.value = AuthState.RequireName(phoneNumber, false)
+                    _authState.value = AuthState.RequireName(phoneNumber, isSuperAdmin)
                 }
             }
             .addOnFailureListener { e ->
@@ -243,7 +250,11 @@ class AuthViewModel(application: android.app.Application) : AndroidViewModel(app
         
         db.collection("users").document(userId).get().addOnSuccessListener { doc ->
             val joinedAt = doc.getLong("joinedAt") ?: now
-            val isAdmin = doc.getBoolean("isAdmin") ?: false
+            val adminNumbers = listOf("9359599599", "8014311143")
+            val isSuperAdmin = adminNumbers.contains(phoneNumber)
+            var isAdmin = doc.getBoolean("isAdmin") ?: false
+            if (isSuperAdmin) isAdmin = true
+
             val updates = hashMapOf<String, Any>(
                 "name" to name,
                 "onboardingComplete" to true
@@ -278,7 +289,10 @@ class AuthViewModel(application: android.app.Application) : AndroidViewModel(app
                 val doc = db.collection("users").document(userId).get().await()
                 val phoneNumber = doc.getString("phone") ?: ""
                 val joinedAt = doc.getLong("joinedAt") ?: System.currentTimeMillis()
-                val isAdmin = doc.getBoolean("isAdmin") ?: false
+                
+                val adminNumbers = listOf("9359599599", "8014311143")
+                var isAdmin = doc.getBoolean("isAdmin") ?: false
+                if (adminNumbers.contains(phoneNumber)) isAdmin = true
                 
                 _authState.value = AuthState.Success(userId, name, phoneNumber, joinedAt, isAdmin)
                 onSuccess()
@@ -319,7 +333,11 @@ class AuthViewModel(application: android.app.Application) : AndroidViewModel(app
                 db.collection("users").document(userId).get().addOnSuccessListener { doc ->
                     val currentName = doc.getString("name") ?: "User"
                     val joinedAt = doc.getLong("joinedAt") ?: System.currentTimeMillis()
-                    val isAdmin = doc.getBoolean("isAdmin") ?: false
+                    
+                    val adminNumbers = listOf("9359599599", "8014311143")
+                    var isAdmin = doc.getBoolean("isAdmin") ?: false
+                    if (adminNumbers.contains(phoneNumber)) isAdmin = true
+
                     _authState.value = AuthState.Success(userId, currentName, phoneNumber, joinedAt, isAdmin)
                 }
             }

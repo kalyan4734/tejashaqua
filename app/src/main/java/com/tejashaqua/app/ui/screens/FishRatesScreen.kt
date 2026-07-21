@@ -36,9 +36,7 @@ fun FishRatesScreen(onBackClick: () -> Unit) {
     val keyboardController = LocalSoftwareKeyboardController.current
 
     val fishTypes = listOf(
-        "Rohu", "Katla", "Karamosu", "Gaddi chepa", "Pangasius", 
-        "Roopchand", "Pandu gappa", "Tilapia", "Chitala", "Koramenu", 
-        "Valuga", "Jalla", "Tuna", "Pulasa", "Crab", "Others"
+        "Rohu", "Pangasius", "Roopchand"
     )
     
     var rates by remember { mutableStateOf<List<AquaRate>>(emptyList()) }

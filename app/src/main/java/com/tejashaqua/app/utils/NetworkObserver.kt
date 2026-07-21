@@ -10,6 +10,8 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
+import kotlinx.coroutines.delay
+
 /**
  * Robust network observer that tracks the actual internet connectivity status.
  * It uses the default network callback to ensure we only respond to changes
@@ -33,12 +35,9 @@ class NetworkObserver(context: Context) {
 
             override fun onLost(network: Network) {
                 super.onLost(network)
-                updateStatus()
-            }
-
-            override fun onLosing(network: Network, maxMsToLive: Int) {
-                super.onLosing(network, maxMsToLive)
-                updateStatus()
+                // When a network is lost, we check if there's any other fallback network
+                // before immediately reporting as Lost.
+                updateStatus(isLosing = true)
             }
 
             override fun onUnavailable() {
@@ -46,16 +45,30 @@ class NetworkObserver(context: Context) {
                 updateStatus()
             }
 
-            private fun updateStatus() {
+            private fun updateStatus(isLosing: Boolean = false) {
                 val activeNetwork = connectivityManager.activeNetwork
                 val capabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
                 
-                // We check for INTERNET capability.
-                // To avoid flickering, we consider it available if it has INTERNET capability.
-                val hasInternet = capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) ?: false
+                // We check for INTERNET capability AND VALIDATED status.
+                // VALIDATED means the system has confirmed there is actual internet access.
+                val hasInternet = capabilities != null &&
+                        capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+                        capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
 
                 launch {
-                    send(if (hasInternet) Status.Available else Status.Lost)
+                    if (!hasInternet && isLosing) {
+                        // Small delay before confirming loss to handle network handovers (WiFi -> Data)
+                        delay(2000)
+                        val retryCapabilities = connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)
+                        val stillNoInternet = retryCapabilities == null ||
+                                !retryCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+                        
+                        if (stillNoInternet) {
+                            send(Status.Lost)
+                        }
+                    } else {
+                        send(if (hasInternet) Status.Available else Status.Lost)
+                    }
                 }
             }
         }
@@ -66,7 +79,9 @@ class NetworkObserver(context: Context) {
         // Initial state check
         val activeNetwork = connectivityManager.activeNetwork
         val capabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
-        val isInitiallyConnected = capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
+        val isInitiallyConnected = capabilities != null &&
+                capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+                capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
         launch { send(if (isInitiallyConnected) Status.Available else Status.Lost) }
 
         awaitClose {

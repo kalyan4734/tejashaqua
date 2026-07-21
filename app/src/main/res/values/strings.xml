@@ -220,6 +220,7 @@
     <string name="fish_tuna">Tuna</string>
     <string name="fish_pulasa">Pulasa</string>
     <string name="fish_crab">Crab</string>
+    <string name="fish_bangaru_teega">Bangaru Teega</string>
     <string name="fish_others">Others</string>
 
     <!-- Units -->
@@ -290,7 +291,11 @@
     <string name="camera">Camera</string>
     <string name="gallery">Gallery</string>
     <string name="fill_mandatory_fields">Please fill all mandatory fields highlighted in red</string>
+    <string name="storage_permission_title">Storage Permission</string>
     <string name="storage_permission_required">Storage permission is required to select photos</string>
+    <string name="camera_permission_title">Camera Permission</string>
+    <string name="camera_permission_required">Camera permission is required to take photos</string>
+    <string name="camera_permission_denied">Camera permission denied. Please enable it in settings to take photos.</string>
     <string name="edit_profile">Edit Profile</string>
     <string name="user_name_label">User Name</string>
     <string name="phone_number_label">Phone Number</string>
@@ -304,7 +309,7 @@
     <string name="version_label">Version %s</string>
     <string name="contact_us">Contact Us</string>
     <string name="website">Website</string>
-    <string name="all_rights_reserved">© 2024 Tejash Aqua. All rights reserved.</string>
+    <string name="all_rights_reserved">© 2026 Tejash Aqua. All rights reserved.</string>
     <string name="choose_language">Choose Your Language</string>
     <string name="signing_in">Signing you in…</string>
     <string name="admin_portal">Admin Portal</string>
@@ -331,7 +336,7 @@
     <string name="acres_suffix">%s Acres</string>
     <string name="privacy_policy_content">
 Privacy Policy for TejashAqua
-Effective Date: May 20, 2026
+Effective Date: July 19, 2026
 
 TejashAqua (\"we,\" \"our,\" or \"us\") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, and disclose your information when you use our mobile application.
 
@@ -395,6 +400,8 @@ These terms shall be governed by and construed in accordance with the laws of In
     <string name="count_label">Count %s</string>
     <string name="no_internet_connection">No Internet Connection</string>
     <string name="no_internet_title">No Internet</string>
+    <string name="notifications">Notifications</string>
+    <string name="no_notifications">No new notifications</string>
     <string name="no_internet_desc">Please check your internet connection and try again.</string>
     <string name="location_disclosure_title">Location Permission</string>
     <string name="location_disclosure_desc">Tejash Aqua needs your location to show you relevant aqua marketplace listings in your area and help you select locations for your posts.</string>

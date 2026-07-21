@@ -2,6 +2,7 @@ package com.tejashaqua.app.ui.components
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -40,7 +41,9 @@ fun MarketItem(
     modifier: Modifier = Modifier,
     isFavorited: Boolean = false,
     timestamp: Long = 0L,
-    onFavoriteClick: (() -> Unit)? = null
+    onFavoriteClick: (() -> Unit)? = null,
+    onClick: (() -> Unit)? = null,
+    onPosterClick: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val displayLocation = remember(location) {
@@ -91,7 +94,7 @@ fun MarketItem(
     }
 
     Surface(
-        modifier = modifier,
+        modifier = if (onClick != null) modifier.clickable { onClick() } else modifier,
         shape = RoundedCornerShape(12.dp),
         border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEEEEEE)),
         color = Color.White,
@@ -144,7 +147,12 @@ fun MarketItem(
                     }
                 }
                 Spacer(modifier = Modifier.height(4.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.clickable(enabled = onPosterClick != null) { 
+                        onPosterClick?.invoke() 
+                    }
+                ) {
                     Icon(Icons.Default.Person, null, tint = categoryColor, modifier = Modifier.size(12.dp))
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(text = stringResource(R.string.by_label, posterName), fontSize = 10.sp, color = Color.DarkGray, maxLines = 1)

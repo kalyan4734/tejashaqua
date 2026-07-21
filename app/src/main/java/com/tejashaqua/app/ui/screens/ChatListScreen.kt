@@ -84,8 +84,9 @@ fun ChatListScreen(
                 
                 val chatList = snapshot.documents.mapNotNull { doc ->
                     val data = doc.data ?: return@mapNotNull null
+                    val sellerId = data["sellerId"] as? String ?: ""
                     val buyerId = data["buyerId"] as? String ?: ""
-                    val isBuying = buyerId == currentUserId
+                    val isBuying = if (sellerId.isNotEmpty()) sellerId != currentUserId else buyerId == currentUserId
                     
                     val unreadCounts = data["unreadCounts"] as? Map<*, *>
                     val unreadCount = (unreadCounts?.get(currentUserId) as? Long)?.toInt() ?: 

@@ -42,7 +42,7 @@ fun PrawnRatesScreen(onBackClick: () -> Unit) {
     val db = FirebaseFirestore.getInstance()
     val keyboardController = LocalSoftwareKeyboardController.current
 
-    val counts = listOf("200", "100", "90", "80", "70", "60", "50", "45", "40", "35", "30")
+    val counts = listOf("100", "90", "80", "70", "60", "50", "47", "45", "40", "37", "35", "30", "25", "20", "200")
     var prices by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var lastUpdatedDate by remember { mutableStateOf("") }
 

@@ -39,6 +39,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.DocumentSnapshot
 import com.tejashaqua.app.R
 import com.tejashaqua.app.data.model.AquaRate
 import com.tejashaqua.app.data.model.RateTrend
@@ -50,6 +51,11 @@ import com.tejashaqua.app.ui.components.RateGraphBottomSheet
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+
+import com.tejashaqua.app.data.model.CustomerInfo
+import com.tejashaqua.app.data.repository.CustomerRepository
+import com.tejashaqua.app.ui.components.CustomerFoundDialog
+import com.tejashaqua.app.ui.components.SellerPostsDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -90,6 +96,19 @@ fun DashboardScreen(
     var showGraphSheet by remember { mutableStateOf(false) }
     var selectedRateForGraph by remember { mutableStateOf<AquaRate?>(null) }
 
+    var selectedCustomer by remember { mutableStateOf<CustomerInfo?>(null) }
+    
+    var showSellerPostsDialog by remember { mutableStateOf(false) }
+    var selectedSellerId by remember { mutableStateOf("") }
+    var selectedSellerName by remember { mutableStateOf("") }
+
+    // Logic to detect special search
+    LaunchedEffect(productSearchText) {
+        if (productSearchText.lowercase().trim() == "sowmya") {
+            selectedCustomer = CustomerRepository.getCustomerBySearch(productSearchText)
+        }
+    }
+
     val fetchedName by locationViewModel.currentLocationName.collectAsState()
     val fetchedSub by locationViewModel.currentSubLocation.collectAsState()
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -103,14 +122,64 @@ fun DashboardScreen(
     }
 
     var showWelcomeSheet by remember { mutableStateOf(showNameSheetInitial) } 
+    var showNotificationsSheet by remember { mutableStateOf(false) }
     var tempName by remember { mutableStateOf("") }
 
     // Marketplace State
     val db = remember { FirebaseFirestore.getInstance() }
     var listings by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
     var favoriteIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var lastCheckedNotifications by remember { mutableLongStateOf(0L) }
+    var unreadNotificationCount by remember { mutableIntStateOf(0) }
     var blockedUsers by remember { mutableStateOf<Set<String>>(emptySet()) }
     var isLoadingListings by remember { mutableStateOf(true) }
+    var lastVisibleDoc by remember { mutableStateOf<DocumentSnapshot?>(null) }
+    var isLastPage by remember { mutableStateOf(false) }
+    var isPaginating by remember { mutableStateOf(false) }
+
+    fun loadListings(isFirstPage: Boolean = false) {
+        if (isFirstPage) {
+            isLoadingListings = true
+            lastVisibleDoc = null
+            isLastPage = false
+        } else {
+            if (isLastPage || isPaginating) return
+            isPaginating = true
+        }
+
+        var query = db.collection("listings")
+            .orderBy("timestamp", Query.Direction.DESCENDING)
+            .limit(20)
+
+        if (!isFirstPage && lastVisibleDoc != null) {
+            query = query.startAfter(lastVisibleDoc!!)
+        }
+
+        query.get().addOnSuccessListener { snapshot ->
+            val newItems = snapshot.documents.map { 
+                val data = it.data?.toMutableMap() ?: mutableMapOf()
+                data["id"] = it.id
+                data
+            }
+            
+            if (isFirstPage) {
+                listings = newItems
+            } else {
+                listings = listings + newItems
+            }
+
+            if (snapshot.documents.isNotEmpty()) {
+                lastVisibleDoc = snapshot.documents[snapshot.size() - 1]
+            }
+            
+            isLastPage = snapshot.size() < 20
+            isLoadingListings = false
+            isPaginating = false
+        }.addOnFailureListener {
+            isLoadingListings = false
+            isPaginating = false
+        }
+    }
 
     LaunchedEffect(currentUserId) {
         if (currentUserId.isNotEmpty()) {
@@ -119,25 +188,30 @@ fun DashboardScreen(
                     if (snapshot != null && snapshot.exists()) {
                         val blocked = snapshot.get("blockedUsers") as? List<*>
                         blockedUsers = blocked?.mapNotNull { it?.toString() }?.toSet() ?: emptySet()
+                        
+                        lastCheckedNotifications = snapshot.getLong("lastCheckedNotifications") ?: 0L
                     }
                 }
         }
     }
 
-    LaunchedEffect(Unit) {
-        db.collection("listings")
-            .orderBy("timestamp", Query.Direction.DESCENDING)
-            .limit(100)
-            .addSnapshotListener { value, error ->
-                if (value != null) {
-                    listings = value.documents.map { 
-                        val data = it.data?.toMutableMap() ?: mutableMapOf()
-                        data["id"] = it.id
-                        data
-                    }
-                }
-                isLoadingListings = false
+    // Update unread count whenever listings or lastCheckedNotifications change
+    LaunchedEffect(listings, lastCheckedNotifications) {
+        if (lastCheckedNotifications > 0) {
+            listings.count { data ->
+                val ts = data["timestamp"] as? Long ?: 0L
+                val userId = data["userId"] as? String ?: ""
+                ts > lastCheckedNotifications && userId != currentUserId
             }
+        } else {
+            0
+        }.let { 
+            unreadNotificationCount = it
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        loadListings(isFirstPage = true)
     }
 
     LaunchedEffect(currentUserId) {
@@ -193,11 +267,20 @@ fun DashboardScreen(
         }
     }.value
 
+    val selectedSellerPosts = remember(selectedSellerId, listings) {
+        if (selectedSellerId.isEmpty()) emptyList()
+        else listings.filter { (it["userId"] as? String) == selectedSellerId }
+    }
+
     // Chat State
     var chats by remember { mutableStateOf(listOf<ChatListItemData>()) }
     var isLoadingChats by remember { mutableStateOf(true) }
     var chatSearchText by remember { mutableStateOf("") }
     var chatSelectedTabIndex by remember { mutableIntStateOf(0) }
+
+    val totalUnreadCount by remember {
+        derivedStateOf { chats.sumOf { it.unreadCount } }
+    }
 
     LaunchedEffect(currentUserId) {
         if (currentUserId.isEmpty()) {
@@ -213,8 +296,9 @@ fun DashboardScreen(
                 
                 chats = snapshot.documents.mapNotNull { doc ->
                     val data = doc.data ?: return@mapNotNull null
+                    val sellerId = data["sellerId"] as? String ?: ""
                     val buyerId = data["buyerId"] as? String ?: ""
-                    val isBuying = buyerId == currentUserId
+                    val isBuying = if (sellerId.isNotEmpty()) sellerId != currentUserId else buyerId == currentUserId
                     
                     val unreadCounts = data["unreadCounts"] as? Map<*, *>
                     val unreadCount = (unreadCounts?.get(currentUserId) as? Long)?.toInt() ?: 
@@ -291,7 +375,31 @@ fun DashboardScreen(
                                 )
                             }
                         }
-                        Icon(Icons.Default.Public, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
+                        IconButton(onClick = {
+                            keyboardController?.hide()
+                            showNotificationsSheet = true
+                            
+                            // Mark as read by updating timestamp to current time
+                            if (currentUserId.isNotEmpty()) {
+                                db.collection("users").document(currentUserId)
+                                    .update("lastCheckedNotifications", System.currentTimeMillis())
+                            }
+                        }) {
+                            BadgedBox(
+                                badge = {
+                                    if (unreadNotificationCount > 0) {
+                                        Badge(
+                                            containerColor = Color.Red,
+                                            contentColor = Color.White
+                                        ) {
+                                            Text(text = if (unreadNotificationCount > 9) "9+" else unreadNotificationCount.toString())
+                                        }
+                                    }
+                                }
+                            ) {
+                                Icon(Icons.Default.Public, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
+                            }
+                        }
                     }
                 }
             } else if (selectedItem == 2) {
@@ -401,7 +509,22 @@ fun DashboardScreen(
                     Icon(Icons.Default.Add, stringResource(R.string.add), modifier = Modifier.size(30.dp))
                 }
                 NavigationBarItem(
-                    icon = { Icon(Icons.Default.Chat, stringResource(R.string.chats)) },
+                    icon = { 
+                        BadgedBox(
+                            badge = {
+                                if (totalUnreadCount > 0) {
+                                    Badge(
+                                        containerColor = Color.Red,
+                                        contentColor = Color.White
+                                    ) {
+                                        Text(text = if (totalUnreadCount > 99) "99+" else totalUnreadCount.toString())
+                                    }
+                                }
+                            }
+                        ) {
+                            Icon(Icons.AutoMirrored.Filled.Chat, stringResource(R.string.chats))
+                        }
+                    },
                     selected = selectedItem == 2,
                     onClick = { 
                         keyboardController?.hide()
@@ -491,7 +614,17 @@ fun DashboardScreen(
                             }
                         }
                     } else {
-                        items(filteredListings.chunked(2)) { rowItems ->
+                        val chunkedItems = filteredListings.chunked(2)
+                        items(chunkedItems.size) { index ->
+                            val rowItems = chunkedItems[index]
+                            
+                            // Load more when reaching near the end
+                            if (index >= chunkedItems.size - 2 && !isLastPage && !isPaginating && productSearchText.isBlank() && selectedCategoryFilter == "All") {
+                                SideEffect {
+                                    loadListings(isFirstPage = false)
+                                }
+                            }
+
                             Row(
                                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -546,11 +679,32 @@ fun DashboardScreen(
                                                 }
                                             }
                                         },
-                                        modifier = Modifier.weight(1f).clickable { onItemClick(data) }
+                                        onClick = { onItemClick(data) },
+                                        onPosterClick = {
+                                            selectedSellerId = data["userId"]?.toString() ?: ""
+                                            selectedSellerName = data["posterName"]?.toString() ?: "User"
+                                            if (selectedSellerId.isNotEmpty()) {
+                                                showSellerPostsDialog = true
+                                            }
+                                        },
+                                        modifier = Modifier.weight(1f)
                                     )
                                 }
                                 if (rowItems.size == 1) {
                                     Spacer(modifier = Modifier.weight(1f))
+                                }
+                            }
+                        }
+
+                        if (isPaginating) {
+                            item {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(color = AquaBlue, modifier = Modifier.size(24.dp))
                                 }
                             }
                         }
@@ -647,10 +801,100 @@ fun DashboardScreen(
                 }
             }
 
+            if (showNotificationsSheet) {
+                val notifications = remember(listings, lastCheckedNotifications) {
+                    listings.filter { data ->
+                        val userId = data["userId"] as? String ?: ""
+                        userId != currentUserId
+                    }.sortedByDescending { it["timestamp"] as? Long ?: 0L }
+                }
+
+                ModalBottomSheet(
+                    onDismissRequest = { showNotificationsSheet = false },
+                    sheetState = rememberModalBottomSheetState(),
+                    containerColor = Color.White,
+                    shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+                ) {
+                    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp)) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Text(stringResource(R.string.notifications), fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                            IconButton(onClick = { showNotificationsSheet = false }) { Icon(Icons.Default.Close, contentDescription = "Close") }
+                        }
+                        
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        if (notifications.isEmpty()) {
+                            Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                                Text(stringResource(R.string.no_notifications), color = GrayText)
+                            }
+                        } else {
+                            LazyColumn(
+                                modifier = Modifier.fillMaxWidth().heightIn(max = 500.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp),
+                                contentPadding = PaddingValues(bottom = 24.dp)
+                            ) {
+                                items(notifications) { data ->
+                                    val timestamp = data["timestamp"] as? Long ?: 0L
+                                    val isNew = timestamp > lastCheckedNotifications
+                                    val title = data["title"]?.toString() ?: "New Post"
+                                    val category = data["category"]?.toString() ?: "Post"
+                                    val posterName = data["posterName"]?.toString() ?: "User"
+
+                                    Card(
+                                        onClick = {
+                                            showNotificationsSheet = false
+                                            onItemClick(data)
+                                        },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = if (isNew) Color(0xFFF0F7FF) else Color(0xFFFAFAFA)
+                                        ),
+                                        shape = RoundedCornerShape(12.dp),
+                                        border = androidx.compose.foundation.BorderStroke(1.dp, if (isNew) AquaBlue.copy(alpha = 0.3f) else Color(0xFFEEEEEE))
+                                    ) {
+                                        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                                            Box(modifier = Modifier.size(40.dp).background(if (isNew) AquaBlue else Color.LightGray, CircleShape), contentAlignment = Alignment.Center) {
+                                                Icon(Icons.Default.PostAdd, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+                                            }
+                                            Spacer(modifier = Modifier.width(12.dp))
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(text = if (isNew) "NEW: $title" else title, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color.Black)
+                                                Text(text = "$category posted by $posterName", fontSize = 12.sp, color = Color.Gray)
+                                                Text(text = SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault()).format(Date(timestamp)), fontSize = 10.sp, color = GrayText)
+                                            }
+                                            if (isNew) {
+                                                Box(modifier = Modifier.size(8.dp).background(Color.Red, CircleShape))
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+                }
+            }
+
             if (showGraphSheet && selectedRateForGraph != null) {
                 RateGraphBottomSheet(
                     rate = selectedRateForGraph!!,
                     onDismiss = { showGraphSheet = false }
+                )
+            }
+
+            if (selectedCustomer != null) {
+                CustomerFoundDialog(
+                    customer = selectedCustomer!!,
+                    onDismiss = { selectedCustomer = null }
+                )
+            }
+
+            if (showSellerPostsDialog) {
+                SellerPostsDialog(
+                    sellerName = selectedSellerName,
+                    sellerPosts = selectedSellerPosts,
+                    onDismiss = { showSellerPostsDialog = false },
+                    onItemClick = { onItemClick(it) }
                 )
             }
         }

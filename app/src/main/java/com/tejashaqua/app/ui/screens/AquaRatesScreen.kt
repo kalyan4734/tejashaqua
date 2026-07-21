@@ -36,7 +36,11 @@ import com.tejashaqua.app.ui.components.RateGraphBottomSheet
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AquaRatesScreen(onBackClick: () -> Unit) {
+fun AquaRatesScreen(
+    onBackClick: () -> Unit,
+    onFishRatesClick: () -> Unit = {},
+    onPrawnsClick: () -> Unit = {}
+) {
     val context = LocalContext.current
     val db = FirebaseFirestore.getInstance()
     var rates by remember { mutableStateOf<List<AquaRate>>(emptyList()) }
@@ -46,9 +50,7 @@ fun AquaRatesScreen(onBackClick: () -> Unit) {
     var selectedRateForGraph by remember { mutableStateOf<AquaRate?>(null) }
 
     val fishTypes = listOf(
-        "Prawns", "Rohu", "Katla", "Karamosu", "Gaddi chepa", "Pangasius", 
-        "Roopchand", "Pandu gappa", "Tilapia", "Chitala", "Koramenu", 
-        "Valuga", "Engilayi", "Jalla", "Tuna", "Pulasa", "Crab", "Others"
+        "Prawns", "Rohu"
     )
 
     LaunchedEffect(Unit) {
@@ -70,6 +72,13 @@ fun AquaRatesScreen(onBackClick: () -> Unit) {
                     rates = fishTypes.map { fish ->
                         fetchedMap[fish.lowercase(java.util.Locale.ROOT)] ?: AquaRate(fish, "--", context.getString(R.string.no_change), RateTrend.FLAT, isPrawn = fish.lowercase(java.util.Locale.ROOT) == "prawns")
                     }
+                }
+                
+                if (rates.isEmpty() || rates.all { it.price == "--" }) {
+                    rates = listOf(
+                        AquaRate("Prawns", "₹280-1000", context.getString(R.string.view_all_prices), RateTrend.FLAT, isPrawn = true),
+                        AquaRate("Rohu", "₹160/kg", "+₹5 (3%)", RateTrend.UP, isPrawn = false)
+                    )
                 }
                 isLoading = false
             }
@@ -118,8 +127,14 @@ fun AquaRatesScreen(onBackClick: () -> Unit) {
                         RateItemCard(
                             rate = rate,
                             onClick = {
-                                selectedRateForGraph = rate
-                                showGraphSheet = true
+                                if (rate.isPrawn) {
+                                    onPrawnsClick()
+                                } else if (rate.name.lowercase(java.util.Locale.ROOT) == "rohu") {
+                                    onFishRatesClick()
+                                } else {
+                                    selectedRateForGraph = rate
+                                    showGraphSheet = true
+                                }
                             }
                         )
                     }
