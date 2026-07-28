@@ -233,10 +233,21 @@ fun SelectLocationScreen(
                 }
             } else {
                 Box(modifier = Modifier.fillMaxSize()) {
+                    val hasLocationPermission = remember {
+                        androidx.core.content.ContextCompat.checkSelfPermission(
+                            context,
+                            android.Manifest.permission.ACCESS_FINE_LOCATION
+                        ) == android.content.pm.PackageManager.PERMISSION_GRANTED ||
+                        androidx.core.content.ContextCompat.checkSelfPermission(
+                            context,
+                            android.Manifest.permission.ACCESS_COARSE_LOCATION
+                        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                    }
+
                     GoogleMap(
                         modifier = Modifier.fillMaxSize(),
                         cameraPositionState = cameraPositionState,
-                        properties = MapProperties(isMyLocationEnabled = true),
+                        properties = MapProperties(isMyLocationEnabled = hasLocationPermission),
                         onMapClick = { latLng ->
                             updateLocationFromLatLng(latLng)
                         }
@@ -246,6 +257,23 @@ fun SelectLocationScreen(
                                 state = MarkerState(position = it),
                                 title = selectedLocation?.first ?: stringResource(R.string.selected_location),
                                 snippet = selectedLocation?.second ?: ""
+                            )
+                        }
+                    }
+
+                    if (!hasLocationPermission) {
+                        Surface(
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .padding(bottom = 80.dp, start = 16.dp, end = 16.dp),
+                            color = Color.Black.copy(alpha = 0.7f),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.location_permission_denied),
+                                color = Color.White,
+                                fontSize = 12.sp,
+                                modifier = Modifier.padding(12.dp)
                             )
                         }
                     }

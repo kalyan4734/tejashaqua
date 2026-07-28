@@ -113,8 +113,8 @@ fun AdminDashboardScreen(onBackClick: () -> Unit) {
             }
 
             when (selectedTab) {
-                0 -> FishRatesAdmin(selectedDate)
-                1 -> PrawnRatesAdmin(selectedDate)
+                0 -> FishRatesAdmin(selectedDate, onBackClick)
+                1 -> PrawnRatesAdmin(selectedDate, onBackClick)
             }
         }
     }
@@ -122,10 +122,11 @@ fun AdminDashboardScreen(onBackClick: () -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FishRatesAdmin(selectedDate: Long) {
+fun FishRatesAdmin(selectedDate: Long, onBackClick: () -> Unit) {
     val db = FirebaseFirestore.getInstance()
     var rates by remember { mutableStateOf<List<AquaRate>>(emptyList()) }
     var previousRates by remember { mutableStateOf<Map<String, Double>>(emptyMap()) }
+    var noDataAvailable by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val currentLang = LocaleHelper.getSelectedLanguage(context) ?: "en"
@@ -171,10 +172,30 @@ fun FishRatesAdmin(selectedDate: Long) {
                 AquaRate(doc.id, price, change, trend, isPrawn)
             })
             rates = fishTypes.map { name -> fetched[name] ?: AquaRate(name, isPrawn = name == "Prawns") }
+            
+            // Check if all rates are marked as no data
+            noDataAvailable = rates.all { it.price == context.getString(R.string.no_data_available) }
         }
     }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(stringResource(R.string.no_data_available), fontWeight = FontWeight.Bold)
+            Switch(
+                checked = noDataAvailable,
+                onCheckedChange = { 
+                    noDataAvailable = it
+                    if (it) {
+                        rates = rates.map { r -> r.copy(price = context.getString(R.string.no_data_available), change = context.getString(R.string.no_change), trend = RateTrend.FLAT) }
+                    }
+                }
+            )
+        }
+
         LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             items(rates) { rate ->
                 Card(
@@ -204,7 +225,7 @@ fun FishRatesAdmin(selectedDate: Long) {
                                     newChange = when {
                                         diff > 0 -> "+₹$diff"
                                         diff < 0 -> "-₹${Math.abs(diff)}"
-                                        else -> "No Change"
+                                        else -> ""
                                     }
                                 }
                                 
@@ -212,10 +233,14 @@ fun FishRatesAdmin(selectedDate: Long) {
                                     if (it.name == rate.name) it.copy(price = newPrice, trend = newTrend, change = newChange) 
                                     else it 
                                 }
+                                if (newPrice != context.getString(R.string.no_data_available)) {
+                                    noDataAvailable = false
+                                }
                             },
                             label = { Text(stringResource(R.string.price_placeholder)) },
                             modifier = Modifier.fillMaxWidth(),
-                            keyboardOptions = keyboardOptions
+                            keyboardOptions = keyboardOptions,
+                            enabled = !noDataAvailable
                         )
                     }
                 }
@@ -230,10 +255,24 @@ fun FishRatesAdmin(selectedDate: Long) {
                 val batch = db.batch()
                 rates.forEach { rate ->
                     val ref = db.collection("aqua_rates").document(rate.name)
+                    
+                    val displayPrice = if (noDataAvailable) {
+                        context.getString(R.string.no_data_available)
+                    } else {
+                        val clean = rate.price.filter { it.isDigit() || it == '.' || it == '-' }
+                        if (!rate.isPrawn && clean.isNotEmpty() && !rate.price.contains("/")) {
+                            "₹$clean/kg"
+                        } else if (clean.isNotEmpty() && !rate.price.startsWith("₹")) {
+                            "₹${rate.price}"
+                        } else {
+                            rate.price
+                        }
+                    }
+
                     val data = mapOf(
-                        "price" to rate.price,
-                        "change" to rate.change,
-                        "trend" to rate.trend.name,
+                        "price" to displayPrice,
+                        "change" to if (noDataAvailable) "" else rate.change,
+                        "trend" to if (noDataAvailable) RateTrend.FLAT.name else rate.trend.name,
                         "isPrawn" to rate.isPrawn,
                         "lastUpdated" to selectedDate
                     )
@@ -243,17 +282,18 @@ fun FishRatesAdmin(selectedDate: Long) {
                     val historyId = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date(selectedDate))
                     val cleanPrice = rate.price.split("-").first().filter { it.isDigit() || it == '.' }
                     val priceVal = cleanPrice.toDoubleOrNull() ?: 0.0
-                    if (priceVal > 0) {
+                    if (priceVal > 0 && !noDataAvailable) {
                         val historyData = mapOf(
                             "price" to priceVal,
                             "timestamp" to selectedDate,
-                            "displayPrice" to rate.price
+                            "displayPrice" to displayPrice
                         )
                         batch.set(ref.collection("history").document(historyId), historyData)
                     }
                 }
                 batch.commit().addOnSuccessListener {
                     Toast.makeText(context, "All Rates Updated Successfully", Toast.LENGTH_SHORT).show()
+                    onBackClick()
                 }
             },
             modifier = Modifier.fillMaxWidth().height(56.dp),
@@ -269,7 +309,7 @@ fun FishRatesAdmin(selectedDate: Long) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PrawnRatesAdmin(selectedDate: Long) {
+fun PrawnRatesAdmin(selectedDate: Long, onBackClick: () -> Unit) {
     val db = FirebaseFirestore.getInstance()
     val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -280,6 +320,7 @@ fun PrawnRatesAdmin(selectedDate: Long) {
     var selectedMarket by remember { mutableStateOf("Bhimavaram") }
     val markets = listOf("Bhimavaram", "Nellore", "Kakinada", "Machilipatnam")
     var expanded by remember { mutableStateOf(false) }
+    var noDataAvailable by remember { mutableStateOf(false) }
 
     val counts = listOf("100", "90", "80", "70", "60", "50", "47", "45", "40", "37", "35", "30", "25", "20", "200")
     var prices by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
@@ -290,6 +331,8 @@ fun PrawnRatesAdmin(selectedDate: Long) {
             if (doc.exists()) {
                 val data = doc.get("rates") as? Map<*, *>
                 prices = data?.mapKeys { it.key.toString() }?.mapValues { it.value.toString() } ?: emptyMap()
+                
+                noDataAvailable = prices.values.all { it == context.getString(R.string.no_data_available) }
             } else {
                 prices = emptyMap()
             }
@@ -297,11 +340,10 @@ fun PrawnRatesAdmin(selectedDate: Long) {
     }
 
     LaunchedEffect(selectedDate) {
-        val prevCal = Calendar.getInstance().apply {
+        val prevId = Calendar.getInstance().apply {
             time = Date(selectedDate)
             add(Calendar.DAY_OF_YEAR, -1)
-        }
-        val prevId = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(prevCal.time)
+        }.let { SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(it.time) }
         
         db.collection("aqua_rates").document("Prawns").collection("history").document(prevId).get()
             .addOnSuccessListener { doc ->
@@ -310,6 +352,23 @@ fun PrawnRatesAdmin(selectedDate: Long) {
     }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(stringResource(R.string.no_data_available), fontWeight = FontWeight.Bold)
+            Switch(
+                checked = noDataAvailable,
+                onCheckedChange = { 
+                    noDataAvailable = it
+                    if (it) {
+                        prices = counts.associateWith { context.getString(R.string.no_data_available) }
+                    }
+                }
+            )
+        }
+
         ExposedDropdownMenuBox(
             expanded = expanded,
             onExpandedChange = { 
@@ -351,10 +410,14 @@ fun PrawnRatesAdmin(selectedDate: Long) {
                         value = price,
                         onValueChange = { newValue ->
                             prices = prices.toMutableMap().apply { put(count, newValue) }
+                            if (newValue != context.getString(R.string.no_data_available)) {
+                                noDataAvailable = false
+                            }
                         },
                         label = { Text(stringResource(R.string.rupees_per_kg_label)) },
                         modifier = Modifier.weight(1f),
-                        keyboardOptions = keyboardOptions
+                        keyboardOptions = keyboardOptions,
+                        enabled = !noDataAvailable
                     )
                 }
             }
@@ -380,13 +443,14 @@ fun PrawnRatesAdmin(selectedDate: Long) {
                     val price100 = prices["100"] ?: ""
                     
                     if (price100.isNotEmpty()) {
-                        val displayPrice = "₹$price100"
+                        val isNoData = price100 == context.getString(R.string.no_data_available)
+                        val displayPrice = if (isNoData) price100 else "₹$price100/kg"
                         val currentVal = price100.filter { it.isDigit() || it == '.' }.toDoubleOrNull() ?: 0.0
                         
                         var trend = RateTrend.FLAT
                         var change = context.getString(R.string.no_change)
                         
-                        if (previousSummaryPrice > 0 && currentVal > 0) {
+                        if (!isNoData && previousSummaryPrice > 0 && currentVal > 0) {
                             val diff = (currentVal - previousSummaryPrice).toInt()
                             trend = when {
                                 diff > 0 -> RateTrend.UP
@@ -410,7 +474,7 @@ fun PrawnRatesAdmin(selectedDate: Long) {
 
                         // 3. Save to history for the summary graph
                         val historyId = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date(selectedDate))
-                        if (currentVal > 0) {
+                        if (currentVal > 0 && !isNoData) {
                             val historyData = mapOf(
                                 "price" to currentVal,
                                 "timestamp" to selectedDate,
@@ -423,6 +487,7 @@ fun PrawnRatesAdmin(selectedDate: Long) {
 
                 batch.commit().addOnSuccessListener { 
                     Toast.makeText(context, "All Prawn Rates Updated Successfully", Toast.LENGTH_SHORT).show()
+                    onBackClick()
                 }
             },
             modifier = Modifier.fillMaxWidth().height(56.dp),

@@ -30,7 +30,12 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         android.util.Log.d("FCM", "Message received: ${remoteMessage.notification?.title}")
         
         val title = remoteMessage.notification?.title ?: remoteMessage.data["title"] ?: "Tejash Aqua"
-        val body = remoteMessage.notification?.body ?: remoteMessage.data["body"] ?: ""
+        var body = remoteMessage.notification?.body ?: remoteMessage.data["body"] ?: ""
+        
+        // Clean up "(no change)" or "No Change" from notification body (Point 4)
+        if (body.contains("(no change)", ignoreCase = true)) {
+            body = body.replace(Regex("\\(?no change\\)?", RegexOption.IGNORE_CASE), "").trim()
+        }
         
         sendNotification(title, body, remoteMessage.data)
     }

@@ -97,6 +97,19 @@ fun SavedItemsScreen(
                         val acreText = stringResource(R.string.unit_acre)
                         
                         val categoryStr = data["category"]?.toString() ?: "Other"
+                        val displayCategory = when(categoryStr.uppercase()) {
+                            "FISH" -> stringResource(R.string.cat_fish_seed)
+                            "PRAWNS" -> stringResource(R.string.cat_prawns)
+                            "EQUIPMENTS" -> stringResource(R.string.cat_equipments)
+                            "VEHICLES" -> stringResource(R.string.cat_vehicles)
+                            "FEED" -> stringResource(R.string.cat_feed)
+                            "SERVICES" -> stringResource(R.string.cat_services)
+                            "TANKS" -> stringResource(R.string.cat_tanks)
+                            "BUSINESS" -> stringResource(R.string.cat_business)
+                            "JOBS" -> stringResource(R.string.cat_jobs)
+                            else -> categoryStr
+                        }
+
                         val priceLabel = when (categoryStr.uppercase()) {
                             "PRAWNS" -> {
                                 val rate = data["rateValue"]?.toString() ?: naText
@@ -120,7 +133,7 @@ fun SavedItemsScreen(
                         MarketItem(
                             title = data["title"]?.toString()?.takeIf { it.isNotBlank() } ?: stringResource(R.string.no_title),
                             price = priceLabel,
-                            category = categoryStr,
+                            category = displayCategory,
                             location = data["location"]?.toString() ?: stringResource(R.string.unknown_location),
                             posterName = data["posterName"]?.toString() ?: stringResource(R.string.user_label),
                             imageUrl = images?.firstOrNull(),
@@ -136,6 +149,7 @@ fun SavedItemsScreen(
                                 keyboardController?.hide()
                                 onItemClick(data)
                             },
+                            rawCategory = categoryStr,
                             modifier = Modifier.fillMaxWidth()
                         )
                     }

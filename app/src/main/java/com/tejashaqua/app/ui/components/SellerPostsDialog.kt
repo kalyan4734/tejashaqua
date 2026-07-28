@@ -81,6 +81,19 @@ fun SellerPostsDialog(
                     ) {
                         items(sellerPosts) { data ->
                             val categoryStr = data["category"]?.toString() ?: "Other"
+                            val displayCategory = when(categoryStr.uppercase()) {
+                                "FISH" -> stringResource(R.string.cat_fish_seed)
+                                "PRAWNS" -> stringResource(R.string.cat_prawns)
+                                "EQUIPMENTS" -> stringResource(R.string.cat_equipments)
+                                "VEHICLES" -> stringResource(R.string.cat_vehicles)
+                                "FEED" -> stringResource(R.string.cat_feed)
+                                "SERVICES" -> stringResource(R.string.cat_services)
+                                "TANKS" -> stringResource(R.string.cat_tanks)
+                                "BUSINESS" -> stringResource(R.string.cat_business)
+                                "JOBS" -> stringResource(R.string.cat_jobs)
+                                else -> categoryStr
+                            }
+                            
                             val naText = stringResource(R.string.not_available_short)
                             val tonText = stringResource(R.string.unit_ton)
                             val acreText = stringResource(R.string.unit_acre)
@@ -107,7 +120,7 @@ fun SellerPostsDialog(
                             MarketItem(
                                 title = data["title"]?.toString() ?: "No Title",
                                 price = priceLabel,
-                                category = categoryStr,
+                                category = displayCategory,
                                 location = data["location"]?.toString() ?: "Unknown",
                                 posterName = data["posterName"]?.toString() ?: "User",
                                 imageUrl = (data["images"] as? List<*>)?.firstOrNull()?.toString(),
@@ -117,6 +130,7 @@ fun SellerPostsDialog(
                                     onDismiss()
                                     onItemClick(data) 
                                 },
+                                rawCategory = categoryStr,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }

@@ -1,5 +1,9 @@
 package com.tejashaqua.app.ui.screens
 
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.transformable
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.graphics.graphicsLayer
 import android.location.Geocoder
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -86,8 +90,21 @@ fun DetailedPageScreen(
     val acreText = stringResource(R.string.unit_acre)
 
     val title = listingData["title"]?.toString() ?: stringResource(R.string.no_title)
-    val categoryString = listingData["category"]?.toString() ?: stringResource(R.string.fish_others)
-    val priceLabel = when (categoryString.uppercase()) {
+    val categoryStr = listingData["category"]?.toString() ?: "Other"
+    val displayCategory = when(categoryStr.uppercase()) {
+        "FISH" -> stringResource(R.string.cat_fish_seed)
+        "PRAWNS" -> stringResource(R.string.cat_prawns)
+        "EQUIPMENTS" -> stringResource(R.string.cat_equipments)
+        "VEHICLES" -> stringResource(R.string.cat_vehicles)
+        "FEED" -> stringResource(R.string.cat_feed)
+        "SERVICES" -> stringResource(R.string.cat_services)
+        "TANKS" -> stringResource(R.string.cat_tanks)
+        "BUSINESS" -> stringResource(R.string.cat_business)
+        "JOBS" -> stringResource(R.string.cat_jobs)
+        else -> categoryStr
+    }
+    
+    val priceLabel = when (categoryStr.uppercase()) {
         "PRAWNS" -> {
             val rate = listingData["rateValue"]?.toString() ?: naText
             val formattedRate = CurrencyUtils.formatPrice(rate)
@@ -106,7 +123,7 @@ fun DetailedPageScreen(
         "TANKS" -> "₹${CurrencyUtils.formatPrice(listingData["estPricePerAcre"] ?: naText)}/$acreText"
         else -> "₹${CurrencyUtils.formatPrice(listingData["price"] ?: listingData["rateValue"] ?: naText)}"
     }
-    val category = try { ListingCategory.valueOf(categoryString.uppercase()) } catch (e: Exception) { null }
+    val category = try { ListingCategory.valueOf(categoryStr.uppercase()) } catch (e: Exception) { null }
     val fullLocation = listingData["location"]?.toString() ?: stringResource(R.string.unknown_location)
     // Use the first part of the address (Locality) as the main location
     val location = fullLocation.split(",").firstOrNull()?.trim() ?: fullLocation
@@ -119,6 +136,7 @@ fun DetailedPageScreen(
     val listingId = listingData["id"]?.toString() ?: ""
     
     var sellerJoinedAt by remember { mutableLongStateOf(0L) }
+    var sellerShowMobile by remember { mutableStateOf(true) }
     val db = remember { FirebaseFirestore.getInstance() }
     
     var showSellerPostsDialog by remember { mutableStateOf(false) }
@@ -129,6 +147,7 @@ fun DetailedPageScreen(
             db.collection("users").document(listingUserId).get().addOnSuccessListener { doc ->
                 if (doc.exists()) {
                     sellerJoinedAt = doc.getLong("joinedAt") ?: 0L
+                    sellerShowMobile = doc.getBoolean("showMobileNumber") ?: true
                 }
             }
             
@@ -191,9 +210,9 @@ fun DetailedPageScreen(
 
         var similarListings by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
 
-        LaunchedEffect(categoryString, listingId) {
+        LaunchedEffect(categoryStr, listingId) {
             db.collection("listings")
-                .whereEqualTo("category", categoryString)
+                .whereEqualTo("category", categoryStr)
                 .limit(10)
                 .get()
                 .addOnSuccessListener { snapshot ->
@@ -273,21 +292,48 @@ fun DetailedPageScreen(
                     color = MaterialTheme.colorScheme.surface,
                     modifier = Modifier.navigationBarsPadding()
                 ) {
-                    Button(
-                        onClick = { 
-                            keyboardController?.hide()
-                            onChatClick(listingData) 
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp)
-                            .height(56.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = AquaBlue)
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Icon(Icons.Default.ChatBubbleOutline, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(stringResource(R.string.chat_with_seller), fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        if (sellerShowMobile) {
+                            val contactNumber = listingData["contactNumber"]?.toString() ?: ""
+                            OutlinedButton(
+                                onClick = { 
+                                    keyboardController?.hide()
+                                    if (contactNumber.isNotEmpty()) {
+                                        val intent = android.content.Intent(android.content.Intent.ACTION_DIAL).apply {
+                                            data = android.net.Uri.parse("tel:$contactNumber")
+                                        }
+                                        context.startActivity(intent)
+                                    } else {
+                                        Toast.makeText(context, context.getString(R.string.phone_not_available), Toast.LENGTH_SHORT).show()
+                                    }
+                                },
+                                modifier = Modifier.weight(1f).height(56.dp),
+                                shape = RoundedCornerShape(12.dp),
+                                border = BorderStroke(1.dp, AquaBlue),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = AquaBlue)
+                            ) {
+                                Icon(Icons.Default.Phone, contentDescription = null)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(stringResource(R.string.contact_us), fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                            }
+                        }
+
+                        Button(
+                            onClick = { 
+                                keyboardController?.hide()
+                                onChatClick(listingData) 
+                            },
+                            modifier = Modifier.weight(1f).height(56.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = AquaBlue)
+                        ) {
+                            Icon(Icons.Default.ChatBubbleOutline, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(stringResource(R.string.chat_with_seller), fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        }
                     }
                 }
             }
@@ -374,6 +420,15 @@ fun DetailedPageScreen(
                                 )
                             }
                         }
+                    } else if (categoryStr.uppercase() == "JOBS") {
+                        Box(modifier = Modifier.fillMaxSize().background(Color(0xFFF3E5F5)), contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = null,
+                                modifier = Modifier.size(80.dp),
+                                tint = Color(0xFF673AB7).copy(alpha = 0.5f)
+                            )
+                        }
                     } else {
                         Image(
                             painter = painterResource(id = R.drawable.app_logo),
@@ -405,7 +460,7 @@ fun DetailedPageScreen(
                 Column(modifier = Modifier.padding(16.dp)) {
                     Surface(color = Color(0xFFE8EAF6), shape = RoundedCornerShape(4.dp)) {
                         Text(
-                            text = categoryString,
+                            text = displayCategory,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                             fontSize = 12.sp,
                             color = AquaBlue,
@@ -511,7 +566,7 @@ fun DetailedPageScreen(
                             DetailRowItem(stringResource(R.string.work_location_label), listingData["tankLocation"]?.toString() ?: stringResource(R.string.not_available_short))
                         }
                         else -> {
-                            DetailRowItem(stringResource(R.string.category_label), categoryString)
+                            DetailRowItem(stringResource(R.string.category_label), displayCategory)
                             DetailRowItem(stringResource(R.string.price_label), priceLabel)
                         }
                     }
@@ -532,9 +587,7 @@ fun DetailedPageScreen(
                         modifier = Modifier
                             .padding(bottom = 16.dp)
                             .clickable { 
-                                if (sellerListings.isNotEmpty()) {
-                                    showSellerPostsDialog = true 
-                                }
+                                showSellerPostsDialog = true
                             }
                     ) {
                         Box(
@@ -600,13 +653,25 @@ fun DetailedPageScreen(
                             .background(Color(0xFFF5F5F5))
                             .border(1.dp, Color(0xFFEEEEEE), RoundedCornerShape(12.dp))
                     ) {
+                        val hasLocationPermission = remember {
+                            androidx.core.content.ContextCompat.checkSelfPermission(
+                                context,
+                                android.Manifest.permission.ACCESS_FINE_LOCATION
+                            ) == android.content.pm.PackageManager.PERMISSION_GRANTED ||
+                            androidx.core.content.ContextCompat.checkSelfPermission(
+                                context,
+                                android.Manifest.permission.ACCESS_COARSE_LOCATION
+                            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                        }
+
                         GoogleMap(
                             modifier = Modifier.fillMaxSize(),
                             cameraPositionState = cameraPositionState,
+                            properties = MapProperties(isMyLocationEnabled = hasLocationPermission),
                             uiSettings = MapUiSettings(
                                 zoomControlsEnabled = false,
                                 mapToolbarEnabled = true,
-                                myLocationButtonEnabled = false,
+                                myLocationButtonEnabled = hasLocationPermission,
                                 compassEnabled = false
                             )
                         ) {
@@ -662,8 +727,21 @@ fun DetailedPageScreen(
                                 val simImages = (data["images"] as? List<*>)?.filterIsInstance<String>()
                                 val isSimFav = favoriteIds.contains(simId)
 
-                                val categoryStr = data["category"]?.toString() ?: "Other"
-                                val simPriceLabel = when (categoryStr.uppercase()) {
+                                val categoryStrSim = data["category"]?.toString() ?: "Other"
+                                val displayCategorySim = when(categoryStrSim.uppercase()) {
+                                    "FISH" -> stringResource(R.string.cat_fish_seed)
+                                    "PRAWNS" -> stringResource(R.string.cat_prawns)
+                                    "EQUIPMENTS" -> stringResource(R.string.cat_equipments)
+                                    "VEHICLES" -> stringResource(R.string.cat_vehicles)
+                                    "FEED" -> stringResource(R.string.cat_feed)
+                                    "SERVICES" -> stringResource(R.string.cat_services)
+                                    "TANKS" -> stringResource(R.string.cat_tanks)
+                                    "BUSINESS" -> stringResource(R.string.cat_business)
+                                    "JOBS" -> stringResource(R.string.cat_jobs)
+                                    else -> categoryStrSim
+                                }
+                                
+                                val simPriceLabel = when (categoryStrSim.uppercase()) {
                                     "PRAWNS" -> {
                                         val rate = data["rateValue"]?.toString() ?: naText
                                         val formattedRate = CurrencyUtils.formatPrice(rate)
@@ -686,13 +764,14 @@ fun DetailedPageScreen(
                                 MarketItem(
                                     title = data["title"]?.toString()?.takeIf { it.isNotBlank() } ?: "No Title",
                                     price = simPriceLabel,
-                                    category = categoryStr,
+                                    category = displayCategorySim,
                                     location = data["location"]?.toString() ?: "Unknown",
                                     posterName = data["posterName"]?.toString() ?: "User",
                                     imageUrl = simImages?.firstOrNull(),
                                     isFavorited = isSimFav,
                                     onFavoriteClick = { toggleFavorite(data, isSimFav) },
                                     onClick = { onItemClick(data) },
+                                    rawCategory = categoryStrSim,
                                     modifier = Modifier.width(160.dp)
                                 )
                             }
@@ -701,18 +780,16 @@ fun DetailedPageScreen(
                 }
             }
             
-            if (showSellerPostsDialog) {
-                item {
-                    SellerPostsDialog(
-                        sellerName = posterName,
-                        sellerPosts = sellerListings,
-                        onDismiss = { showSellerPostsDialog = false },
-                        onItemClick = { onItemClick(it) }
-                    )
-                }
-            }
-
             item { Spacer(modifier = Modifier.height(80.dp)) }
+        }
+        
+        if (showSellerPostsDialog) {
+            SellerPostsDialog(
+                sellerName = posterName,
+                sellerPosts = sellerListings,
+                onDismiss = { showSellerPostsDialog = false },
+                onItemClick = { onItemClick(it) }
+            )
         }
     }
   }
@@ -734,14 +811,44 @@ fun FullScreenImageDialog(
         Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
             HorizontalPager(
                 state = fullScreenPagerState,
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize(),
+                userScrollEnabled = true // Pager scrolling
             ) { page ->
-                AsyncImage(
-                    model = images[page]?.toString() ?: "",
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Fit
-                )
+                var scale by remember { mutableFloatStateOf(1f) }
+                var offset by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
+                val state = androidx.compose.foundation.gestures.rememberTransformableState { zoomChange, offsetChange, _ ->
+                    scale *= zoomChange
+                    scale = scale.coerceIn(1f, 5f)
+                    offset += offsetChange
+                }
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .transformable(state = state)
+                        .pointerInput(Unit) {
+                            detectTapGestures(
+                                onDoubleTap = {
+                                    scale = if (scale > 1f) 1f else 2f
+                                    offset = androidx.compose.ui.geometry.Offset.Zero
+                                }
+                            )
+                        }
+                ) {
+                    AsyncImage(
+                        model = images[page]?.toString() ?: "",
+                        contentDescription = null,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer(
+                                scaleX = scale,
+                                scaleY = scale,
+                                translationX = offset.x,
+                                translationY = offset.y
+                            ),
+                        contentScale = ContentScale.Fit
+                    )
+                }
             }
             
             IconButton(

@@ -246,6 +246,46 @@ fun ProfileScreen(
             item { Spacer(modifier = Modifier.height(16.dp)) }
 
             item {
+                var showMobileNumber by remember { mutableStateOf(true) }
+                LaunchedEffect(currentUserId) {
+                    if (currentUserId != null) {
+                        db.collection("users").document(currentUserId).get().addOnSuccessListener { doc ->
+                            showMobileNumber = doc.getBoolean("showMobileNumber") ?: true
+                        }
+                    }
+                }
+
+                Card(
+                    modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(stringResource(R.string.show_mobile_number), fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                            Text(stringResource(R.string.show_mobile_number_desc), fontSize = 12.sp, color = GrayText)
+                        }
+                        Switch(
+                            checked = showMobileNumber,
+                            onCheckedChange = { 
+                                showMobileNumber = it
+                                if (currentUserId != null) {
+                                    db.collection("users").document(currentUserId).update("showMobileNumber", it)
+                                }
+                            },
+                            colors = SwitchDefaults.colors(checkedThumbColor = AquaBlue, checkedTrackColor = AquaBlue.copy(alpha = 0.5f))
+                        )
+                    }
+                }
+            }
+
+            item { Spacer(modifier = Modifier.height(16.dp)) }
+
+            item {
                 Card(
                     modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),

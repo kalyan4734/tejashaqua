@@ -153,6 +153,7 @@
     <string name="view_all_prices">అన్ని ధరలను చూడండి</string>
     <!-- Categories -->
     <string name="cat_fish">చేపలు</string>
+    <string name="cat_fish_seed">చేప పిల్లలు</string>
     <string name="cat_prawns">రొయ్యలు</string>
     <string name="cat_equipments">పరికరాలు</string>
     <string name="cat_vehicles">వాహనాలు</string>
@@ -252,12 +253,15 @@
     <string name="equip_generators">జనరేటర్లు</string>
     <string name="equip_pump_engines">పంప్ ఇంజన్లు</string>
     <string name="equip_boats">పడవలు</string>
+    <string name="equip_mavulu">మావులు</string>
     <string name="equip_wires">ఎలక్ట్రికల్ వైర్లు</string>
 
     <!-- Service Types -->
     <string name="service_live_fish_vehicles">లైవ్ ఫిష్ వెహికల్స్</string>
     <string name="service_feed_transport">మేత రవాణా</string>
     <string name="service_bore_well">బోర్ వెల్</string>
+    <string name="service_chart_writing">చార్ట్ రాయుట</string>
+    <string name="service_earth_movers">ఎర్త్ మూవర్స్</string>
     <string name="service_nets">వలలు</string>
 
     <!-- Business Categories -->
@@ -408,9 +412,9 @@
     <string name="update_required">అప్‌డేట్ అవసరం</string>
     <string name="update_desc">తేజశ్ ఆక్వా కొత్త వెర్షన్ అందుబాటులో ఉంది. యాప్‌ని ఉపయోగించడం కొనసాగించడానికి దయచేసి అప్‌డేట్ చేయండి.</string>
     <string name="fish_rates_title">చేపల ధరలు</string>
-    <string name="fish_table_header">Fish (చేప)</string>
-    <string name="average_table_header">Average (సగటు బరువు)</string>
-    <string name="price_table_header">Price (రేటు)</string>
+    <string name="fish_table_header">చేప</string>
+    <string name="average_table_header">సగటు బరువు</string>
+    <string name="price_table_header">ధర</string>
     <string name="update_now">ఇప్పుడే అప్‌డేట్ చేయండి</string>
     <string name="buyer_label">కొనుగోలుదారు</string>
     <string name="one_kg">1 కిలో</string>
@@ -431,4 +435,7 @@
     <string name="market_machilipatnam">మచిలీపట్నం</string>
     <string name="unit_ton">టన్ను</string>
     <string name="unit_acre">ఎకరం</string>
+    <string name="no_data_available">ఈ రోజు డేటా అందుబాటులో లేదు</string>
+    <string name="show_mobile_number">లిస్టింగ్స్‌లో మొబైల్ నంబర్‌ను చూపించు</string>
+    <string name="show_mobile_number_desc">దీన్ని నిలిపివేస్తే, కొనుగోలుదారులు మిమ్మల్ని చాట్ ద్వారా మాత్రమే సంప్రదించగలరు.</string>
 </resources>

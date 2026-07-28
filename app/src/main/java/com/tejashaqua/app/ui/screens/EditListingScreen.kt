@@ -437,7 +437,7 @@ fun EditListingScreen(
 
     val screenTitle = if (isEditMode) stringResource(R.string.edit_listing) else {
         when(category) {
-            ListingCategory.FISH -> stringResource(R.string.cat_fish)
+            ListingCategory.FISH -> stringResource(R.string.cat_fish_seed)
             ListingCategory.PRAWNS -> stringResource(R.string.cat_prawns)
             ListingCategory.EQUIPMENTS -> stringResource(R.string.cat_equipments)
             ListingCategory.VEHICLES -> stringResource(R.string.cat_vehicles)
@@ -1165,7 +1165,7 @@ fun EquipmentFields(
         stringResource(R.string.equip_aerators), stringResource(R.string.equip_motors), 
         stringResource(R.string.equip_pump_motors), stringResource(R.string.equip_bore_motors), 
         stringResource(R.string.equip_generators), stringResource(R.string.equip_pump_engines), 
-        stringResource(R.string.equip_boats), stringResource(R.string.equip_wires), 
+        stringResource(R.string.equip_boats), stringResource(R.string.equip_mavulu), stringResource(R.string.equip_wires), 
         othersStr
     )
     
@@ -1383,7 +1383,7 @@ fun ServiceFields(
     accentColor: Color = AquaBlue
 ) {
     val othersStr = stringResource(R.string.fish_others)
-    val serviceOptions = listOf(stringResource(R.string.service_bore_well), stringResource(R.string.service_live_fish_vehicles), stringResource(R.string.service_nets), othersStr)
+    val serviceOptions = listOf(stringResource(R.string.service_bore_well), stringResource(R.string.service_live_fish_vehicles), stringResource(R.string.service_nets), stringResource(R.string.service_chart_writing), stringResource(R.string.service_earth_movers), othersStr)
     
     var isOthers by remember { mutableStateOf(serviceType.isNotEmpty() && !serviceOptions.filter { it != othersStr }.contains(serviceType)) }
     var otherName by remember { mutableStateOf(if (isOthers) serviceType else "") }
@@ -1392,6 +1392,8 @@ fun ServiceFields(
         val boreWell = stringResource(R.string.service_bore_well)
         val fishVehicles = stringResource(R.string.service_live_fish_vehicles)
         val nets = stringResource(R.string.service_nets)
+        val chartWriting = stringResource(R.string.service_chart_writing)
+        val earthMovers = stringResource(R.string.service_earth_movers)
 
         SearchableListingDropdown(
             label = stringResource(R.string.service_type_label),
@@ -1846,49 +1848,50 @@ private fun generateDefaultDescription(
     when (category) {
         ListingCategory.FISH -> {
             if (fishType.isNotEmpty()) parts.add(fishType)
-            if (title.isNotEmpty()) parts.add(title)
+            if (title.isNotEmpty() && title != fishType) parts.add(title)
             if (sizeValue.isNotEmpty()) parts.add(context.getString(R.string.desc_size_prefix, "$sizeValue $sizeType"))
             if (quantity.isNotEmpty()) parts.add(context.getString(R.string.desc_quantity_prefix, CurrencyUtils.formatPrice(quantity)))
             if (price.isNotEmpty()) parts.add(context.getString(R.string.desc_price_prefix, price))
         }
         ListingCategory.PRAWNS -> {
             if (prawnType.isNotEmpty()) parts.add(prawnType)
-            if (title.isNotEmpty()) parts.add(title)
+            if (title.isNotEmpty() && title != prawnType) parts.add(title)
             if (hatcheryName.isNotEmpty()) parts.add(context.getString(R.string.desc_hatchery_prefix, hatcheryName))
             if (quantity.isNotEmpty()) parts.add(context.getString(R.string.desc_quantity_prefix, "$quantity $unitType"))
             if (rateValue.isNotEmpty()) parts.add(context.getString(R.string.desc_rate_prefix, "$rateValue per $rateType"))
         }
         ListingCategory.EQUIPMENTS -> {
             if (equipmentType.isNotEmpty()) parts.add(equipmentType)
-            if (title.isNotEmpty()) parts.add(title)
+            if (title.isNotEmpty() && title != equipmentType) parts.add(title)
             if (price.isNotEmpty()) parts.add(context.getString(R.string.desc_price_prefix, price))
         }
         ListingCategory.VEHICLES -> {
             if (serviceType.isNotEmpty()) parts.add(serviceType)
             if (vehicleName.isNotEmpty()) parts.add(vehicleName)
             if (vehicleCapacity.isNotEmpty()) parts.add(context.getString(R.string.desc_capacity_prefix, vehicleCapacity))
-            if (title.isNotEmpty()) parts.add(title)
+            if (title.isNotEmpty() && title != vehicleName && title != serviceType) parts.add(title)
         }
         ListingCategory.FEED -> {
             if (feedName.isNotEmpty()) parts.add(feedName)
-            if (title.isNotEmpty()) parts.add(title)
+            if (title.isNotEmpty() && title != feedName) parts.add(title)
             if (ratePerTon.isNotEmpty()) parts.add(context.getString(R.string.desc_rate_prefix, "$ratePerTon/ton"))
         }
         ListingCategory.BUSINESS -> {
+            val mainType = if (businessSubCategory == "Feed") feedName else if (businessSubCategory == "Medicine") medicineName else businessType
             if (businessSubCategory.isNotEmpty()) parts.add(businessSubCategory)
             if (businessType.isNotEmpty()) parts.add(businessType)
             if (businessSubCategory == "Feed" && feedName.isNotEmpty()) parts.add(feedName)
             if (businessSubCategory == "Medicine" && medicineName.isNotEmpty()) parts.add(medicineName)
-            if (title.isNotEmpty()) parts.add(title)
+            if (title.isNotEmpty() && title != mainType && title != businessSubCategory && title != businessType) parts.add(title)
             if (ratePerTon.isNotEmpty()) parts.add(context.getString(R.string.desc_rate_prefix, "$ratePerTon/ton"))
         }
         ListingCategory.SERVICES -> {
             if (serviceType.isNotEmpty()) parts.add(serviceType)
-            if (title.isNotEmpty()) parts.add(title)
+            if (title.isNotEmpty() && title != serviceType) parts.add(title)
         }
         ListingCategory.TANKS -> {
             if (tankType.isNotEmpty()) parts.add(tankType)
-            if (title.isNotEmpty()) parts.add(title)
+            if (title.isNotEmpty() && title != tankType) parts.add(title)
             if (tankAcres.isNotEmpty()) parts.add(context.getString(R.string.desc_tank_acres_prefix, tankAcres))
             if (tankLocation.isNotEmpty()) parts.add(tankLocation)
         }
@@ -1896,9 +1899,9 @@ private fun generateDefaultDescription(
             if (jobType.isNotEmpty()) parts.add(jobType)
             if (salary.isNotEmpty()) parts.add(context.getString(R.string.desc_salary_prefix, salary))
             if (tankAcres.isNotEmpty()) parts.add(context.getString(R.string.desc_tank_acres_prefix, tankAcres))
-            if (title.isNotEmpty()) parts.add(title)
+            if (title.isNotEmpty() && title != jobType) parts.add(title)
         }
     }
 
-    return parts.filter { it.isNotEmpty() }.joinToString(". ")
+    return parts.filter { it.isNotEmpty() }.joinToString(" || ") + "||"
 }

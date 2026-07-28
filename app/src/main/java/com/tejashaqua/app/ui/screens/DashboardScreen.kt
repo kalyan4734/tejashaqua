@@ -635,6 +635,17 @@ fun DashboardScreen(
                                     val isFavorited = favoriteIds.contains(listingId)
 
                                     val categoryStr = data["category"]?.toString() ?: "Other"
+                                    val displayCategory = when(categoryStr.uppercase()) {
+                                        "FISH" -> stringResource(R.string.cat_fish_seed)
+                                        "PRAWNS" -> stringResource(R.string.cat_prawns)
+                                        "EQUIPMENTS" -> stringResource(R.string.cat_equipments)
+                                        "VEHICLES" -> stringResource(R.string.cat_vehicles)
+                                        "FEED" -> stringResource(R.string.cat_feed)
+                                        "SERVICES" -> stringResource(R.string.cat_services)
+                                        "TANKS" -> stringResource(R.string.cat_tanks)
+                                        "BUSINESS" -> stringResource(R.string.cat_business)
+                                        else -> categoryStr
+                                    }
                                     val naText = stringResource(R.string.not_available_short)
                                     val tonText = stringResource(R.string.unit_ton)
                                     val acreText = stringResource(R.string.unit_acre)
@@ -661,7 +672,7 @@ fun DashboardScreen(
                                     MarketItem(
                                         title = data["title"]?.toString()?.takeIf { it.isNotBlank() } ?: "No Title",
                                         price = priceLabel,
-                                        category = categoryStr,
+                                        category = displayCategory,
                                         location = data["location"]?.toString() ?: "Unknown",
                                         posterName = data["posterName"]?.toString() ?: "User",
                                         imageUrl = images?.firstOrNull(),
@@ -687,6 +698,7 @@ fun DashboardScreen(
                                                 showSellerPostsDialog = true
                                             }
                                         },
+                                        rawCategory = categoryStr,
                                         modifier = Modifier.weight(1f)
                                     )
                                 }
@@ -912,7 +924,7 @@ fun CategoryFilterRow(selected: String, onSelect: (String) -> Unit) {
         items(categories) { category ->
             val label = when(category) {
                 "All" -> stringResource(R.string.all)
-                "FISH" -> stringResource(R.string.cat_fish)
+                "FISH" -> stringResource(R.string.cat_fish_seed)
                 "PRAWNS" -> stringResource(R.string.cat_prawns)
                 "EQUIPMENTS" -> stringResource(R.string.cat_equipments)
                 "VEHICLES" -> stringResource(R.string.cat_vehicles)

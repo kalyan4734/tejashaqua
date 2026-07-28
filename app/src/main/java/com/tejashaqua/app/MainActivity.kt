@@ -73,10 +73,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import kotlinx.coroutines.flow.MutableStateFlow
 import com.tejashaqua.app.utils.AppStateTracker
 
 class MainActivity : AppCompatActivity() {
     private lateinit var firebaseAnalytics: FirebaseAnalytics
+    private val intentFlow = MutableStateFlow<Intent?>(null)
 
     override fun onResume() {
         super.onResume()
@@ -95,10 +97,12 @@ class MainActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent) // Update current intent to the new one
+        intentFlow.value = intent
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        intentFlow.value = intent
         firebaseAnalytics = FirebaseAnalytics.getInstance(this)
         LocaleHelper.applySavedLocale(this)
         val lang = LocaleHelper.getSelectedLanguage(this) ?: "en"
@@ -114,6 +118,7 @@ class MainActivity : AppCompatActivity() {
                 
                 val networkObserver = remember { NetworkObserver(context) }
                 val networkStatus by networkObserver.observe.collectAsState(initial = NetworkObserver.Status.Available)
+                val currentIntent by intentFlow.collectAsState()
 
                 var appVersion by remember { mutableStateOf("1.0.0") }
                 var needsUpdate by remember { mutableStateOf(false) }
@@ -170,10 +175,10 @@ class MainActivity : AppCompatActivity() {
                 var locationPermissionsToRequest by remember { mutableStateOf<Array<String>>(emptyArray()) }
 
                 // Handle Notification Click Navigation
-                LaunchedEffect(intent, userId) {
-                    val type = intent.getStringExtra("type")
+                LaunchedEffect(currentIntent, userId) {
+                    val type = currentIntent?.getStringExtra("type")
                     if (type == "chat" && userId.isNotEmpty()) {
-                        val chatId = intent.getStringExtra("chatId") ?: ""
+                        val chatId = currentIntent?.getStringExtra("chatId") ?: ""
 
                         if (chatId.isNotEmpty()) {
                             FirebaseFirestore.getInstance().collection("chats").document(chatId)
@@ -202,6 +207,7 @@ class MainActivity : AppCompatActivity() {
                                         // Clear intent data to prevent re-navigation on recomposition/activity restart
                                         intent.removeExtra("type")
                                         intent.removeExtra("chatId")
+                                        intentFlow.value = null
                                     }
                                 }
                         }
@@ -324,7 +330,7 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 LaunchedEffect(currentScreen) {
-                    if (currentScreen == "dashboard") {
+                    if (currentScreen == "dashboard" || currentScreen == "select_location") {
                         val hasLocationPermission = ContextCompat.checkSelfPermission(
                             context,
                             Manifest.permission.ACCESS_FINE_LOCATION
@@ -352,8 +358,8 @@ class MainActivity : AppCompatActivity() {
                                 }
                                 LocaleHelper.setLocationDisclosureShown(context)
                             }
-                        } else if (!LocaleHelper.isLocationDisclosureShown(context)) {
-                            // Not granted and disclosure not shown yet, show disclosure first
+                        } else if (!LocaleHelper.isLocationDisclosureShown(context) || currentScreen == "select_location") {
+                            // Not granted and disclosure not shown yet OR entering select_location screen
                             val permissions = mutableListOf(
                                 Manifest.permission.ACCESS_FINE_LOCATION,
                                 Manifest.permission.ACCESS_COARSE_LOCATION,
@@ -686,6 +692,12 @@ class MainActivity : AppCompatActivity() {
                                             dashboardTab = 2 // Ensure we go back to Chat tab
                                         }
                                         currentScreen = chatSourceScreen 
+                                    },
+                                    onListingClick = { listing ->
+                                        selectedListingData = listing
+                                        detailedPageSource = "chat"
+                                        listingBackStack = emptyList()
+                                        currentScreen = "detailed_page"
                                     },
                                     sendInitialMessage = shouldSendInitialChatMessage
                                 )

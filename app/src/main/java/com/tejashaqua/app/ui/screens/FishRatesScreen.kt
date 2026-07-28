@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -114,6 +115,18 @@ fun FishRatesScreen(onBackClick: () -> Unit) {
                     contentPadding = PaddingValues(bottom = 16.dp)
                 ) {
                     item {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 8.dp)) {
+                            Icon(Icons.Default.DateRange, null, tint = Color.Black, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = if (lastUpdatedDate.isNotEmpty()) lastUpdatedDate else "--",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.Black
+                            )
+                        }
+                    }
+                    item {
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
@@ -176,8 +189,13 @@ fun FishRatesScreen(onBackClick: () -> Unit) {
                                             horizontalArrangement = Arrangement.SpaceBetween
                                         ) {
                                             Column {
+                                                val displayPrice = if (rate.price == "--") "N/A" 
+                                                                  else if (rate.price.contains("/") || rate.price.contains(stringResource(R.string.no_data_available))) rate.price
+                                                                  else if (rate.price.startsWith("₹")) "${rate.price}/kg"
+                                                                  else "₹${rate.price}/kg"
+                                                
                                                 Text(
-                                                    text = if (rate.price == "--") "N/A" else "₹${CurrencyUtils.formatPrice(rate.price)}",
+                                                    text = displayPrice,
                                                     color = AquaBlue, 
                                                     fontWeight = FontWeight.Bold, 
                                                     fontSize = 14.sp

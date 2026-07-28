@@ -43,7 +43,8 @@ fun MarketItem(
     timestamp: Long = 0L,
     onFavoriteClick: (() -> Unit)? = null,
     onClick: (() -> Unit)? = null,
-    onPosterClick: (() -> Unit)? = null
+    onPosterClick: (() -> Unit)? = null,
+    rawCategory: String = ""
 ) {
     val context = LocalContext.current
     val displayLocation = remember(location) {
@@ -63,32 +64,34 @@ fun MarketItem(
         }
     }
 
-    val categoryColor = remember(category) {
-        when (category.uppercase()) {
-            "FISH" -> Color(0xFF009688)
-            "PRAWNS" -> Color(0xFF3F51B5)
-            "EQUIPMENTS" -> Color(0xFF1976D2)
-            "VEHICLES" -> Color(0xFF1976D2)
-            "FEED" -> Color(0xFFE65100)
-            "SERVICES" -> Color(0xFFF57C00)
-            "TANKS" -> Color(0xFF388E3C)
-            "BUSINESS" -> Color(0xFFB71C1C)
-            "JOBS" -> Color(0xFF673AB7)
+    val categoryColor = remember(category, rawCategory) {
+        val cat = (if (rawCategory.isNotEmpty()) rawCategory else category).uppercase()
+        when {
+            cat.contains("FISH") -> Color(0xFF009688)
+            cat.contains("PRAWN") -> Color(0xFF3F51B5)
+            cat.contains("EQUIPMENT") -> Color(0xFF1976D2)
+            cat.contains("VEHICLE") -> Color(0xFF1976D2)
+            cat.contains("FEED") -> Color(0xFFE65100)
+            cat.contains("SERVICE") -> Color(0xFFF57C00)
+            cat.contains("TANK") -> Color(0xFF388E3C)
+            cat.contains("BUSINESS") -> Color(0xFFB71C1C)
+            cat.contains("JOB") -> Color(0xFF673AB7)
             else -> AquaBlue
         }
     }
 
-    val categoryBgColor = remember(category) {
-        when (category.uppercase()) {
-            "FISH" -> Color(0xFFFFF3E0)
-            "PRAWNS" -> Color(0xFFE0F2F1)
-            "EQUIPMENTS" -> Color(0xFFE1F5FE)
-            "VEHICLES" -> Color(0xFFE1F5FE)
-            "FEED" -> Color(0xFFFFF3E0)
-            "SERVICES" -> Color(0xFFFFFDE7)
-            "TANKS" -> Color(0xFFE8F5E9)
-            "BUSINESS" -> Color(0xFFFFEBEE)
-            "JOBS" -> Color(0xFFF3E5F5)
+    val categoryBgColor = remember(category, rawCategory) {
+        val cat = (if (rawCategory.isNotEmpty()) rawCategory else category).uppercase()
+        when {
+            cat.contains("FISH") -> Color(0xFFFFF3E0)
+            cat.contains("PRAWN") -> Color(0xFFE0F2F1)
+            cat.contains("EQUIPMENT") -> Color(0xFFE1F5FE)
+            cat.contains("VEHICLE") -> Color(0xFFE1F5FE)
+            cat.contains("FEED") -> Color(0xFFFFF3E0)
+            cat.contains("SERVICE") -> Color(0xFFFFFDE7)
+            cat.contains("TANK") -> Color(0xFFE8F5E9)
+            cat.contains("BUSINESS") -> Color(0xFFFFEBEE)
+            cat.contains("JOB") -> Color(0xFFF3E5F5)
             else -> Color(0xFFE8EAF6)
         }
     }
@@ -110,6 +113,10 @@ fun MarketItem(
                         contentScale = ContentScale.Crop,
                         error = painterResource(id = R.drawable.app_logo)
                     )
+                } else if (rawCategory.uppercase().contains("JOB") || category.uppercase().contains("JOB")) {
+                    Box(modifier = Modifier.fillMaxSize().background(Color(0xFFF3E5F5)), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(50.dp), tint = Color(0xFF673AB7).copy(alpha = 0.5f))
+                    }
                 } else {
                     Image(painter = painterResource(id = R.drawable.app_logo), contentDescription = null, modifier = Modifier.size(60.dp).align(Alignment.Center), alpha = 0.3f)
                 }

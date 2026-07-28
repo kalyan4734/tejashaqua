@@ -100,6 +100,18 @@ fun MyListingsScreen(
                         listings = snapshot.documents.map { doc ->
                             val fullLocation = doc.getString("location") ?: ""
                             val categoryStr = doc.getString("category") ?: "Other"
+                            val displayCategory = when(categoryStr.uppercase()) {
+                                "FISH" -> context.getString(R.string.cat_fish_seed)
+                                "PRAWNS" -> context.getString(R.string.cat_prawns)
+                                "EQUIPMENTS" -> context.getString(R.string.cat_equipments)
+                                "VEHICLES" -> context.getString(R.string.cat_vehicles)
+                                "FEED" -> context.getString(R.string.cat_feed)
+                                "SERVICES" -> context.getString(R.string.cat_services)
+                                "TANKS" -> context.getString(R.string.cat_tanks)
+                                "BUSINESS" -> context.getString(R.string.cat_business)
+                                "JOBS" -> context.getString(R.string.cat_jobs)
+                                else -> categoryStr
+                            }
                             val naText = context.getString(R.string.not_available_short)
                             val tonText = context.getString(R.string.unit_ton)
                             val acreText = context.getString(R.string.unit_acre)
@@ -126,7 +138,7 @@ fun MyListingsScreen(
                             UserListing(
                                 id = doc.id,
                                 title = doc.getString("title")?.takeIf { it.isNotBlank() } ?: context.getString(R.string.no_title),
-                                category = categoryStr,
+                                category = displayCategory,
                                 price = priceLabel,
                                 unit = "", // Unit is now included in priceLabel
                                 location = fullLocation.split(",").firstOrNull()?.trim() ?: fullLocation,

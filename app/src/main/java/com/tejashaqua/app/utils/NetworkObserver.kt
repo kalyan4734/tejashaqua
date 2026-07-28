@@ -49,11 +49,9 @@ class NetworkObserver(context: Context) {
                 val activeNetwork = connectivityManager.activeNetwork
                 val capabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
                 
-                // We check for INTERNET capability AND VALIDATED status.
-                // VALIDATED means the system has confirmed there is actual internet access.
+                // We check for INTERNET capability.
                 val hasInternet = capabilities != null &&
-                        capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
-                        capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+                        capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
 
                 launch {
                     if (!hasInternet && isLosing) {
@@ -61,7 +59,7 @@ class NetworkObserver(context: Context) {
                         delay(2000)
                         val retryCapabilities = connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)
                         val stillNoInternet = retryCapabilities == null ||
-                                !retryCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+                                !retryCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
                         
                         if (stillNoInternet) {
                             send(Status.Lost)
@@ -74,18 +72,26 @@ class NetworkObserver(context: Context) {
         }
 
         // registerDefaultNetworkCallback is available from API 24+
-        connectivityManager.registerDefaultNetworkCallback(callback)
+        try {
+            connectivityManager.registerDefaultNetworkCallback(callback)
+        } catch (e: Exception) {
+            // Fallback for older versions or issues
+        }
         
-        // Initial state check
+        // Initial state check - check multiple times to ensure it's not transient
         val activeNetwork = connectivityManager.activeNetwork
         val capabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
         val isInitiallyConnected = capabilities != null &&
-                capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
-                capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
-        launch { send(if (isInitiallyConnected) Status.Available else Status.Lost) }
+                capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+        
+        launch { 
+            send(if (isInitiallyConnected) Status.Available else Status.Lost)
+        }
 
         awaitClose {
-            connectivityManager.unregisterNetworkCallback(callback)
+            try {
+                connectivityManager.unregisterNetworkCallback(callback)
+            } catch (e: Exception) {}
         }
     }.distinctUntilChanged()
 

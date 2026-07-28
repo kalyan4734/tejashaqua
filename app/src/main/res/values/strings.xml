@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">TejashAqua</string>
+    <string name="app_name">Tejash Aqua</string>
     <string name="welcome_to">Welcome to </string>
     <string name="tejash_aqua">Tejash Aqua!</string>
     <string name="enter_mobile_number">Enter Your Mobile Number</string>
@@ -153,6 +153,7 @@
     <string name="view_all_prices">View All Prices</string>
     <!-- Categories -->
     <string name="cat_fish">Fish</string>
+    <string name="cat_fish_seed">Fish Seed</string>
     <string name="cat_prawns">Prawns</string>
     <string name="cat_equipments">Equipments</string>
     <string name="cat_vehicles">Vehicles</string>
@@ -252,12 +253,15 @@
     <string name="equip_generators">Generators</string>
     <string name="equip_pump_engines">Pump Engines</string>
     <string name="equip_boats">Boats</string>
+    <string name="equip_mavulu">Mavulu</string>
     <string name="equip_wires">Electrical Wires</string>
 
     <!-- Service Types -->
     <string name="service_live_fish_vehicles">Live Fish Vehicles</string>
     <string name="service_feed_transport">Feed Transport</string>
     <string name="service_bore_well">Bore Well</string>
+    <string name="service_chart_writing">Chart Writing</string>
+    <string name="service_earth_movers">Earth Movers</string>
     <string name="service_nets">Nets</string>
 
     <!-- Business Categories -->
@@ -335,10 +339,10 @@
     <string name="months_suffix">%s Months</string>
     <string name="acres_suffix">%s Acres</string>
     <string name="privacy_policy_content">
-Privacy Policy for TejashAqua
+Privacy Policy for Tejash Aqua
 Effective Date: July 19, 2026
 
-TejashAqua (\"we,\" \"our,\" or \"us\") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, and disclose your information when you use our mobile application.
+Tejash Aqua (\"we,\" \"our,\" or \"us\") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, and disclose your information when you use our mobile application.
 
 1. Information We Collect
 • Personal Data: We collect your mobile number for authentication via OTP. We also collect your name if you choose to provide it for your profile.
@@ -363,9 +367,9 @@ We may update our Privacy Policy from time to time. You are advised to review th
     </string>
 
     <string name="terms_conditions_content">
-Terms and Conditions for TejashAqua
+Terms and Conditions for Tejash Aqua
 
-By downloading or using the TejashAqua app, you agree to these terms:
+By downloading or using the Tejash Aqua app, you agree to these terms:
 
 1. Eligibility
 You must be at least 18 years old to use this app or have parental supervision.
@@ -374,7 +378,7 @@ You must be at least 18 years old to use this app or have parental supervision.
 You are solely responsible for the content of your listings (titles, prices, images). You must not post illegal, fraudulent, or misleading information.
 
 3. Transactions
-TejashAqua is a marketplace platform. We do not participate in the actual transaction between buyers and sellers. We are not responsible for the quality, safety, or legality of the items advertised.
+Tejash Aqua is a marketplace platform. We do not participate in the actual transaction between buyers and sellers. We are not responsible for the quality, safety, or legality of the items advertised.
 
 4. Prohibited Activities
 You may not use the app for any unauthorized or illegal purpose, including harassing other users or scraping data.
@@ -383,7 +387,7 @@ You may not use the app for any unauthorized or illegal purpose, including haras
 We reserve the right to ban or suspend accounts that violate these terms or engage in fraudulent activity.
 
 6. Limitation of Liability
-TejashAqua shall not be liable for any indirect, incidental, or consequential damages arising out of your use of the app.
+Tejash Aqua shall not be liable for any indirect, incidental, or consequential damages arising out of your use of the app.
 
 7. Governing Law
 These terms shall be governed by and construed in accordance with the laws of India.
@@ -409,9 +413,9 @@ These terms shall be governed by and construed in accordance with the laws of In
     <string name="update_required">Update Required</string>
     <string name="update_desc">A new version of Tejash Aqua is available. Please update to continue using the app.</string>
     <string name="fish_rates_title">Fish Rates</string>
-    <string name="fish_table_header">Fish (చేప)</string>
-    <string name="average_table_header">Average (సగటు బరువు)</string>
-    <string name="price_table_header">Price (రేటు)</string>
+    <string name="fish_table_header">Fish</string>
+    <string name="average_table_header">Average Weight</string>
+    <string name="price_table_header">Price</string>
     <string name="update_now">Update Now</string>
     <string name="buyer_label">Buyer</string>
     <string name="one_kg">1 kg</string>
@@ -432,4 +436,7 @@ These terms shall be governed by and construed in accordance with the laws of In
     <string name="market_machilipatnam">Machilipatnam</string>
     <string name="unit_ton">ton</string>
     <string name="unit_acre">acre</string>
+    <string name="no_data_available">No data available for today</string>
+    <string name="show_mobile_number">Show Mobile Number on Listings</string>
+    <string name="show_mobile_number_desc">If disabled, buyers can only contact you via chat.</string>
 </resources>

@@ -49,7 +49,7 @@ fun SelectCategoryScreen(
             R.drawable.prawn,
             ListingCategory.PRAWNS
         ),
-        CategoryItem(stringResource(R.string.cat_fish), stringResource(R.string.fish_desc), R.drawable.fish, ListingCategory.FISH),
+        CategoryItem(stringResource(R.string.cat_fish_seed), stringResource(R.string.fish_desc), R.drawable.fish, ListingCategory.FISH),
         CategoryItem(
             stringResource(R.string.cat_equipments),
             stringResource(R.string.equipments_desc),

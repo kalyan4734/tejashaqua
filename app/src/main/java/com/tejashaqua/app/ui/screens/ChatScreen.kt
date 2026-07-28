@@ -70,6 +70,7 @@ fun ChatScreen(
     currentUserPhone: String,
     currentUserLocation: String,
     onBackClick: () -> Unit,
+    onListingClick: (Map<String, Any>) -> Unit,
     sendInitialMessage: Boolean = false,
     userActionViewModel: UserActionViewModel = viewModel()
 ) {
@@ -270,6 +271,13 @@ fun ChatScreen(
         }
     }
 
+    val imePadding = WindowInsets.ime.asPaddingValues().calculateBottomPadding()
+    LaunchedEffect(imePadding) {
+        if (imePadding > 0.dp && chatMessages.isNotEmpty()) {
+            listState.scrollToItem(chatMessages.size - 1)
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -423,7 +431,8 @@ fun ChatScreen(
             Surface(
                 tonalElevation = 2.dp,
                 shadowElevation = 2.dp,
-                color = Color.White
+                color = Color.White,
+                onClick = { onListingClick(listingDetails) }
             ) {
                 Row(
                     modifier = Modifier
