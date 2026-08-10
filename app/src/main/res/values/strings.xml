@@ -94,9 +94,9 @@
     <string name="clear">Clear</string>
     <string name="contact_number_label">Contact Number</string>
     <string name="title_label">Title</string>
-    <string name="size_label">Size</string>
+    <string name="size_label">Fish Seed Size</string>
     <string name="size_value_label">Size Value</string>
-    <string name="fish_age_label">Fish Age (in Months)</string>
+    <string name="fish_age_label">Fish Seed Age (in Months)</string>
     <string name="quantity_label">Quantity</string>
     <string name="stock_label">Stock</string>
     <string name="no_of_stock_label">No of stock</string>
@@ -127,7 +127,7 @@
     <string name="mins_ago">%d mins ago</string>
     <string name="hours_ago">%d hours ago</string>
     <string name="days_ago">%d days ago</string>
-    <string name="fish_type_label">Fish Type</string>
+    <string name="fish_type_label">Fish Seed Type</string>
     <string name="capacity_label">Capacity</string>
     <string name="service_type_label">Service Type</string>
     <string name="bore_type_label">Bore Type</string>
@@ -223,6 +223,7 @@
     <string name="fish_crab">Crab</string>
     <string name="fish_bangaru_teega">Bangaru Teega</string>
     <string name="fish_others">Others</string>
+    <string name="seed_suffix">Seed</string>
 
     <!-- Units -->
     <string name="unit_inches">Inches</string>
@@ -436,7 +437,7 @@ These terms shall be governed by and construed in accordance with the laws of In
     <string name="market_machilipatnam">Machilipatnam</string>
     <string name="unit_ton">ton</string>
     <string name="unit_acre">acre</string>
-    <string name="no_data_available">No data available for today</string>
+    <string name="no_data_available">N/A</string>
     <string name="show_mobile_number">Show Mobile Number on Listings</string>
     <string name="show_mobile_number_desc">If disabled, buyers can only contact you via chat.</string>
 </resources>

@@ -94,9 +94,9 @@
     <string name="clear">క్లియర్</string>
     <string name="contact_number_label">సంప్రదింపు సంఖ్య</string>
     <string name="title_label">టైటిల్</string>
-    <string name="size_label">పరిమాణం</string>
+    <string name="size_label">చేప పిల్ల సైజు</string>
     <string name="size_value_label">పరిమాణం విలువ</string>
-    <string name="fish_age_label">చేపల వయస్సు (నెలల్లో)</string>
+    <string name="fish_age_label">చేప పిల్ల వయస్సు (నెలల్లో)</string>
     <string name="quantity_label">పరిమాణం (Quantity)</string>
     <string name="stock_label">స్టాక్</string>
     <string name="no_of_stock_label">చేపల సంఖ్య</string>
@@ -127,7 +127,7 @@
     <string name="mins_ago">%d నిమిషాల క్రితం</string>
     <string name="hours_ago">%d గంటల క్రితం</string>
     <string name="days_ago">%d రోజుల క్రితం</string>
-    <string name="fish_type_label">చేపల రకం</string>
+    <string name="fish_type_label">చేప పిల్ల రకం</string>
     <string name="capacity_label">సామర్థ్యం</string>
     <string name="service_type_label">సేవ రకం</string>
     <string name="bore_type_label">బోర్ రకం</string>
@@ -176,7 +176,7 @@
     <string name="services_desc">బోర్‌వెల్, వాహనాలు, వలలు మొదలైనవి.</string>
     <string name="phone_not_available">ఫోన్ అందుబాటులో లేదు</string>
     <string name="responds_in">%s లో స్పందిస్తారు</string>
-    <string name="desc_size_prefix">పరిమాణం: %s</string>
+    <string name="desc_size_prefix">సైజు: %s</string>
     <string name="desc_quantity_prefix">పరిమాణం (Quantity): %s</string>
     <string name="desc_price_prefix">ధర: ₹%s</string>
     <string name="desc_rate_prefix">ధర (Rate): ₹%s</string>
@@ -223,6 +223,7 @@
     <string name="fish_crab">పీత (Crab)</string>
     <string name="fish_bangaru_teega">బంగారు తీగ</string>
     <string name="fish_others">ఇతరాలు</string>
+    <string name="seed_suffix">సీడ్</string>
 
     <!-- Units -->
     <string name="unit_inches">అంగుళాలు</string>
@@ -435,7 +436,7 @@
     <string name="market_machilipatnam">మచిలీపట్నం</string>
     <string name="unit_ton">టన్ను</string>
     <string name="unit_acre">ఎకరం</string>
-    <string name="no_data_available">ఈ రోజు డేటా అందుబాటులో లేదు</string>
+    <string name="no_data_available">N/A</string>
     <string name="show_mobile_number">లిస్టింగ్స్‌లో మొబైల్ నంబర్‌ను చూపించు</string>
     <string name="show_mobile_number_desc">దీన్ని నిలిపివేస్తే, కొనుగోలుదారులు మిమ్మల్ని చాట్ ద్వారా మాత్రమే సంప్రదించగలరు.</string>
 </resources>

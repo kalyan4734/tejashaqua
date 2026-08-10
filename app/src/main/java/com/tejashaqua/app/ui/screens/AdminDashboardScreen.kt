@@ -174,7 +174,12 @@ fun FishRatesAdmin(selectedDate: Long, onBackClick: () -> Unit) {
             rates = fishTypes.map { name -> fetched[name] ?: AquaRate(name, isPrawn = name == "Prawns") }
             
             // Check if all rates are marked as no data
-            noDataAvailable = rates.all { it.price == context.getString(R.string.no_data_available) }
+            noDataAvailable = rates.all { 
+                it.price == "N/A" || 
+                it.price == "No data available for today" || 
+                it.price == "ఈ రోజు డేటా అందుబాటులో లేదు" || 
+                it.price == context.getString(R.string.no_data_available) 
+            }
         }
     }
 
@@ -253,7 +258,7 @@ fun FishRatesAdmin(selectedDate: Long, onBackClick: () -> Unit) {
             onClick = {
                 keyboardController?.hide()
                 val batch = db.batch()
-                rates.forEach { rate ->
+                rates.forEachIndexed { index, rate ->
                     val ref = db.collection("aqua_rates").document(rate.name)
                     
                     val displayPrice = if (noDataAvailable) {
@@ -269,12 +274,13 @@ fun FishRatesAdmin(selectedDate: Long, onBackClick: () -> Unit) {
                         }
                     }
 
-                    val data = mapOf(
+                    val data = mutableMapOf(
                         "price" to displayPrice,
                         "change" to if (noDataAvailable) "" else rate.change,
                         "trend" to if (noDataAvailable) RateTrend.FLAT.name else rate.trend.name,
                         "isPrawn" to rate.isPrawn,
-                        "lastUpdated" to selectedDate
+                        "lastUpdated" to selectedDate,
+                        "notify" to (index == 0) // Trigger notification only once for the whole fish batch
                     )
                     batch.set(ref, data)
                     
@@ -332,7 +338,12 @@ fun PrawnRatesAdmin(selectedDate: Long, onBackClick: () -> Unit) {
                 val data = doc.get("rates") as? Map<*, *>
                 prices = data?.mapKeys { it.key.toString() }?.mapValues { it.value.toString() } ?: emptyMap()
                 
-                noDataAvailable = prices.values.all { it == context.getString(R.string.no_data_available) }
+                noDataAvailable = prices.values.all { 
+                    it == "N/A" || 
+                    it == "No data available for today" || 
+                    it == "ఈ రోజు డేటా అందుబాటులో లేదు" || 
+                    it == context.getString(R.string.no_data_available) 
+                }
             } else {
                 prices = emptyMap()
             }
@@ -443,8 +454,12 @@ fun PrawnRatesAdmin(selectedDate: Long, onBackClick: () -> Unit) {
                     val price100 = prices["100"] ?: ""
                     
                     if (price100.isNotEmpty()) {
-                        val isNoData = price100 == context.getString(R.string.no_data_available)
-                        val displayPrice = if (isNoData) price100 else "₹$price100/kg"
+                        val isNoData = price100 == "N/A" || 
+                                      price100 == "No data available for today" || 
+                                      price100 == "ఈ రోజు డేటా అందుబాటులో లేదు" || 
+                                      price100 == context.getString(R.string.no_data_available)
+                        
+                        val displayPrice = if (isNoData) context.getString(R.string.no_data_available) else "₹$price100/kg"
                         val currentVal = price100.filter { it.isDigit() || it == '.' }.toDoubleOrNull() ?: 0.0
                         
                         var trend = RateTrend.FLAT
@@ -469,7 +484,8 @@ fun PrawnRatesAdmin(selectedDate: Long, onBackClick: () -> Unit) {
                             "change" to change,
                             "trend" to trend.name,
                             "isPrawn" to true,
-                            "lastUpdated" to selectedDate
+                            "lastUpdated" to selectedDate,
+                            "notify" to true // Trigger notification for prawns summary
                         ), com.google.firebase.firestore.SetOptions.merge())
 
                         // 3. Save to history for the summary graph

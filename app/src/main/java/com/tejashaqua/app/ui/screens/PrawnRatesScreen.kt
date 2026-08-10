@@ -173,6 +173,13 @@ fun PrawnRatesScreen(onBackClick: () -> Unit) {
                         counts.forEachIndexed { index, count ->
                             val price = prices[count] ?: "--"
                             val isEven = index % 2 == 0
+                            
+                            val isNoData = price == "--" || 
+                                          price == "N/A" || 
+                                          price == "No data available for today" || 
+                                          price == "ఈ రోజు డేటా అందుబాటులో లేదు" ||
+                                          price == stringResource(R.string.no_data_available)
+                                          
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -182,7 +189,13 @@ fun PrawnRatesScreen(onBackClick: () -> Unit) {
                             ) {
                                 Text(count, color = Color.Black, modifier = Modifier.weight(1f))
                                 Box(modifier = Modifier.width(1.dp).height(20.dp).background(Color.LightGray.copy(alpha = 0.5f)))
-                                Text(if (price == "--") price else "₹${CurrencyUtils.formatPrice(price)}", color = AquaBlue, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f).padding(start = 16.dp))
+                                Text(
+                                    text = if (isNoData) stringResource(R.string.no_data_available) 
+                                           else "₹${CurrencyUtils.formatPrice(price)}", 
+                                    color = AquaBlue, 
+                                    fontWeight = FontWeight.Bold, 
+                                    modifier = Modifier.weight(1f).padding(start = 16.dp)
+                                )
                             }
                             if (index < counts.size - 1) {
                                 HorizontalDivider(color = Color(0xFFEEEEEE))

@@ -12,6 +12,7 @@ import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.FirebaseApp
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
+import com.google.firebase.functions.FirebaseFunctions
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,12 +36,12 @@ class AuthViewModel(application: android.app.Application) : AndroidViewModel(app
     private val db = FirebaseFirestore.getInstance()
     private val storage = FirebaseStorage.getInstance()
     private val analytics = FirebaseAnalytics.getInstance(application)
+    private val functions = FirebaseFunctions.getInstance()
     
     private val _authState = MutableStateFlow<AuthState>(AuthState.Idle)
     val authState: StateFlow<AuthState> = _authState
 
-    private var verificationId: String = ""
-    private var resendToken: PhoneAuthProvider.ForceResendingToken? = null
+    private var pendingPhoneNumber: String = ""
     private var loadingTimeoutJob: Job? = null
 
     init {
@@ -71,12 +72,11 @@ class AuthViewModel(application: android.app.Application) : AndroidViewModel(app
     }
 
     fun clearVerificationData() {
-        verificationId = ""
-        resendToken = null
+        pendingPhoneNumber = ""
         _authState.value = AuthState.Idle
     }
 
-    fun sendOtp(phoneNumber: String, activity: Activity) {
+    fun sendOtp(phoneNumber: String, activity: Activity? = null) {
         if (phoneNumber.length != 10) {
             _authState.value = AuthState.Error("Please enter a valid 10-digit phone number.")
             return
@@ -88,69 +88,63 @@ class AuthViewModel(application: android.app.Application) : AndroidViewModel(app
         _authState.value = AuthState.Loading
         startLoadingTimeout()
         
-        // Clear previous verification data for a fresh attempt from login screen
-        if (activity.localClassName.contains("MainActivity") && resendToken == null) {
-             verificationId = ""
-        }
+        this.pendingPhoneNumber = phoneNumber
 
         try {
             val bundle = Bundle()
             bundle.putString("phone_number", "+91$phoneNumber")
             analytics.logEvent("otp_request", bundle)
 
-            val builder = PhoneAuthOptions.newBuilder(auth)
-                .setPhoneNumber("+91$phoneNumber")
-                .setTimeout(60L, TimeUnit.SECONDS)
-                .setActivity(activity)
-                .setCallbacks(object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
-                    override fun onVerificationCompleted(credential: PhoneAuthCredential) {
-                        android.util.Log.d("AuthViewModel", "onVerificationCompleted")
-                        stopLoadingTimeout()
-                        signInWithPhoneAuthCredential(credential)
-                    }
-
-                    override fun onVerificationFailed(e: com.google.firebase.FirebaseException) {
-                        stopLoadingTimeout()
-                        android.util.Log.e("AuthViewModel", "onVerificationFailed: ${e.message}", e)
-                        
-                        val errorBundle = Bundle()
-                        errorBundle.putString(FirebaseAnalytics.Param.METHOD, "phone")
-                        errorBundle.putString("error_message", e.localizedMessage)
-                        analytics.logEvent("auth_failure", errorBundle)
-
-                        val message = when(e) {
-                            is FirebaseAuthInvalidCredentialsException -> "Invalid phone number."
-                            is FirebaseAuthException -> {
-                                if (e.errorCode == "ERROR_TOO_MANY_REQUESTS") "Too many requests. Please try again later."
-                                else e.localizedMessage ?: "Verification Failed"
-                            }
-                            else -> e.localizedMessage ?: "Verification Failed"
-                        }
+            val data = hashMapOf("phoneNumber" to phoneNumber)
+            functions.getHttpsCallable("sendOtp")
+                .call(data)
+                .addOnSuccessListener { result ->
+                    stopLoadingTimeout()
+                    val response = result.data as? Map<*, *>
+                    if (response?.get("success") == true) {
+                        android.util.Log.d("AuthViewModel", "OTP Sent successfully via MSG91")
+                        _authState.value = AuthState.OtpSent("msg91_session")
+                    } else {
+                        val message = response?.get("message") as? String ?: "Failed to send OTP"
                         _authState.value = AuthState.Error(message)
                     }
-
-                    override fun onCodeSent(
-                        verificationId: String,
-                        token: PhoneAuthProvider.ForceResendingToken
-                    ) {
-                        android.util.Log.d("AuthViewModel", "onCodeSent: $verificationId")
-                        stopLoadingTimeout()
-                        this@AuthViewModel.verificationId = verificationId
-                        this@AuthViewModel.resendToken = token
-                        _authState.value = AuthState.OtpSent(verificationId)
-                    }
-                })
-            
-            resendToken?.let {
-                builder.setForceResendingToken(it)
-            }
-                
-            PhoneAuthProvider.verifyPhoneNumber(builder.build())
+                }
+                .addOnFailureListener { e ->
+                    stopLoadingTimeout()
+                    android.util.Log.e("AuthViewModel", "sendOtp failure", e)
+                    _authState.value = AuthState.Error(e.localizedMessage ?: "Failed to send OTP")
+                }
         } catch (e: Exception) {
             stopLoadingTimeout()
-            android.util.Log.e("AuthViewModel", "verifyPhoneNumber exception", e)
+            android.util.Log.e("AuthViewModel", "sendOtp exception", e)
             _authState.value = AuthState.Error(e.localizedMessage ?: "Failed to start verification")
         }
+    }
+
+    fun resendOtp(phoneNumber: String) {
+        if (_authState.value is AuthState.Loading) return
+
+        _authState.value = AuthState.Loading
+        startLoadingTimeout()
+
+        val data = hashMapOf("phoneNumber" to phoneNumber)
+        functions.getHttpsCallable("resendOtp")
+            .call(data)
+            .addOnSuccessListener { result ->
+                stopLoadingTimeout()
+                val response = result.data as? Map<*, *>
+                if (response?.get("success") == true) {
+                    android.util.Log.d("AuthViewModel", "OTP Resent successfully")
+                    _authState.value = AuthState.OtpSent("msg91_session_resend")
+                } else {
+                    val message = response?.get("message") as? String ?: "Failed to resend OTP"
+                    _authState.value = AuthState.Error(message)
+                }
+            }
+            .addOnFailureListener { e ->
+                stopLoadingTimeout()
+                _authState.value = AuthState.Error(e.localizedMessage ?: "Failed to resend OTP")
+            }
     }
 
     fun verifyOtp(otp: String) {
@@ -158,7 +152,7 @@ class AuthViewModel(application: android.app.Application) : AndroidViewModel(app
             _authState.value = AuthState.Error("Please enter a 6-digit OTP.")
             return
         }
-        if (verificationId.isEmpty()) {
+        if (pendingPhoneNumber.isEmpty()) {
             _authState.value = AuthState.Error("Session expired. Please resend OTP.")
             return
         }
@@ -167,16 +161,40 @@ class AuthViewModel(application: android.app.Application) : AndroidViewModel(app
         startLoadingTimeout()
         
         try {
-            val credential = PhoneAuthProvider.getCredential(verificationId, otp)
-            signInWithPhoneAuthCredential(credential)
+            val data = hashMapOf(
+                "phoneNumber" to pendingPhoneNumber,
+                "otp" to otp
+            )
+            functions.getHttpsCallable("verifyOtp")
+                .call(data)
+                .addOnSuccessListener { result ->
+                    val response = result.data as? Map<*, *>
+                    if (response?.get("success") == true) {
+                        val customToken = response["customToken"] as? String
+                        if (customToken != null) {
+                            signInWithCustomToken(customToken)
+                        } else {
+                            stopLoadingTimeout()
+                            _authState.value = AuthState.Error("Verification successful but token missing")
+                        }
+                    } else {
+                        stopLoadingTimeout()
+                        val message = response?.get("message") as? String ?: "Invalid OTP"
+                        _authState.value = AuthState.Error(message)
+                    }
+                }
+                .addOnFailureListener { e ->
+                    stopLoadingTimeout()
+                    _authState.value = AuthState.Error(e.localizedMessage ?: "Verification failed")
+                }
         } catch (e: Exception) {
             stopLoadingTimeout()
             _authState.value = AuthState.Error(e.localizedMessage ?: "Invalid OTP attempt")
         }
     }
 
-    private fun signInWithPhoneAuthCredential(credential: PhoneAuthCredential) {
-        auth.signInWithCredential(credential)
+    private fun signInWithCustomToken(token: String) {
+        auth.signInWithCustomToken(token)
             .addOnCompleteListener { task ->
                 stopLoadingTimeout()
                 if (task.isSuccessful) {

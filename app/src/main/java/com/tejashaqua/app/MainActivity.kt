@@ -176,9 +176,15 @@ class MainActivity : AppCompatActivity() {
 
                 // Handle Notification Click Navigation
                 LaunchedEffect(currentIntent, userId) {
-                    val type = currentIntent?.getStringExtra("type")
-                    if (type == "chat" && userId.isNotEmpty()) {
-                        val chatId = currentIntent?.getStringExtra("chatId") ?: ""
+                    val intentToProcess = currentIntent
+                    if (intentToProcess == null || userId.isEmpty()) return@LaunchedEffect
+
+                    val type = intentToProcess.getStringExtra("type")
+                    android.util.Log.d("NAV", "Processing notification type: $type")
+
+                    if (type == "chat") {
+                        val chatId = intentToProcess.getStringExtra("chatId") ?: ""
+                        android.util.Log.d("NAV", "Chat ID from intent: $chatId")
 
                         if (chatId.isNotEmpty()) {
                             FirebaseFirestore.getInstance().collection("chats").document(chatId)
@@ -194,9 +200,12 @@ class MainActivity : AppCompatActivity() {
                                         updatedData["userId"] = if (isBuying) data["sellerId"]
                                             ?: "" else data["buyerId"] ?: ""
                                         updatedData["title"] = data["listingTitle"] ?: ""
-                                        updatedData["listingLocation"] =
-                                            data["listingLocation"] ?: ""
-                                        updatedData["listingPrice"] = data["listingPrice"] ?: ""
+                                        updatedData["price"] = data["listingPrice"] ?: ""
+                                        updatedData["location"] = data["listingLocation"] ?: ""
+                                        val img = data["listingImage"]?.toString() ?: ""
+                                        if (img.isNotEmpty()) {
+                                            updatedData["images"] = listOf(img)
+                                        }
 
                                         selectedListingData = updatedData
                                         chatSourceScreen = "dashboard"
@@ -204,13 +213,14 @@ class MainActivity : AppCompatActivity() {
                                         shouldSendInitialChatMessage = false
                                         currentScreen = "chat"
 
-                                        // Clear intent data to prevent re-navigation on recomposition/activity restart
-                                        intent.removeExtra("type")
-                                        intent.removeExtra("chatId")
+                                        // Clear intent data to prevent re-navigation
                                         intentFlow.value = null
                                     }
                                 }
                         }
+                    } else if (type == "rates") {
+                        currentScreen = "aqua_rates"
+                        intentFlow.value = null
                     }
                 }
 
@@ -573,7 +583,7 @@ class MainActivity : AppCompatActivity() {
                                     showNoInternetDialog = true
                                     return@OtpScreen
                                 }
-                                authViewModel.sendOtp(mobileNumber, this@MainActivity)
+                                authViewModel.resendOtp(mobileNumber)
                             }, onBackClick = {
                                 authViewModel.resetState()
                                 currentScreen = "login"

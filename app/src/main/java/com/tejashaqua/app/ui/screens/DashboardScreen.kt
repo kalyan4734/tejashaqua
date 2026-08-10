@@ -1053,8 +1053,8 @@ fun AquaRatesSection(onRateClick: (AquaRate) -> Unit) {
                 
                 if (rates.all { it.price == "--" }) {
                     rates = listOf(
-                        AquaRate("Prawns", "₹280-1000", context.getString(R.string.view_all_prices), RateTrend.FLAT, isPrawn = true),
-                        AquaRate("Rohu", "₹160/kg", "+₹5 (3%)", RateTrend.UP)
+                        AquaRate("Prawns", context.getString(R.string.no_data_available), context.getString(R.string.view_all_prices), RateTrend.FLAT, isPrawn = true),
+                        AquaRate("Rohu", context.getString(R.string.no_data_available), context.getString(R.string.no_change), RateTrend.FLAT)
                     )
                 }
                 isLoading = false
@@ -1129,6 +1129,14 @@ fun RateCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val isNoData = rate.price == "--" || 
+                  rate.price == "N/A" || 
+                  rate.price == "No data available for today" || 
+                  rate.price == "ఈ రోజు డేటా అందుబాటులో లేదు" ||
+                  rate.price == stringResource(R.string.no_data_available)
+
+    val displayPrice = if (isNoData) stringResource(R.string.no_data_available) else rate.price
+
     Surface(
         modifier = modifier
             .fillMaxWidth()
@@ -1162,7 +1170,7 @@ fun RateCard(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = rate.price,
+                        text = displayPrice,
                         fontWeight = FontWeight.ExtraBold,
                         fontSize = 18.sp,
                         color = Color.Black

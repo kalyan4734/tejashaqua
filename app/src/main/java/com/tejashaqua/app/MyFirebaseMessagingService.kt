@@ -12,7 +12,8 @@ import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import com.tejashaqua.app.utils.AppStateTracker
 
-class MyFirebaseMessagingService : FirebaseMessagingService() {
+class
+MyFirebaseMessagingService : FirebaseMessagingService() {
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         val type = remoteMessage.data["type"]
@@ -29,13 +30,14 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
         android.util.Log.d("FCM", "Message received: ${remoteMessage.notification?.title}")
         
-        val title = remoteMessage.notification?.title ?: remoteMessage.data["title"] ?: "Tejash Aqua"
+        var title = remoteMessage.notification?.title ?: remoteMessage.data["title"] ?: "Tejash Aqua"
         var body = remoteMessage.notification?.body ?: remoteMessage.data["body"] ?: ""
         
-        // Clean up "(no change)" or "No Change" from notification body (Point 4)
-        if (body.contains("(no change)", ignoreCase = true)) {
-            body = body.replace(Regex("\\(?no change\\)?", RegexOption.IGNORE_CASE), "").trim()
-        }
+        // Clean up "(no change)", "No Change", and Telugu equivalent from notification body and title
+        val noChangeRegex = Regex("\\(?no change\\)?|\\(?మార్పు లేదు\\)?", RegexOption.IGNORE_CASE)
+        
+        title = title.replace(noChangeRegex, "").trim()
+        body = body.replace(noChangeRegex, "").trim()
         
         sendNotification(title, body, remoteMessage.data)
     }

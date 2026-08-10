@@ -189,8 +189,14 @@ fun FishRatesScreen(onBackClick: () -> Unit) {
                                             horizontalArrangement = Arrangement.SpaceBetween
                                         ) {
                                             Column {
-                                                val displayPrice = if (rate.price == "--") "N/A" 
-                                                                  else if (rate.price.contains("/") || rate.price.contains(stringResource(R.string.no_data_available))) rate.price
+                                                val isNoData = rate.price == "--" || 
+                                                              rate.price == "N/A" || 
+                                                              rate.price == "No data available for today" || 
+                                                              rate.price == "ఈ రోజు డేటా అందుబాటులో లేదు" ||
+                                                              rate.price == stringResource(R.string.no_data_available)
+                                                              
+                                                val displayPrice = if (isNoData) stringResource(R.string.no_data_available) 
+                                                                  else if (rate.price.contains("/") || rate.price.contains("N/A")) rate.price
                                                                   else if (rate.price.startsWith("₹")) "${rate.price}/kg"
                                                                   else "₹${rate.price}/kg"
                                                 

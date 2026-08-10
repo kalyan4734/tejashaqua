@@ -722,6 +722,7 @@ fun EditListingScreen(
                             vehicleName, { vehicleName = it },
                             vehicleCapacity, { vehicleCapacity = it },
                             netType, { netType = it },
+                            price, { price = it },
                             errors = fieldErrors,
                             keyboardOptions = keyboardOptionsBase,
                             accentColor = categoryColor
@@ -1008,7 +1009,11 @@ fun FishFields(
     val crab = stringResource(R.string.fish_crab)
     val bangaruTeega = stringResource(R.string.fish_bangaru_teega)
 
-    val options = remember { listOf(rohu, katla, karamosu, gaddiChepa, pangasius, roopchand, panduGappa, tilapia, chitala, koramenu, valuga, engilayi, jalla, tuna, pulasa, crab, bangaruTeega, othersStr) }
+    val seedSuffix = " " + stringResource(R.string.seed_suffix)
+    val options = remember { 
+        listOf(rohu, katla, karamosu, gaddiChepa, pangasius, roopchand, panduGappa, tilapia, chitala, koramenu, valuga, engilayi, jalla, tuna, pulasa, crab, bangaruTeega)
+            .map { "$it$seedSuffix" } + othersStr 
+    }
     
     var isOthers by remember { mutableStateOf(fishType.isNotEmpty() && !options.filter { it != othersStr }.contains(fishType)) }
     var otherName by remember { mutableStateOf(if (isOthers) fishType else "") }
@@ -1378,6 +1383,7 @@ fun ServiceFields(
     vehicleName: String, onVehicleNameChange: (String) -> Unit,
     vehicleCapacity: String, onVehicleCapacityChange: (String) -> Unit,
     netType: String, onNetTypeChange: (String) -> Unit,
+    price: String, onPriceChange: (String) -> Unit,
     errors: Map<String, Boolean> = emptyMap(),
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     accentColor: Color = AquaBlue
@@ -1451,6 +1457,10 @@ fun ServiceFields(
                     isError = errors["netType"] == true,
                     accentColor = accentColor
                 )
+            }
+            else -> {
+                // For other services (like Technician, etc.), show price field
+                ListingTextField(label = stringResource(R.string.price_label), value = price, onValueChange = onPriceChange, isError = errors["price"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number), accentColor = accentColor)
             }
         }
     }
