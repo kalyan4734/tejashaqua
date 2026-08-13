@@ -423,8 +423,8 @@ class MainActivity : AppCompatActivity() {
                                 }
                                 LocaleHelper.setLocationDisclosureShown(context)
                             }
-                        } else if (!LocaleHelper.isLocationDisclosureShown(context) || currentScreen == "select_location") {
-                            // Not granted and disclosure not shown yet OR entering select_location screen
+                        } else if (!LocaleHelper.isLocationDisclosureShown(context) || currentScreen == "select_location" || currentScreen == "dashboard") {
+                            // Not granted and disclosure not shown yet OR entering select_location screen OR entering dashboard
                             val permissions = mutableListOf(
                                 Manifest.permission.ACCESS_FINE_LOCATION,
                                 Manifest.permission.ACCESS_COARSE_LOCATION,
@@ -656,8 +656,24 @@ class MainActivity : AppCompatActivity() {
                                 },
                                 onProfileClick = { currentScreen = "profile" },
                                 onLocationClick = {
-                                    locationPickerSource = "dashboard"
-                                    currentScreen = "select_location"
+                                    val hasLocationPermission = ContextCompat.checkSelfPermission(
+                                        this@MainActivity,
+                                        Manifest.permission.ACCESS_FINE_LOCATION
+                                    ) == PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(
+                                        this@MainActivity,
+                                        Manifest.permission.ACCESS_COARSE_LOCATION
+                                    ) == PackageManager.PERMISSION_GRANTED
+
+                                    if (hasLocationPermission) {
+                                        locationPickerSource = "dashboard"
+                                        currentScreen = "select_location"
+                                    } else {
+                                        locationPermissionsToRequest = arrayOf(
+                                            Manifest.permission.ACCESS_FINE_LOCATION,
+                                            Manifest.permission.ACCESS_COARSE_LOCATION
+                                        )
+                                        showLocationDisclosure = true
+                                    }
                                 },
                                 onPrawnsClick = { currentScreen = "prawn_rates" },
                                 onFishRatesClick = { currentScreen = "fish_rates" },
@@ -849,8 +865,24 @@ class MainActivity : AppCompatActivity() {
                                 onPostClick = { currentScreen = "dashboard" },
                                 onDeleteClick = { currentScreen = "dashboard" },
                                 onLocationChangeClick = {
-                                    locationPickerSource = "listing"
-                                    currentScreen = "select_location"
+                                    val hasLocationPermission = ContextCompat.checkSelfPermission(
+                                        this@MainActivity,
+                                        Manifest.permission.ACCESS_FINE_LOCATION
+                                    ) == PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(
+                                        this@MainActivity,
+                                        Manifest.permission.ACCESS_COARSE_LOCATION
+                                    ) == PackageManager.PERMISSION_GRANTED
+
+                                    if (hasLocationPermission) {
+                                        locationPickerSource = "listing"
+                                        currentScreen = "select_location"
+                                    } else {
+                                        locationPermissionsToRequest = arrayOf(
+                                            Manifest.permission.ACCESS_FINE_LOCATION,
+                                            Manifest.permission.ACCESS_COARSE_LOCATION
+                                        )
+                                        showLocationDisclosure = true
+                                    }
                                 },
                                 joinedAt = joinedAt,
                                 userId = userId,
