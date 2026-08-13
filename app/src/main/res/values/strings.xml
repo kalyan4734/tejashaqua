@@ -440,4 +440,6 @@ These terms shall be governed by and construed in accordance with the laws of In
     <string name="no_data_available">N/A</string>
     <string name="show_mobile_number">Show Mobile Number on Listings</string>
     <string name="show_mobile_number_desc">If disabled, buyers can only contact you via chat.</string>
+    <string name="location_settings_desc">Location permission is required to use this feature. Please enable it in app settings.</string>
+    <string name="open_settings">Open Settings</string>
 </resources>

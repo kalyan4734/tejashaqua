@@ -242,3 +242,33 @@ exports.onChatMessageCreated = onDocumentCreated("chats/{chatId}/messages/{messa
         ...notificationPayload
     });
 });
+
+/**
+ * Synchronizes privacy settings across all listings when a user updates their profile.
+ */
+exports.onUserUpdated = onDocumentUpdated("users/{userId}", async (event) => {
+    const before = event.data.before.data();
+    const after = event.data.after.data();
+
+    if (before.showMobileNumber !== after.showMobileNumber) {
+        const userId = event.params.userId;
+        const newValue = after.showMobileNumber || false;
+
+        logger.info(`Updating mobile visibility for user ${userId} to ${newValue}`);
+
+        const listingsSnapshot = await admin.firestore()
+            .collection("listings")
+            .where("userId", "==", userId)
+            .get();
+
+        if (listingsSnapshot.empty) return null;
+
+        const batch = admin.firestore().batch();
+        listingsSnapshot.docs.forEach((doc) => {
+            batch.update(doc.ref, { sellerShowMobile: newValue });
+        });
+
+        return batch.commit();
+    }
+    return null;
+});

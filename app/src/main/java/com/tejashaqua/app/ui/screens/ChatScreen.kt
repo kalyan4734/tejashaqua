@@ -215,7 +215,9 @@ fun ChatScreen(
             "sellerName" to sellerNameLabel,
             "buyerId" to buyerId,
             "buyerName" to buyerName,
-            "participants" to listOf(currentUserId, sellerUserId)
+            "participants" to listOf(currentUserId, sellerUserId),
+            "sellerShowMobile" to (listingDetails["sellerShowMobile"] as? Boolean ?: false),
+            "sellerJoinedAt" to ((listingDetails["sellerJoinedAt"] as? Number)?.toLong() ?: 0L)
         )
         
         // First ensure doc exists with basic meta

@@ -27,7 +27,7 @@ sealed class AuthState {
     object Idle : AuthState()
     object Loading : AuthState()
     data class OtpSent(val verificationId: String) : AuthState()
-    data class Success(val userId: String, val userName: String, val mobileNumber: String, val joinedAt: Long, val isAdmin: Boolean = false) : AuthState()
+    data class Success(val userId: String, val userName: String, val mobileNumber: String, val joinedAt: Long, val isAdmin: Boolean = false, val showMobileNumber: Boolean = false) : AuthState()
     data class RequireName(val phoneNumber: String, val isAdmin: Boolean = false) : AuthState()
     data class Error(val message: String) : AuthState()
 }
@@ -234,6 +234,7 @@ class AuthViewModel(application: android.app.Application) : AndroidViewModel(app
                     val name = document.getString("name") ?: "User"
                     val joinedAt = document.getLong("joinedAt") ?: System.currentTimeMillis()
                     val onboardingComplete = document.getBoolean("onboardingComplete") ?: false
+                    val showMobile = document.getBoolean("showMobileNumber") ?: false
                     
                     if (onboardingComplete) {
                         // Update FCM Token on login
@@ -241,7 +242,7 @@ class AuthViewModel(application: android.app.Application) : AndroidViewModel(app
                             db.collection("users").document(userId).update("fcmToken", token)
                         }
                         analytics.logEvent(FirebaseAnalytics.Event.LOGIN, null)
-                        _authState.value = AuthState.Success(userId, name, phoneNumber, joinedAt, isAdmin)
+                        _authState.value = AuthState.Success(userId, name, phoneNumber, joinedAt, isAdmin, showMobile)
                     } else {
                         analytics.logEvent(FirebaseAnalytics.Event.SIGN_UP, null)
                         _authState.value = AuthState.RequireName(phoneNumber, isAdmin)
@@ -255,7 +256,8 @@ class AuthViewModel(application: android.app.Application) : AndroidViewModel(app
                         "phone" to phoneNumber,
                         "joinedAt" to now,
                         "onboardingComplete" to false,
-                        "isAdmin" to isSuperAdmin
+                        "isAdmin" to isSuperAdmin,
+                        "showMobileNumber" to false
                     )
                     db.collection("users").document(userId).set(user)
                     _authState.value = AuthState.RequireName(phoneNumber, isSuperAdmin)
@@ -289,7 +291,7 @@ class AuthViewModel(application: android.app.Application) : AndroidViewModel(app
                 db.collection("users").document(userId).update(updates)
                     .addOnSuccessListener {
                         analytics.logEvent("profile_onboarding_complete", null)
-                        _authState.value = AuthState.Success(userId, name, phoneNumber, joinedAt, isAdmin)
+                        _authState.value = AuthState.Success(userId, name, phoneNumber, joinedAt, isAdmin, false)
                     }
                     .addOnFailureListener { e ->
                         _authState.value = AuthState.Error(e.localizedMessage ?: "Failed to save user info")
@@ -316,12 +318,13 @@ class AuthViewModel(application: android.app.Application) : AndroidViewModel(app
                 val doc = db.collection("users").document(userId).get().await()
                 val phoneNumber = doc.getString("phone") ?: ""
                 val joinedAt = doc.getLong("joinedAt") ?: System.currentTimeMillis()
+                val showMobile = doc.getBoolean("showMobileNumber") ?: false
                 
                 val adminNumbers = listOf("9359599599", "8014311143")
                 var isAdmin = doc.getBoolean("isAdmin") ?: false
                 if (adminNumbers.contains(phoneNumber)) isAdmin = true
                 
-                _authState.value = AuthState.Success(userId, name, phoneNumber, joinedAt, isAdmin)
+                _authState.value = AuthState.Success(userId, name, phoneNumber, joinedAt, isAdmin, showMobile)
                 onSuccess()
             } catch (e: Exception) {
                 _authState.value = AuthState.Error(e.localizedMessage ?: "Failed to update profile")
@@ -363,12 +366,13 @@ class AuthViewModel(application: android.app.Application) : AndroidViewModel(app
                     db.collection("users").document(userId).get().addOnSuccessListener { doc ->
                         val currentName = doc.getString("name") ?: "User"
                         val joinedAt = doc.getLong("joinedAt") ?: System.currentTimeMillis()
+                        val showMobile = doc.getBoolean("showMobileNumber") ?: false
                         
                         val adminNumbers = listOf("9359599599", "8014311143")
                         var isAdmin = doc.getBoolean("isAdmin") ?: false
                         if (adminNumbers.contains(phoneNumber)) isAdmin = true
 
-                        _authState.value = AuthState.Success(userId, currentName, phoneNumber, joinedAt, isAdmin)
+                        _authState.value = AuthState.Success(userId, currentName, phoneNumber, joinedAt, isAdmin, showMobile)
                     }
                 }
         }

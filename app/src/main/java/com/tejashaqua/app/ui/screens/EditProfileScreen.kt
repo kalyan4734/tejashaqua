@@ -46,6 +46,7 @@ import com.tejashaqua.app.R
 import com.tejashaqua.app.ui.components.LoadingOverlay
 import com.tejashaqua.app.ui.viewmodel.AuthViewModel
 import com.tejashaqua.app.ui.theme.AquaBlue
+import com.tejashaqua.app.ui.theme.GrayText
 import java.io.ByteArrayOutputStream
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -58,6 +59,7 @@ fun EditProfileScreen(
     authViewModel: AuthViewModel = viewModel()
 ) {
     var name by remember { mutableStateOf(currentName) }
+    var showMobileNumber by remember { mutableStateOf(false) }
     var profileImage by remember { mutableStateOf<Any?>(null) }
     var existingPicUrl by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(false) }
@@ -71,13 +73,14 @@ fun EditProfileScreen(
     val auth = FirebaseAuth.getInstance()
     val scrollState = rememberScrollState()
 
-    // Load existing profile picture
+    // Load existing profile picture and settings
     LaunchedEffect(Unit) {
         val userId = auth.currentUser?.uid
         if (userId != null) {
             db.collection("users").document(userId).get().addOnSuccessListener { doc ->
                 if (doc.exists()) {
                     existingPicUrl = doc.getString("profilePic")
+                    showMobileNumber = doc.getBoolean("showMobileNumber") ?: false
                 }
             }
         }
@@ -269,6 +272,23 @@ fun EditProfileScreen(
                     shape = RoundedCornerShape(12.dp)
                 )
 
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(stringResource(R.string.show_mobile_number), fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text(stringResource(R.string.show_mobile_number_desc), fontSize = 12.sp, color = GrayText)
+                    }
+                    Switch(
+                        checked = showMobileNumber,
+                        onCheckedChange = { showMobileNumber = it },
+                        colors = SwitchDefaults.colors(checkedThumbColor = AquaBlue, checkedTrackColor = AquaBlue.copy(alpha = 0.5f))
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(32.dp))
 
                 Button(
@@ -276,6 +296,10 @@ fun EditProfileScreen(
                         keyboardController?.hide()
                         if (name.isNotBlank()) {
                             isLoading = true
+                            val userId = auth.currentUser?.uid
+                            if (userId != null) {
+                                db.collection("users").document(userId).update("showMobileNumber", showMobileNumber)
+                            }
                             authViewModel.updateProfile(name, profileImage) {
                                 isLoading = false
                                 Toast.makeText(context, context.getString(R.string.profile_updated), Toast.LENGTH_SHORT).show()

@@ -50,13 +50,15 @@ fun ProfileScreen(
     onLogoutClick: () -> Unit,
     onChangeLanguageClick: () -> Unit,
     isAdmin: Boolean = false,
-    onAdminClick: () -> Unit = {}
+    onAdminClick: () -> Unit = {},
+    initialShowMobileNumber: Boolean = false
 ) {
     var showLogoutDialog by remember { mutableStateOf(false) }
     var listingCount by remember { mutableIntStateOf(0) }
     var savedCount by remember { mutableIntStateOf(0) }
     var chatCount by remember { mutableIntStateOf(0) }
     var profilePicUrl by remember { mutableStateOf<String?>(null) }
+    var showMobileNumber by remember { mutableStateOf(initialShowMobileNumber) }
     
     val auth = FirebaseAuth.getInstance()
     val db = FirebaseFirestore.getInstance()
@@ -93,6 +95,10 @@ fun ProfileScreen(
                 .addSnapshotListener { snapshot, _ ->
                     if (snapshot != null && snapshot.exists()) {
                         profilePicUrl = snapshot.getString("profilePic")
+                        val remoteShowMobile = snapshot.getBoolean("showMobileNumber")
+                        if (remoteShowMobile != null) {
+                            showMobileNumber = remoteShowMobile
+                        }
                     }
                 }
         }
@@ -246,15 +252,6 @@ fun ProfileScreen(
             item { Spacer(modifier = Modifier.height(16.dp)) }
 
             item {
-                var showMobileNumber by remember { mutableStateOf(true) }
-                LaunchedEffect(currentUserId) {
-                    if (currentUserId != null) {
-                        db.collection("users").document(currentUserId).get().addOnSuccessListener { doc ->
-                            showMobileNumber = doc.getBoolean("showMobileNumber") ?: true
-                        }
-                    }
-                }
-
                 Card(
                     modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),

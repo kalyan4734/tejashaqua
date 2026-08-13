@@ -439,4 +439,6 @@
     <string name="no_data_available">N/A</string>
     <string name="show_mobile_number">లిస్టింగ్స్‌లో మొబైల్ నంబర్‌ను చూపించు</string>
     <string name="show_mobile_number_desc">దీన్ని నిలిపివేస్తే, కొనుగోలుదారులు మిమ్మల్ని చాట్ ద్వారా మాత్రమే సంప్రదించగలరు.</string>
+    <string name="location_settings_desc">ఈ ఫీచర్‌ని ఉపయోగించడానికి స్థాన అనుమతి అవసరం. దయచేసి యాప్ సెట్టింగ్‌లలో దీన్ని ప్రారంభించండి.</string>
+    <string name="open_settings">సెట్టింగ్‌లను ప్రారంభించండి</string>
 </resources>

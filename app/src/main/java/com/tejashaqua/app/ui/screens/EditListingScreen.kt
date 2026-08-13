@@ -65,7 +65,8 @@ fun EditListingScreen(
     onLocationChangeClick: () -> Unit,
     listingViewModel: ListingViewModel = viewModel(),
     joinedAt: Long,
-    userId: String
+    userId: String,
+    showMobileNumberPreference: Boolean
 ) {
     // General fields
     var selectedServiceType by remember { mutableStateOf("") }
@@ -598,7 +599,7 @@ fun EditListingScreen(
                                 vehicleName, vehicleCapacity, businessType, feedName, ratePerTon, 
                                 medicineName, businessSubCategory,
                                 boreWellType, tankAcres, estPricePerAcre, tankLocation, jobType, salary, netType, 
-                                tankType, userId
+                                tankType, userId, showMobileNumberPreference, joinedAt
                             )
                             
                             listingViewModel.saveListing(data, selectedPhotos)
@@ -897,7 +898,9 @@ private fun buildListingMap(
     salary: String,
     netType: String,
     tankType: String,
-    userId: String
+    userId: String,
+    showMobileNumberPreference: Boolean,
+    joinedAt: Long
 ): Map<String, Any> {
     val data = mutableMapOf<String, Any>()
     if (id != null) data["id"] = id
@@ -913,6 +916,8 @@ private fun buildListingMap(
     }
     data["contactNumber"] = contactNumber
     data["posterName"] = posterName
+    data["sellerShowMobile"] = showMobileNumberPreference
+    data["sellerJoinedAt"] = joinedAt
     
     // Images will be handled in ViewModel
 

@@ -74,6 +74,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import kotlinx.coroutines.flow.MutableStateFlow
+import androidx.core.app.ActivityCompat
 import com.tejashaqua.app.utils.AppStateTracker
 
 class MainActivity : AppCompatActivity() {
@@ -131,6 +132,7 @@ class MainActivity : AppCompatActivity() {
                 var userId by remember { mutableStateOf("") }
                 var joinedAt by remember { mutableLongStateOf(0L) }
                 var isAdmin by remember { mutableStateOf(false) }
+                var showMobileNumber by remember { mutableStateOf(false) }
 
                 val isLanguageSelected =
                     remember { mutableStateOf(LocaleHelper.getSelectedLanguage(context) != null) }
@@ -172,7 +174,49 @@ class MainActivity : AppCompatActivity() {
                 var pickedListingLocation by remember { mutableStateOf<Pair<String, LatLng?>?>(null) }
                 
                 var showLocationDisclosure by remember { mutableStateOf(false) }
+                var showSettingsDialog by remember { mutableStateOf(false) }
                 var locationPermissionsToRequest by remember { mutableStateOf<Array<String>>(emptyArray()) }
+
+                // --- NAVIGATION HELPERS ---
+                val navigateToDetailedPage: (Map<String, Any>, String) -> Unit = { data, source ->
+                    val lid = data["id"]?.toString() ?: data["listingId"]?.toString() ?: ""
+                    val sellerId = data["userId"]?.toString() ?: data["sellerId"]?.toString() ?: ""
+                    
+                    if (sellerId.isEmpty()) {
+                        selectedListingData = data
+                        detailedPageSource = source
+                        listingBackStack = emptyList()
+                        currentScreen = "detailed_page"
+                    } else {
+                        // ALWAYS fetch user preference before navigating to ensure NO flicker
+                        // Firestore 'get()' will use cache if available, so it's very fast.
+                        FirebaseFirestore.getInstance().collection("users").document(sellerId).get()
+                            .addOnSuccessListener { doc ->
+                                val updatedData = data.toMutableMap()
+                                val showMobile = doc.getBoolean("showMobileNumber") ?: false
+                                val joined = doc.getLong("joinedAt") ?: 0L
+                                updatedData["sellerShowMobile"] = showMobile
+                                updatedData["sellerJoinedAt"] = joined
+                                if (lid.isNotEmpty()) updatedData["id"] = lid
+                                
+                                selectedListingData = updatedData
+                                detailedPageSource = source
+                                // Only reset backstack if not coming from detailed page itself
+                                if (source != "detailed_page") {
+                                    listingBackStack = emptyList()
+                                }
+                                currentScreen = "detailed_page"
+                            }
+                            .addOnFailureListener {
+                                selectedListingData = data
+                                detailedPageSource = source
+                                if (source != "detailed_page") {
+                                    listingBackStack = emptyList()
+                                }
+                                currentScreen = "detailed_page"
+                            }
+                    }
+                }
 
                 // Handle Notification Click Navigation
                 LaunchedEffect(currentIntent, userId) {
@@ -194,7 +238,8 @@ class MainActivity : AppCompatActivity() {
                                     val isBuying = data["buyerId"] == userId
 
                                     val updatedData = data.toMutableMap()
-                                    updatedData["id"] = data["listingId"] ?: ""
+                                    val lid = data["listingId"]?.toString() ?: ""
+                                    updatedData["id"] = lid
                                     updatedData["posterName"] = if (isBuying) data["sellerName"]
                                         ?: "Seller" else data["buyerName"] ?: "User"
                                     updatedData["userId"] = if (isBuying) data["sellerId"]
@@ -207,12 +252,11 @@ class MainActivity : AppCompatActivity() {
                                         updatedData["images"] = listOf(img)
                                     }
 
-                                    selectedListingData = updatedData
-                                    chatSourceScreen = "dashboard"
+                                    // Notifications also need the flicker-free fetch
+                                    navigateToDetailedPage(updatedData, "dashboard")
                                     dashboardTab = 2
                                     shouldSendInitialChatMessage = false
                                     currentScreen = "chat"
-                                    android.util.Log.d("NAV", "Navigating to Chat screen for $chatId")
                                     
                                     // Clear intent data to prevent re-navigation
                                     intentFlow.value = null
@@ -228,10 +272,7 @@ class MainActivity : AppCompatActivity() {
                                 if (doc.exists()) {
                                     val data = doc.data ?: return@addOnSuccessListener
                                     data["id"] = doc.id
-                                    selectedListingData = data
-                                    detailedPageSource = "dashboard"
-                                    listingBackStack = emptyList()
-                                    currentScreen = "detailed_page"
+                                    navigateToDetailedPage(data, "dashboard")
                                     intentFlow.value = null
                                 }
                             }
@@ -346,10 +387,19 @@ class MainActivity : AppCompatActivity() {
                         Manifest.permission.ACCESS_FINE_LOCATION,
                         false
                     ) || permissions.getOrDefault(Manifest.permission.ACCESS_COARSE_LOCATION, false)
+                    
                     if (isGranted) {
                         locationViewModel.fetchCurrentLocation()
                     } else {
                         locationViewModel.onPermissionDenied()
+                        // Check if they permanently denied
+                        val isLocationBlocked = !ActivityCompat.shouldShowRequestPermissionRationale(
+                            this@MainActivity,
+                            Manifest.permission.ACCESS_FINE_LOCATION
+                        )
+                        if (isLocationBlocked) {
+                            showSettingsDialog = true
+                        }
                     }
                 }
 
@@ -429,6 +479,7 @@ class MainActivity : AppCompatActivity() {
                             userId = state.userId
                             joinedAt = state.joinedAt
                             isAdmin = state.isAdmin
+                            showMobileNumber = state.showMobileNumber
 
                             // Subscribe to personal topic for chat notifications
                             FirebaseMessaging.getInstance().subscribeToTopic("user_$userId")
@@ -500,6 +551,30 @@ class MainActivity : AppCompatActivity() {
                                     permissionLauncher.launch(locationPermissionsToRequest)
                                 }) {
                                     Text(stringResource(R.string.ok))
+                                }
+                            }
+                        )
+                    }
+
+                    if (showSettingsDialog) {
+                        AlertDialog(
+                            onDismissRequest = { showSettingsDialog = false },
+                            title = { Text(stringResource(R.string.location_disclosure_title)) },
+                            text = { Text(stringResource(R.string.location_settings_desc)) },
+                            confirmButton = {
+                                TextButton(onClick = {
+                                    showSettingsDialog = false
+                                    val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                        data = android.net.Uri.fromParts("package", packageName, null)
+                                    }
+                                    startActivity(intent)
+                                }) {
+                                    Text(stringResource(R.string.open_settings))
+                                }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = { showSettingsDialog = false }) {
+                                    Text(stringResource(R.string.cancel))
                                 }
                             }
                         )
@@ -615,16 +690,29 @@ class MainActivity : AppCompatActivity() {
                                 },
                                 onProfileClick = { currentScreen = "profile" },
                                 onLocationClick = {
-                                    locationPickerSource = "dashboard"
-                                    currentScreen = "select_location"
+                                    val hasLocationPermission = ContextCompat.checkSelfPermission(
+                                        this@MainActivity,
+                                        Manifest.permission.ACCESS_FINE_LOCATION
+                                    ) == PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(
+                                        this@MainActivity,
+                                        Manifest.permission.ACCESS_COARSE_LOCATION
+                                    ) == PackageManager.PERMISSION_GRANTED
+
+                                    if (hasLocationPermission) {
+                                        locationPickerSource = "dashboard"
+                                        currentScreen = "select_location"
+                                    } else {
+                                        locationPermissionsToRequest = arrayOf(
+                                            Manifest.permission.ACCESS_FINE_LOCATION,
+                                            Manifest.permission.ACCESS_COARSE_LOCATION
+                                        )
+                                        showLocationDisclosure = true
+                                    }
                                 },
                                 onPrawnsClick = { currentScreen = "prawn_rates" },
                                 onFishRatesClick = { currentScreen = "fish_rates" },
                                 onItemClick = { data ->
-                                    selectedListingData = data
-                                    detailedPageSource = "dashboard"
-                                    listingBackStack = emptyList()
-                                    currentScreen = "detailed_page"
+                                    navigateToDetailedPage(data, "dashboard")
                                 },
                                 onChatListClick = { data ->
                                     val sellerId = data["sellerId"]?.toString() ?: ""
@@ -696,7 +784,7 @@ class MainActivity : AppCompatActivity() {
                                         selectedListingData?.let { current ->
                                             listingBackStack = listingBackStack + current
                                         }
-                                        selectedListingData = newData
+                                        navigateToDetailedPage(newData, "detailed_page")
                                     }
                                 )
                             }
@@ -718,10 +806,7 @@ class MainActivity : AppCompatActivity() {
                                         currentScreen = chatSourceScreen 
                                     },
                                     onListingClick = { listing ->
-                                        selectedListingData = listing
-                                        detailedPageSource = "chat"
-                                        listingBackStack = emptyList()
-                                        currentScreen = "detailed_page"
+                                        navigateToDetailedPage(listing, "chat")
                                     },
                                     sendInitialMessage = shouldSendInitialChatMessage
                                 )
@@ -818,7 +903,8 @@ class MainActivity : AppCompatActivity() {
                                     currentScreen = "select_location"
                                 },
                                 joinedAt = joinedAt,
-                                userId = userId
+                                userId = userId,
+                                showMobileNumberPreference = showMobileNumber
                             )
 
                             "privacy_policy" -> LegalScreen(
@@ -860,7 +946,8 @@ class MainActivity : AppCompatActivity() {
                                     currentScreen = "language_selection"
                                 },
                                 isAdmin = isAdmin,
-                                onAdminClick = { currentScreen = "admin_dashboard" })
+                                onAdminClick = { currentScreen = "admin_dashboard" },
+                                initialShowMobileNumber = showMobileNumber)
 
                             "about_app" -> AboutAppScreen(
                                 versionName = appVersion,
@@ -869,10 +956,7 @@ class MainActivity : AppCompatActivity() {
                             "saved_items" -> SavedItemsScreen(onBackClick = {
                                 currentScreen = "profile"
                             }, onItemClick = { data ->
-                                selectedListingData = data
-                                detailedPageSource = "saved_items"
-                                listingBackStack = emptyList()
-                                currentScreen = "detailed_page"
+                                navigateToDetailedPage(data, "saved_items")
                             })
 
                             "edit_profile" -> EditProfileScreen(

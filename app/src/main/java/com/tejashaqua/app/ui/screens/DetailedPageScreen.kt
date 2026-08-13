@@ -131,25 +131,44 @@ fun DetailedPageScreen(
     val posterName = listingData["posterName"]?.toString() ?: stringResource(R.string.user_label)
     val images = (listingData["images"] as? List<*>) ?: emptyList<String>()
     val timestamp = (listingData["timestamp"] as? Long) ?: System.currentTimeMillis()
-    val listingUserId = listingData["userId"]?.toString() ?: ""
-    val isOwnListing = currentUserId == listingUserId
+    val listingUserId = listingData["userId"]?.toString() ?: listingData["posterId"]?.toString() ?: ""
+    val isOwnListing = currentUserId.isNotEmpty() && listingUserId.isNotEmpty() && currentUserId == listingUserId
     val listingId = listingData["id"]?.toString() ?: ""
     
-    var sellerJoinedAt by remember { mutableLongStateOf(0L) }
-    var sellerShowMobile by remember { mutableStateOf(true) }
+    // Pass from Home Page to avoid flicker for Joined Date and Privacy Toggle
+    var sellerJoinedAt by remember(listingId) { 
+        mutableLongStateOf((listingData["sellerJoinedAt"] as? Number)?.toLong() ?: 0L) 
+    }
+    var sellerShowMobile by remember(listingId) { 
+        mutableStateOf(listingData["sellerShowMobile"] as? Boolean ?: false) 
+    }
     val db = remember { FirebaseFirestore.getInstance() }
     
     var showSellerPostsDialog by remember { mutableStateOf(false) }
     var sellerListings by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
     
-    LaunchedEffect(listingUserId) {
+    DisposableEffect(listingUserId, listingId) {
+        var userListener: com.google.firebase.firestore.ListenerRegistration? = null
+        
         if (listingUserId.isNotEmpty()) {
-            db.collection("users").document(listingUserId).get().addOnSuccessListener { doc ->
-                if (doc.exists()) {
-                    sellerJoinedAt = doc.getLong("joinedAt") ?: 0L
-                    sellerShowMobile = doc.getBoolean("showMobileNumber") ?: true
+            userListener = db.collection("users").document(listingUserId)
+                .addSnapshotListener { doc, _ ->
+                    if (doc != null && doc.exists()) {
+                        val remoteJoinedAt = doc.getLong("joinedAt") ?: 0L
+                        if (remoteJoinedAt > 0) {
+                            sellerJoinedAt = remoteJoinedAt
+                        }
+
+                        val remoteShowMobile = doc.get("showMobileNumber")
+                        if (remoteShowMobile is Boolean) {
+                            // Only update if it's different from what we started with
+                            // to avoid a frame where it resets to default.
+                            if (sellerShowMobile != remoteShowMobile) {
+                                sellerShowMobile = remoteShowMobile
+                            }
+                        }
+                    }
                 }
-            }
             
             db.collection("listings")
                 .whereEqualTo("userId", listingUserId)
@@ -161,6 +180,10 @@ fun DetailedPageScreen(
                         d
                     }
                 }
+        }
+        
+        onDispose {
+            userListener?.remove()
         }
     }
 
@@ -286,53 +309,61 @@ fun DetailedPageScreen(
             )
         },
         bottomBar = {
-            if (!isOwnListing) {
+            if (currentUserId.isNotEmpty() && !isOwnListing) {
                 Surface(
                     tonalElevation = 8.dp, 
                     color = MaterialTheme.colorScheme.surface,
                     modifier = Modifier.navigationBarsPadding()
                 ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(88.dp)
+                            .padding(16.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        if (sellerShowMobile) {
-                            val contactNumber = listingData["contactNumber"]?.toString() ?: ""
-                            OutlinedButton(
+                        Row(
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            if (sellerShowMobile) {
+                                val contactNumber = listingData["contactNumber"]?.toString() ?: ""
+                                OutlinedButton(
+                                    onClick = { 
+                                        keyboardController?.hide()
+                                        if (contactNumber.isNotEmpty()) {
+                                            val intent = android.content.Intent(android.content.Intent.ACTION_DIAL).apply {
+                                                data = android.net.Uri.parse("tel:$contactNumber")
+                                            }
+                                            context.startActivity(intent)
+                                        } else {
+                                            Toast.makeText(context, context.getString(R.string.phone_not_available), Toast.LENGTH_SHORT).show()
+                                        }
+                                    },
+                                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                                    shape = RoundedCornerShape(12.dp),
+                                    border = BorderStroke(1.dp, AquaBlue),
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = AquaBlue)
+                                ) {
+                                    Icon(Icons.Default.Phone, contentDescription = null)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(stringResource(R.string.contact_us), fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                }
+                            }
+
+                            Button(
                                 onClick = { 
                                     keyboardController?.hide()
-                                    if (contactNumber.isNotEmpty()) {
-                                        val intent = android.content.Intent(android.content.Intent.ACTION_DIAL).apply {
-                                            data = android.net.Uri.parse("tel:$contactNumber")
-                                        }
-                                        context.startActivity(intent)
-                                    } else {
-                                        Toast.makeText(context, context.getString(R.string.phone_not_available), Toast.LENGTH_SHORT).show()
-                                    }
+                                    onChatClick(listingData) 
                                 },
-                                modifier = Modifier.weight(1f).height(56.dp),
+                                modifier = Modifier.weight(1f).fillMaxHeight(),
                                 shape = RoundedCornerShape(12.dp),
-                                border = BorderStroke(1.dp, AquaBlue),
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = AquaBlue)
+                                colors = ButtonDefaults.buttonColors(containerColor = AquaBlue)
                             ) {
-                                Icon(Icons.Default.Phone, contentDescription = null)
+                                Icon(Icons.Default.ChatBubbleOutline, contentDescription = null)
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text(stringResource(R.string.contact_us), fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                Text(stringResource(R.string.chat_with_seller), fontWeight = FontWeight.Bold, fontSize = 16.sp)
                             }
-                        }
-
-                        Button(
-                            onClick = { 
-                                keyboardController?.hide()
-                                onChatClick(listingData) 
-                            },
-                            modifier = Modifier.weight(1f).height(56.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = AquaBlue)
-                        ) {
-                            Icon(Icons.Default.ChatBubbleOutline, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(stringResource(R.string.chat_with_seller), fontWeight = FontWeight.Bold, fontSize = 16.sp)
                         }
                     }
                 }
