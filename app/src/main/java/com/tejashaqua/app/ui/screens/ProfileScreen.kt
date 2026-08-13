@@ -51,14 +51,17 @@ fun ProfileScreen(
     onChangeLanguageClick: () -> Unit,
     isAdmin: Boolean = false,
     onAdminClick: () -> Unit = {},
-    initialShowMobileNumber: Boolean = false
+    initialShowMobileNumber: Boolean = false,
+    onPrivacyToggle: (Boolean) -> Unit = {}
 ) {
     var showLogoutDialog by remember { mutableStateOf(false) }
     var listingCount by remember { mutableIntStateOf(0) }
     var savedCount by remember { mutableIntStateOf(0) }
     var chatCount by remember { mutableIntStateOf(0) }
     var profilePicUrl by remember { mutableStateOf<String?>(null) }
-    var showMobileNumber by remember { mutableStateOf(initialShowMobileNumber) }
+
+    // Derived from parent, but kept in local state for instant toggle feedback
+    var showMobileNumber by remember(initialShowMobileNumber) { mutableStateOf(initialShowMobileNumber) }
     
     val auth = FirebaseAuth.getInstance()
     val db = FirebaseFirestore.getInstance()
@@ -270,9 +273,7 @@ fun ProfileScreen(
                             checked = showMobileNumber,
                             onCheckedChange = { 
                                 showMobileNumber = it
-                                if (currentUserId != null) {
-                                    db.collection("users").document(currentUserId).update("showMobileNumber", it)
-                                }
+                                onPrivacyToggle(it)
                             },
                             colors = SwitchDefaults.colors(checkedThumbColor = AquaBlue, checkedTrackColor = AquaBlue.copy(alpha = 0.5f))
                         )

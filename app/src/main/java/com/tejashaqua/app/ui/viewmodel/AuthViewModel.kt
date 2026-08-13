@@ -44,6 +44,7 @@ class AuthViewModel(application: android.app.Application) : AndroidViewModel(app
 
     private var pendingPhoneNumber: String = ""
     private var loadingTimeoutJob: Job? = null
+    private var userDocListener: com.google.firebase.firestore.ListenerRegistration? = null
 
     init {
         checkCurrentSession()
@@ -52,9 +53,73 @@ class AuthViewModel(application: android.app.Application) : AndroidViewModel(app
     private fun checkCurrentSession() {
         val currentUser = auth.currentUser
         if (currentUser != null) {
-            _authState.value = AuthState.Loading
-            checkUserExists()
+            startUserDocListener(currentUser.uid)
         }
+    }
+
+    private fun startUserDocListener(userId: String) {
+        userDocListener?.remove()
+        // If we don't already have a Success state, show loading
+        if (_authState.value !is AuthState.Success) {
+            _authState.value = AuthState.Loading
+        }
+
+        userDocListener = db.collection("users").document(userId)
+            .addSnapshotListener { document, error ->
+                if (error != null) {
+                    _authState.value = AuthState.Error(error.localizedMessage ?: "Connection error")
+                    return@addSnapshotListener
+                }
+
+                if (document != null && document.exists()) {
+                    val name = document.getString("name") ?: "User"
+                    val phone = document.getString("phone") ?: auth.currentUser?.phoneNumber?.removePrefix("+91") ?: ""
+                    val joinedAt = document.getLong("joinedAt") ?: System.currentTimeMillis()
+                    val onboardingComplete = document.getBoolean("onboardingComplete") ?: false
+                    val showMobile = document.getBoolean("showMobileNumber") ?: false
+                    val isAdmin = document.getBoolean("isAdmin") ?: false
+
+                    if (onboardingComplete) {
+                        _authState.value = AuthState.Success(userId, name, phone, joinedAt, isAdmin, showMobile)
+                    } else {
+                        _authState.value = AuthState.RequireName(phone, isAdmin)
+                    }
+                } else if (document != null && !document.exists()) {
+                    // Create user document if missing
+                    val phone = auth.currentUser?.phoneNumber?.removePrefix("+91") ?: ""
+                    val adminNumbers = listOf("9359599599", "8014311143")
+                    val isSuperAdmin = adminNumbers.contains(phone)
+
+                    val now = System.currentTimeMillis()
+                    val user = hashMapOf(
+                        "uid" to userId,
+                        "name" to "User",
+                        "phone" to phone,
+                        "joinedAt" to now,
+                        "onboardingComplete" to false,
+                        "isAdmin" to isSuperAdmin,
+                        "showMobileNumber" to false
+                    )
+                    db.collection("users").document(userId).set(user)
+                }
+            }
+    }
+
+    fun updatePrivacyPreference(enabled: Boolean) {
+        val userId = auth.currentUser?.uid ?: return
+
+        // Optimistically update to avoid local flicker
+        val current = _authState.value
+        if (current is AuthState.Success) {
+            _authState.value = current.copy(showMobileNumber = enabled)
+        }
+
+        db.collection("users").document(userId).update("showMobileNumber", enabled)
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        userDocListener?.remove()
     }
 
     private fun startLoadingTimeout() {
@@ -200,71 +265,14 @@ class AuthViewModel(application: android.app.Application) : AndroidViewModel(app
                 stopLoadingTimeout()
                 if (task.isSuccessful) {
                     analytics.logEvent("otp_verify_success", null)
-                    checkUserExists()
+                    val userId = auth.currentUser?.uid
+                    if (userId != null) startUserDocListener(userId)
                 } else {
                     val bundle = Bundle()
                     bundle.putString("error_message", task.exception?.localizedMessage)
                     analytics.logEvent("otp_verify_failure", bundle)
                     _authState.value = AuthState.Error(task.exception?.localizedMessage ?: "Sign-in Failed")
                 }
-            }
-    }
-
-    private fun checkUserExists() {
-        val userId = auth.currentUser?.uid
-        if (userId == null) {
-            _authState.value = AuthState.Error("Session lost. Please try again.")
-            return
-        }
-        val phoneNumber = auth.currentUser?.phoneNumber?.removePrefix("+91") ?: ""
-        val adminNumbers = listOf("9359599599", "8014311143")
-        val isSuperAdmin = adminNumbers.contains(phoneNumber)
-        
-        _authState.value = AuthState.Loading
-        db.collection("users").document(userId).get()
-            .addOnSuccessListener { document ->
-                var isAdmin = document.getBoolean("isAdmin") ?: false
-                
-                if (isSuperAdmin && !isAdmin) {
-                    isAdmin = true
-                    db.collection("users").document(userId).update("isAdmin", true)
-                }
-                
-                if (document.exists()) {
-                    val name = document.getString("name") ?: "User"
-                    val joinedAt = document.getLong("joinedAt") ?: System.currentTimeMillis()
-                    val onboardingComplete = document.getBoolean("onboardingComplete") ?: false
-                    val showMobile = document.getBoolean("showMobileNumber") ?: false
-                    
-                    if (onboardingComplete) {
-                        // Update FCM Token on login
-                        FirebaseMessaging.getInstance().token.addOnSuccessListener { token ->
-                            db.collection("users").document(userId).update("fcmToken", token)
-                        }
-                        analytics.logEvent(FirebaseAnalytics.Event.LOGIN, null)
-                        _authState.value = AuthState.Success(userId, name, phoneNumber, joinedAt, isAdmin, showMobile)
-                    } else {
-                        analytics.logEvent(FirebaseAnalytics.Event.SIGN_UP, null)
-                        _authState.value = AuthState.RequireName(phoneNumber, isAdmin)
-                    }
-                } else {
-                    val now = System.currentTimeMillis()
-                    val dummyName = "User_${userId.takeLast(4)}"
-                    val user = hashMapOf(
-                        "uid" to userId,
-                        "name" to dummyName,
-                        "phone" to phoneNumber,
-                        "joinedAt" to now,
-                        "onboardingComplete" to false,
-                        "isAdmin" to isSuperAdmin,
-                        "showMobileNumber" to false
-                    )
-                    db.collection("users").document(userId).set(user)
-                    _authState.value = AuthState.RequireName(phoneNumber, isSuperAdmin)
-                }
-            }
-            .addOnFailureListener { e ->
-                _authState.value = AuthState.Error(e.localizedMessage ?: "Failed to check user info")
             }
     }
 

@@ -132,7 +132,7 @@ class MainActivity : AppCompatActivity() {
                 var userId by remember { mutableStateOf("") }
                 var joinedAt by remember { mutableLongStateOf(0L) }
                 var isAdmin by remember { mutableStateOf(false) }
-                var showMobileNumber by remember { mutableStateOf(false) }
+                val showMobileNumber = (authState as? AuthState.Success)?.showMobileNumber ?: false
 
                 val isLanguageSelected =
                     remember { mutableStateOf(LocaleHelper.getSelectedLanguage(context) != null) }
@@ -227,7 +227,7 @@ class MainActivity : AppCompatActivity() {
 
                     val type = intentToProcess.getStringExtra("type") ?: (if (intentToProcess.action == "OPEN_CHAT") "chat" else if (intentToProcess.action == "OPEN_RATES") "rates" else null)
                     val chatId = intentToProcess.getStringExtra("chatId")
-                    
+
                     android.util.Log.d("NAV", "Type: $type, ChatId: $chatId")
 
                     if (type == "chat" && chatId != null) {
@@ -257,7 +257,7 @@ class MainActivity : AppCompatActivity() {
                                     dashboardTab = 2
                                     shouldSendInitialChatMessage = false
                                     currentScreen = "chat"
-                                    
+
                                     // Clear intent data to prevent re-navigation
                                     intentFlow.value = null
                                 }
@@ -387,19 +387,10 @@ class MainActivity : AppCompatActivity() {
                         Manifest.permission.ACCESS_FINE_LOCATION,
                         false
                     ) || permissions.getOrDefault(Manifest.permission.ACCESS_COARSE_LOCATION, false)
-                    
                     if (isGranted) {
                         locationViewModel.fetchCurrentLocation()
                     } else {
                         locationViewModel.onPermissionDenied()
-                        // Check if they permanently denied
-                        val isLocationBlocked = !ActivityCompat.shouldShowRequestPermissionRationale(
-                            this@MainActivity,
-                            Manifest.permission.ACCESS_FINE_LOCATION
-                        )
-                        if (isLocationBlocked) {
-                            showSettingsDialog = true
-                        }
                     }
                 }
 
@@ -416,7 +407,7 @@ class MainActivity : AppCompatActivity() {
                         if (hasLocationPermission) {
                             // Already granted, just fetch
                             locationViewModel.fetchCurrentLocation()
-                            
+
                             // Only check for other permissions if we haven't done the initial request yet
                             if (!LocaleHelper.isLocationDisclosureShown(context)) {
                                 val others = mutableListOf<String>()
@@ -479,7 +470,6 @@ class MainActivity : AppCompatActivity() {
                             userId = state.userId
                             joinedAt = state.joinedAt
                             isAdmin = state.isAdmin
-                            showMobileNumber = state.showMobileNumber
 
                             // Subscribe to personal topic for chat notifications
                             FirebaseMessaging.getInstance().subscribeToTopic("user_$userId")
@@ -539,7 +529,7 @@ class MainActivity : AppCompatActivity() {
 
                     if (showLocationDisclosure) {
                         AlertDialog(
-                            onDismissRequest = { 
+                            onDismissRequest = {
                                 showLocationDisclosure = false
                                 permissionLauncher.launch(locationPermissionsToRequest)
                             },
@@ -551,30 +541,6 @@ class MainActivity : AppCompatActivity() {
                                     permissionLauncher.launch(locationPermissionsToRequest)
                                 }) {
                                     Text(stringResource(R.string.ok))
-                                }
-                            }
-                        )
-                    }
-
-                    if (showSettingsDialog) {
-                        AlertDialog(
-                            onDismissRequest = { showSettingsDialog = false },
-                            title = { Text(stringResource(R.string.location_disclosure_title)) },
-                            text = { Text(stringResource(R.string.location_settings_desc)) },
-                            confirmButton = {
-                                TextButton(onClick = {
-                                    showSettingsDialog = false
-                                    val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                        data = android.net.Uri.fromParts("package", packageName, null)
-                                    }
-                                    startActivity(intent)
-                                }) {
-                                    Text(stringResource(R.string.open_settings))
-                                }
-                            },
-                            dismissButton = {
-                                TextButton(onClick = { showSettingsDialog = false }) {
-                                    Text(stringResource(R.string.cancel))
                                 }
                             }
                         )
@@ -646,7 +612,7 @@ class MainActivity : AppCompatActivity() {
                                     authViewModel.clearVerificationData()
                                     onDispose {}
                                 }
-                                
+
                                 LoginScreen(onSendOtp = { number ->
                                     if (networkStatus != NetworkObserver.Status.Available) {
                                         showNoInternetDialog = true
@@ -690,24 +656,8 @@ class MainActivity : AppCompatActivity() {
                                 },
                                 onProfileClick = { currentScreen = "profile" },
                                 onLocationClick = {
-                                    val hasLocationPermission = ContextCompat.checkSelfPermission(
-                                        this@MainActivity,
-                                        Manifest.permission.ACCESS_FINE_LOCATION
-                                    ) == PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(
-                                        this@MainActivity,
-                                        Manifest.permission.ACCESS_COARSE_LOCATION
-                                    ) == PackageManager.PERMISSION_GRANTED
-
-                                    if (hasLocationPermission) {
-                                        locationPickerSource = "dashboard"
-                                        currentScreen = "select_location"
-                                    } else {
-                                        locationPermissionsToRequest = arrayOf(
-                                            Manifest.permission.ACCESS_FINE_LOCATION,
-                                            Manifest.permission.ACCESS_COARSE_LOCATION
-                                        )
-                                        showLocationDisclosure = true
-                                    }
+                                    locationPickerSource = "dashboard"
+                                    currentScreen = "select_location"
                                 },
                                 onPrawnsClick = { currentScreen = "prawn_rates" },
                                 onFishRatesClick = { currentScreen = "fish_rates" },
@@ -947,7 +897,9 @@ class MainActivity : AppCompatActivity() {
                                 },
                                 isAdmin = isAdmin,
                                 onAdminClick = { currentScreen = "admin_dashboard" },
-                                initialShowMobileNumber = showMobileNumber)
+                                initialShowMobileNumber = showMobileNumber,
+                                onPrivacyToggle = { authViewModel.updatePrivacyPreference(it) }
+                            )
 
                             "about_app" -> AboutAppScreen(
                                 versionName = appVersion,
