@@ -13,6 +13,7 @@ import com.google.firebase.FirebaseApp
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.functions.FirebaseFunctions
+import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -36,7 +37,7 @@ class AuthViewModel(application: android.app.Application) : AndroidViewModel(app
     private val db = FirebaseFirestore.getInstance()
     private val storage = FirebaseStorage.getInstance()
     private val analytics = FirebaseAnalytics.getInstance(application)
-    private val functions = FirebaseFunctions.getInstance()
+    private val functions = FirebaseFunctions.getInstance("asia-south1")
     
     private val _authState = MutableStateFlow<AuthState>(AuthState.Idle)
     val authState: StateFlow<AuthState> = _authState
@@ -235,6 +236,10 @@ class AuthViewModel(application: android.app.Application) : AndroidViewModel(app
                     val onboardingComplete = document.getBoolean("onboardingComplete") ?: false
                     
                     if (onboardingComplete) {
+                        // Update FCM Token on login
+                        FirebaseMessaging.getInstance().token.addOnSuccessListener { token ->
+                            db.collection("users").document(userId).update("fcmToken", token)
+                        }
                         analytics.logEvent(FirebaseAnalytics.Event.LOGIN, null)
                         _authState.value = AuthState.Success(userId, name, phoneNumber, joinedAt, isAdmin)
                     } else {
@@ -278,14 +283,18 @@ class AuthViewModel(application: android.app.Application) : AndroidViewModel(app
                 "onboardingComplete" to true
             )
             
-            db.collection("users").document(userId).update(updates)
-                .addOnSuccessListener {
-                    analytics.logEvent("profile_onboarding_complete", null)
-                    _authState.value = AuthState.Success(userId, name, phoneNumber, joinedAt, isAdmin)
-                }
-                .addOnFailureListener { e ->
-                    _authState.value = AuthState.Error(e.localizedMessage ?: "Failed to save user info")
-                }
+            // Also save token here
+            FirebaseMessaging.getInstance().token.addOnSuccessListener { token ->
+                updates["fcmToken"] = token
+                db.collection("users").document(userId).update(updates)
+                    .addOnSuccessListener {
+                        analytics.logEvent("profile_onboarding_complete", null)
+                        _authState.value = AuthState.Success(userId, name, phoneNumber, joinedAt, isAdmin)
+                    }
+                    .addOnFailureListener { e ->
+                        _authState.value = AuthState.Error(e.localizedMessage ?: "Failed to save user info")
+                    }
+            }
         }
     }
 
@@ -346,19 +355,23 @@ class AuthViewModel(application: android.app.Application) : AndroidViewModel(app
     fun skipOnboarding() {
         val userId = auth.currentUser?.uid ?: return
         val phoneNumber = auth.currentUser?.phoneNumber?.removePrefix("+91") ?: ""
-        db.collection("users").document(userId).update("onboardingComplete", true)
-            .addOnSuccessListener {
-                db.collection("users").document(userId).get().addOnSuccessListener { doc ->
-                    val currentName = doc.getString("name") ?: "User"
-                    val joinedAt = doc.getLong("joinedAt") ?: System.currentTimeMillis()
-                    
-                    val adminNumbers = listOf("9359599599", "8014311143")
-                    var isAdmin = doc.getBoolean("isAdmin") ?: false
-                    if (adminNumbers.contains(phoneNumber)) isAdmin = true
+        
+        FirebaseMessaging.getInstance().token.addOnSuccessListener { token ->
+            val updates = mapOf("onboardingComplete" to true, "fcmToken" to token)
+            db.collection("users").document(userId).update(updates)
+                .addOnSuccessListener {
+                    db.collection("users").document(userId).get().addOnSuccessListener { doc ->
+                        val currentName = doc.getString("name") ?: "User"
+                        val joinedAt = doc.getLong("joinedAt") ?: System.currentTimeMillis()
+                        
+                        val adminNumbers = listOf("9359599599", "8014311143")
+                        var isAdmin = doc.getBoolean("isAdmin") ?: false
+                        if (adminNumbers.contains(phoneNumber)) isAdmin = true
 
-                    _authState.value = AuthState.Success(userId, currentName, phoneNumber, joinedAt, isAdmin)
+                        _authState.value = AuthState.Success(userId, currentName, phoneNumber, joinedAt, isAdmin)
+                    }
                 }
-            }
+        }
     }
 
     fun logout() {

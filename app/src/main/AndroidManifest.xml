@@ -16,6 +16,10 @@
 
     <queries>
         <package android:name="com.google.android.gms" />
+        <package android:name="com.android.vending" />
+        <intent>
+            <action android:name="com.google.android.gms.location.SETTINGS_API" />
+        </intent>
     </queries>
 
     <application
@@ -29,10 +33,14 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.TejashAqua"
         android:localeConfig="@xml/locales_config">
-        
+
+        <meta-data
+            android:name="com.google.android.gms.version"
+            android:value="@integer/google_play_services_version" />
+
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyD5VUXOhcaF840JnM5YaUMIH1cx2Qdj4QM" />
+            android:value="AIzaSyC1H1cs7ieShx2j_s66MsOJO6YOi5S_TjQ" />
 
         <activity
             android:name=".MainActivity"
@@ -42,8 +50,17 @@
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="OPEN_CHAT" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="OPEN_RATES" />
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
 

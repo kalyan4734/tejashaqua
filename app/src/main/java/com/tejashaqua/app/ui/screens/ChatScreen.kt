@@ -107,6 +107,9 @@ fun ChatScreen(
     val rawPrice = listingDetails["rateValue"]?.toString()?.takeIf { it.isNotBlank() }
         ?: listingDetails["price"]?.toString()?.takeIf { it.isNotBlank() }
         ?: listingDetails["listingPrice"]?.toString()?.takeIf { it.isNotBlank() }
+        ?: listingDetails["salary"]?.toString()?.takeIf { it.isNotBlank() }
+        ?: listingDetails["estPricePerAcre"]?.toString()?.takeIf { it.isNotBlank() }
+        ?: listingDetails["ratePerTon"]?.toString()?.takeIf { it.isNotBlank() }
         ?: stringResource(R.string.not_available_short)
     
     val priceValue = rawPrice
@@ -124,10 +127,12 @@ fun ChatScreen(
             if (priceValue == stringResource(R.string.not_available_short)) priceValue else "₹${CurrencyUtils.formatPrice(priceValue)}/ton"
         }
         categoryStr.uppercase() == "JOBS" -> {
-            if (priceValue == stringResource(R.string.not_available_short)) priceValue else "₹${CurrencyUtils.formatPrice(priceValue)}"
+            val salaryValue = listingDetails["salary"]?.toString()?.takeIf { it.isNotBlank() } ?: priceValue
+            if (salaryValue == stringResource(R.string.not_available_short)) salaryValue else "₹${CurrencyUtils.formatPrice(salaryValue)}"
         }
         categoryStr.uppercase() == "TANKS" -> {
-            if (priceValue == stringResource(R.string.not_available_short)) priceValue else "₹${CurrencyUtils.formatPrice(listingDetails["estPricePerAcre"] ?: priceValue)}/acre"
+            val tankPrice = listingDetails["estPricePerAcre"]?.toString()?.takeIf { it.isNotBlank() } ?: priceValue
+            if (tankPrice == stringResource(R.string.not_available_short)) tankPrice else "₹${CurrencyUtils.formatPrice(tankPrice)}/acre"
         }
         else -> {
             if (priceValue == stringResource(R.string.not_available_short)) priceValue else "₹${CurrencyUtils.formatPrice(priceValue)}"

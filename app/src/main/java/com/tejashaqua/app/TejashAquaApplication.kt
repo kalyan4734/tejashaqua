@@ -30,11 +30,13 @@ class TejashAquaApplication : Application() {
 
         // Subscribe to all_listings topic for push notifications
         FirebaseMessaging.getInstance().subscribeToTopic("all_listings")
+        // Subscribe to all_users topic for rate updates
+        FirebaseMessaging.getInstance().subscribeToTopic("all_users")
         
         if (!Places.isInitialized()) {
             val lang = LocaleHelper.getSelectedLanguage(this) ?: "en"
             val locale = Locale.forLanguageTag(lang)
-            Places.initialize(this, "AIzaSyD5VUXOhcaF840JnM5YaUMIH1cx2Qdj4QM", locale)
+            Places.initialize(this, "AIzaSyC1H1cs7ieShx2j_s66MsOJO6YOi5S_TjQ", locale)
         }
     }
 }

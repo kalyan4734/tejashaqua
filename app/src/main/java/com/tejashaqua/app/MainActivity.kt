@@ -178,49 +178,63 @@ class MainActivity : AppCompatActivity() {
                 LaunchedEffect(currentIntent, userId) {
                     val intentToProcess = currentIntent
                     if (intentToProcess == null || userId.isEmpty()) return@LaunchedEffect
+                    
+                    android.util.Log.d("NAV", "Checking intent: action=${intentToProcess.action}, extras=${intentToProcess.extras?.keySet()?.joinToString()}")
 
-                    val type = intentToProcess.getStringExtra("type")
-                    android.util.Log.d("NAV", "Processing notification type: $type")
+                    val type = intentToProcess.getStringExtra("type") ?: (if (intentToProcess.action == "OPEN_CHAT") "chat" else if (intentToProcess.action == "OPEN_RATES") "rates" else null)
+                    val chatId = intentToProcess.getStringExtra("chatId")
+                    
+                    android.util.Log.d("NAV", "Type: $type, ChatId: $chatId")
 
-                    if (type == "chat") {
-                        val chatId = intentToProcess.getStringExtra("chatId") ?: ""
-                        android.util.Log.d("NAV", "Chat ID from intent: $chatId")
+                    if (type == "chat" && chatId != null) {
+                        FirebaseFirestore.getInstance().collection("chats").document(chatId)
+                            .get().addOnSuccessListener { doc ->
+                                if (doc.exists()) {
+                                    val data = doc.data ?: return@addOnSuccessListener
+                                    val isBuying = data["buyerId"] == userId
 
-                        if (chatId.isNotEmpty()) {
-                            FirebaseFirestore.getInstance().collection("chats").document(chatId)
-                                .get().addOnSuccessListener { doc ->
-                                    if (doc.exists()) {
-                                        val data = doc.data ?: return@addOnSuccessListener
-                                        val isBuying = data["buyerId"] == userId
-
-                                        val updatedData = data.toMutableMap()
-                                        updatedData["id"] = data["listingId"] ?: ""
-                                        updatedData["posterName"] = if (isBuying) data["sellerName"]
-                                            ?: "Seller" else data["buyerName"] ?: "User"
-                                        updatedData["userId"] = if (isBuying) data["sellerId"]
-                                            ?: "" else data["buyerId"] ?: ""
-                                        updatedData["title"] = data["listingTitle"] ?: ""
-                                        updatedData["price"] = data["listingPrice"] ?: ""
-                                        updatedData["location"] = data["listingLocation"] ?: ""
-                                        val img = data["listingImage"]?.toString() ?: ""
-                                        if (img.isNotEmpty()) {
-                                            updatedData["images"] = listOf(img)
-                                        }
-
-                                        selectedListingData = updatedData
-                                        chatSourceScreen = "dashboard"
-                                        dashboardTab = 2
-                                        shouldSendInitialChatMessage = false
-                                        currentScreen = "chat"
-
-                                        // Clear intent data to prevent re-navigation
-                                        intentFlow.value = null
+                                    val updatedData = data.toMutableMap()
+                                    updatedData["id"] = data["listingId"] ?: ""
+                                    updatedData["posterName"] = if (isBuying) data["sellerName"]
+                                        ?: "Seller" else data["buyerName"] ?: "User"
+                                    updatedData["userId"] = if (isBuying) data["sellerId"]
+                                        ?: "" else data["buyerId"] ?: ""
+                                    updatedData["title"] = data["listingTitle"] ?: ""
+                                    updatedData["price"] = data["listingPrice"] ?: ""
+                                    updatedData["location"] = data["listingLocation"] ?: ""
+                                    val img = data["listingImage"]?.toString() ?: ""
+                                    if (img.isNotEmpty()) {
+                                        updatedData["images"] = listOf(img)
                                     }
+
+                                    selectedListingData = updatedData
+                                    chatSourceScreen = "dashboard"
+                                    dashboardTab = 2
+                                    shouldSendInitialChatMessage = false
+                                    currentScreen = "chat"
+                                    android.util.Log.d("NAV", "Navigating to Chat screen for $chatId")
+                                    
+                                    // Clear intent data to prevent re-navigation
+                                    intentFlow.value = null
                                 }
-                        }
+                            }
                     } else if (type == "rates") {
                         currentScreen = "aqua_rates"
                         intentFlow.value = null
+                    } else if (type == "listing" && intentToProcess.getStringExtra("listingId") != null) {
+                        val lid = intentToProcess.getStringExtra("listingId") ?: ""
+                        FirebaseFirestore.getInstance().collection("listings").document(lid)
+                            .get().addOnSuccessListener { doc ->
+                                if (doc.exists()) {
+                                    val data = doc.data ?: return@addOnSuccessListener
+                                    data["id"] = doc.id
+                                    selectedListingData = data
+                                    detailedPageSource = "dashboard"
+                                    listingBackStack = emptyList()
+                                    currentScreen = "detailed_page"
+                                    intentFlow.value = null
+                                }
+                            }
                     }
                 }
 
