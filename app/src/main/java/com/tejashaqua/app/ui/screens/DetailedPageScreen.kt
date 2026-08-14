@@ -343,11 +343,18 @@ fun DetailedPageScreen(
                                     modifier = Modifier.weight(1f).fillMaxHeight(),
                                     shape = RoundedCornerShape(12.dp),
                                     border = BorderStroke(1.dp, AquaBlue),
+                                    contentPadding = PaddingValues(horizontal = 4.dp),
                                     colors = ButtonDefaults.outlinedButtonColors(contentColor = AquaBlue)
                                 ) {
-                                    Icon(Icons.Default.Phone, contentDescription = null)
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(stringResource(R.string.contact_us), fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                                    Icon(Icons.Default.Phone, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = stringResource(R.string.contact_us), 
+                                        fontWeight = FontWeight.Bold, 
+                                        fontSize = 15.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
                                 }
                             }
 
@@ -358,11 +365,18 @@ fun DetailedPageScreen(
                                 },
                                 modifier = Modifier.weight(1f).fillMaxHeight(),
                                 shape = RoundedCornerShape(12.dp),
+                                contentPadding = PaddingValues(horizontal = 4.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = AquaBlue)
                             ) {
-                                Icon(Icons.Default.ChatBubbleOutline, contentDescription = null)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(stringResource(R.string.chat_with_seller), fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                                Icon(Icons.Default.ChatBubbleOutline, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = stringResource(R.string.chat_with_seller), 
+                                    fontWeight = FontWeight.Bold, 
+                                    fontSize = 15.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
                             }
                         }
                     }

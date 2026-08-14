@@ -185,6 +185,16 @@ class MainActivity : AppCompatActivity() {
                 var currentLocationName by remember { mutableStateOf(fetchingLocText) }
                 var currentSubLocation by remember { mutableStateOf("") }
 
+                val fetchedName by locationViewModel.currentLocationName.collectAsState()
+                val fetchedSub by locationViewModel.currentSubLocation.collectAsState()
+
+                LaunchedEffect(fetchedName, fetchedSub) {
+                    if (fetchedName.isNotBlank()) {
+                        currentLocationName = fetchedName
+                        currentSubLocation = fetchedSub
+                    }
+                }
+
                 // Track where the location picker was opened from
                 var locationPickerSource by remember { mutableStateOf("dashboard") }
                 var pickedListingLocation by remember { mutableStateOf<Pair<String, LatLng?>?>(null) }
@@ -463,6 +473,12 @@ class MainActivity : AppCompatActivity() {
                         if (PermissionHelper.getStatus(context, PermissionType.LOCATION) == PermissionStatus.GRANTED) {
                             locationViewModel.fetchCurrentLocation()
                         }
+                    }
+                }
+
+                LaunchedEffect(pStates[PermissionType.LOCATION]) {
+                    if (pStates[PermissionType.LOCATION] == PermissionStatus.DENIED) {
+                        locationViewModel.onPermissionDenied()
                     }
                 }
 
@@ -858,8 +874,7 @@ class MainActivity : AppCompatActivity() {
                                 onDeleteClick = { currentScreen = "dashboard" },
                                 onLocationChangeClick = {
                                     pViewModel.requestFeaturePermissions(listOf(PermissionType.LOCATION)) {
-                                        locationPickerSource = "listing"
-                                        currentScreen = "select_location"
+                                        locationViewModel.fetchCurrentLocation(force = true)
                                     }
                                 },
                                 joinedAt = joinedAt,

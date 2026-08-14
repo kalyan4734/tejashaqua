@@ -117,8 +117,10 @@ fun EditListingScreen(
     var photoError by remember { mutableStateOf(false) }
 
     var isWaitingForLocation by remember { mutableStateOf(false) }
+    var isRefreshingLocation by remember { mutableStateOf(false) }
     val fetchingLocText = stringResource(R.string.fetching_location)
     val deniedLocText = stringResource(R.string.location_permission_denied)
+    val failedLocText = stringResource(R.string.failed_get_location)
 
     var showDeleteDialog by remember { mutableStateOf(false) }
     var isFetchingData by remember { mutableStateOf(false) }
@@ -219,7 +221,7 @@ fun EditListingScreen(
         val errors = mutableMapOf<String, Boolean>()
         
         // Title is hidden for all categories, so we don't validate it here
-        if (location.isBlank() || location == fetchingLocText || location == deniedLocText) errors["location"] = true
+        if (location.isBlank() || location == fetchingLocText || location == deniedLocText || location == failedLocText) errors["location"] = true
         if (selectedPhotos.isEmpty() && category != ListingCategory.JOBS) photoError = true else photoError = false
 
         when (category) {
@@ -332,10 +334,19 @@ fun EditListingScreen(
         }
     }
 
-    LaunchedEffect(location) {
-        if (isWaitingForLocation && location != fetchingLocText && location != deniedLocText && location.isNotBlank()) {
+    LaunchedEffect(location, isWaitingForLocation, isRefreshingLocation) {
+        if (isWaitingForLocation && location != fetchingLocText && location != deniedLocText && location != failedLocText && location.isNotBlank()) {
             isWaitingForLocation = false
             onActionClickInternal()
+        } else if (isWaitingForLocation && location == failedLocText) {
+            isWaitingForLocation = false
+            onActionClickInternal()
+        }
+        
+        if (isRefreshingLocation && location != fetchingLocText && location != deniedLocText && location != failedLocText && location.isNotBlank()) {
+            isRefreshingLocation = false
+        } else if (isRefreshingLocation && (location == failedLocText || location == deniedLocText)) {
+            isRefreshingLocation = false
         }
     }
 
@@ -523,125 +534,19 @@ fun EditListingScreen(
                     color = MaterialTheme.colorScheme.surface,
                     modifier = Modifier.navigationBarsPadding().imePadding()
                 ) {
-                    val fetchingText = stringResource(R.string.fetching_location)
                     val onActionClick = {
                         keyboardController?.hide()
                         
                         pViewModel.requestFeaturePermissions(listOf(PermissionType.LOCATION)) {
-                            // Validation logic with detailed error tracking
-                            val errors = mutableMapOf<String, Boolean>()
-                            
-                            // Title is hidden for all categories, so we don't validate it here
-                            if (location.isBlank() || location == fetchingText) errors["location"] = true
-                            if (selectedPhotos.isEmpty() && category != ListingCategory.JOBS) photoError = true else photoError = false
-
-                            when (category) {
-                                ListingCategory.FISH -> {
-                                    if (fishType.isBlank()) errors["fishType"] = true
-                                    if (sizeValue.isBlank()) errors["sizeValue"] = true
-                                    if (fishAge.isBlank()) errors["fishAge"] = true
-                                    if (quantity.isBlank()) errors["quantity"] = true
-                                    if (price.isBlank()) errors["price"] = true
+                            val status = com.tejashaqua.app.utils.PermissionHelper.getStatus(context, PermissionType.LOCATION)
+                            if (status == com.tejashaqua.app.utils.PermissionStatus.GRANTED) {
+                                if (location.isBlank() || location == fetchingLocText || location == deniedLocText || location == failedLocText) {
+                                    isWaitingForLocation = true
+                                } else {
+                                    onActionClickInternal()
                                 }
-                        ListingCategory.PRAWNS -> {
-                                    if (prawnType.isBlank()) errors["prawnType"] = true
-                                    if (hatcheryName.isBlank()) errors["hatcheryName"] = true
-                                    if (rateValue.isBlank()) errors["rateValue"] = true
-                                    if (quantity.isBlank()) errors["quantity"] = true
-                                }
-                                ListingCategory.EQUIPMENTS -> {
-                                    if (equipmentType.isBlank()) errors["equipmentType"] = true
-                                    if (price.isBlank()) errors["price"] = true
-                                }
-                                ListingCategory.VEHICLES -> {
-                                    if (selectedServiceType.isBlank()) errors["serviceType"] = true
-                                    if (vehicleName.isBlank()) errors["vehicleName"] = true
-                                    if (vehicleCapacity.isBlank()) errors["vehicleCapacity"] = true
-                                }
-                                ListingCategory.FEED -> {
-                                    if (businessType.isBlank()) errors["businessType"] = true
-                                    if (feedName.isBlank()) errors["feedName"] = true
-                                    if (ratePerTon.isBlank()) errors["ratePerTon"] = true
-                                }
-                                ListingCategory.BUSINESS -> {
-                                    if (businessSubCategory.isBlank()) errors["businessSubCategory"] = true
-                                    if (businessSubCategory == "Feed") {
-                                        if (businessType.isBlank()) errors["businessType"] = true
-                                        if (feedName.isBlank()) errors["feedName"] = true
-                                        if (ratePerTon.isBlank()) errors["ratePerTon"] = true
-                                    } else if (businessSubCategory == "Medicine") {
-                                        if (businessType.isBlank()) errors["businessType"] = true
-                                        if (medicineName.isBlank()) errors["medicineName"] = true
-                                    }
-                                }
-                                ListingCategory.SERVICES -> {
-                                    if (selectedServiceType.isBlank()) errors["serviceType"] = true
-                                    if (selectedServiceType == "Bore Well" && boreWellType.isBlank()) errors["boreWellType"] = true
-                                    if (selectedServiceType == "Live Fish Vehicles") {
-                                        if (vehicleName.isBlank()) errors["vehicleName"] = true
-                                        if (vehicleCapacity.isBlank()) errors["vehicleCapacity"] = true
-                                    }
-                                    if (selectedServiceType == "Nets" && netType.isBlank()) errors["netType"] = true
-                                }
-                                ListingCategory.TANKS -> {
-                                    if (tankType.isBlank()) errors["tankType"] = true
-                                    if (tankAcres.isBlank()) errors["tankAcres"] = true
-                                    if (estPricePerAcre.isBlank()) errors["estPricePerAcre"] = true
-                                    if (tankLocation.isBlank()) errors["tankLocation"] = true
-                                }
-                                ListingCategory.JOBS -> {
-                                    if (jobType.isBlank()) errors["jobType"] = true
-                                    if (tankAcres.isBlank()) errors["tankAcres"] = true
-                                    if (salary.isBlank()) errors["salary"] = true
-                                    if (tankLocation.isBlank()) errors["tankLocation"] = true
-                                }
-                            }
-
-                            fieldErrors = errors
-
-                            if (errors.isNotEmpty() || photoError) {
-                                Toast.makeText(context, context.getString(R.string.fill_mandatory_fields), Toast.LENGTH_SHORT).show()
                             } else {
-                                val finalTitle = if (title.isBlank()) {
-                                    when (category) {
-                                        ListingCategory.FISH -> fishType
-                                        ListingCategory.PRAWNS -> prawnType
-                                        ListingCategory.EQUIPMENTS -> equipmentType
-                                        ListingCategory.VEHICLES -> vehicleName
-                                        ListingCategory.FEED -> feedName
-                                        ListingCategory.BUSINESS -> if (businessSubCategory == "Feed") feedName else if (businessSubCategory == "Medicine") medicineName else businessType
-                                        ListingCategory.SERVICES -> selectedServiceType
-                                        ListingCategory.TANKS -> tankType
-                                        ListingCategory.JOBS -> jobType
-                                    }
-                                } else {
-                                    title
-                                }
-
-                                val finalDescription = if (description.isBlank()) {
-                                    generateDefaultDescription(
-                                        context, category, finalTitle, price, fishType, sizeValue, sizeType,
-                                        quantity, unitType, prawnType, hatcheryName, rateValue, rateType,
-                                        equipmentType, vehicleName, vehicleCapacity, feedName, ratePerTon,
-                                        businessType, medicineName, businessSubCategory,
-                                        tankAcres, tankLocation, jobType, salary, selectedServiceType,
-                                        tankType
-                                    )
-                                } else {
-                                    description
-                                }
-
-                                val data = buildListingMap(
-                                    listingId, category, finalTitle, finalDescription, price, location, latLng, userMobileNumber,
-                                    userName, selectedServiceType, fishType, sizeType, sizeValue, fishAge, quantity,
-                                    unitType, prawnType, hatcheryName, rateType, rateValue, equipmentType,
-                                    vehicleName, vehicleCapacity, businessType, feedName, ratePerTon, 
-                                    medicineName, businessSubCategory,
-                                    boreWellType, tankAcres, estPricePerAcre, tankLocation, jobType, salary, netType, 
-                                    tankType, userId, showMobileNumberPreference, joinedAt
-                                )
-                                
-                                listingViewModel.saveListing(data, selectedPhotos)
+                                onActionClickInternal()
                             }
                         }
                     }
@@ -651,6 +556,8 @@ fun EditListingScreen(
                             modifier = Modifier.fillMaxWidth().padding(16.dp),
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
+                            val isActionEnabled = location != fetchingLocText && !isRefreshingLocation && !isWaitingForLocation && !isFetchingData && postState !is ListingViewModel.PostState.Loading
+                            
                             OutlinedButton(
                                 onClick = { 
                                     keyboardController?.hide()
@@ -659,7 +566,8 @@ fun EditListingScreen(
                                 modifier = Modifier.weight(1f).height(56.dp),
                                 shape = RoundedCornerShape(12.dp),
                                 border = BorderStroke(1.dp, Color(0xFFF44336)),
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFF44336))
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFF44336)),
+                                enabled = isActionEnabled
                             ) {
                                 Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(20.dp))
                                 Spacer(modifier = Modifier.width(8.dp))
@@ -669,18 +577,22 @@ fun EditListingScreen(
                                 onClick = onActionClick,
                                 modifier = Modifier.weight(1f).height(56.dp),
                                 shape = RoundedCornerShape(12.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = categoryColor)
+                                colors = ButtonDefaults.buttonColors(containerColor = categoryColor),
+                                enabled = isActionEnabled
                             ) {
                                 Text(stringResource(R.string.save_changes), fontWeight = FontWeight.Bold, fontSize = 16.sp)
                             }
                         }
                     } else {
                         Box(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                            val isActionEnabled = location != fetchingLocText && !isRefreshingLocation && !isWaitingForLocation && !isFetchingData && postState !is ListingViewModel.PostState.Loading
+                            
                             Button(
                                 onClick = onActionClick,
                                 modifier = Modifier.fillMaxWidth().height(56.dp),
                                 shape = RoundedCornerShape(12.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = categoryColor)
+                                colors = ButtonDefaults.buttonColors(containerColor = categoryColor),
+                                enabled = isActionEnabled
                             ) {
                                 Text(stringResource(R.string.post_listing), fontWeight = FontWeight.Bold, fontSize = 16.sp)
                             }
@@ -822,6 +734,7 @@ fun EditListingScreen(
                 item {
                     LocationSection(location, onClick = {
                         keyboardController?.hide()
+                        isRefreshingLocation = true
                         onLocationChangeClick()
                     }, isError = fieldErrors["location"] == true, accentColor = categoryColor)
                 }
@@ -830,10 +743,10 @@ fun EditListingScreen(
             }
         }
 
-        if (isFetchingData || postState is ListingViewModel.PostState.Loading || isWaitingForLocation) {
+        if (isFetchingData || postState is ListingViewModel.PostState.Loading || isWaitingForLocation || isRefreshingLocation) {
             LoadingOverlay(
                 if (isFetchingData) stringResource(R.string.fetching_details) 
-                else if (isWaitingForLocation) stringResource(R.string.fetching_location)
+                else if (isWaitingForLocation || isRefreshingLocation) stringResource(R.string.fetching_location)
                 else stringResource(R.string.saving_listing)
             )
         }

@@ -73,6 +73,13 @@ class PermissionViewModel(application: Application) : AndroidViewModel(applicati
         onHandled: () -> Unit
     ) {
         this.mustGrantAll = mustGrantAll
+        
+        if (!skipNagging) {
+            // If not skipNagging (e.g. user manually clicked a button), 
+            // we want to allow asking again even if denied earlier in this session.
+            permissions.forEach { sessionDeniedPermissions.remove(it) }
+        }
+
         currentRequiredPermissions = if (skipNagging) {
             // Filter out permissions that were denied in this session
             permissions.filter { !sessionDeniedPermissions.contains(it) }
@@ -87,14 +94,14 @@ class PermissionViewModel(application: Application) : AndroidViewModel(applicati
     private fun checkAndRequestNextMissingPermission() {
         val context = getApplication<Application>()
         val missing = currentRequiredPermissions.firstOrNull {
-            PermissionHelper.getStatus(context, it) == PermissionStatus.DENIED && 
+            PermissionHelper.getStatus(context, it) == PermissionStatus.DENIED &&
             !sessionDeniedPermissions.contains(it)
         }
 
         if (missing != null) {
             _visiblePermissionRationale.value = missing
         } else {
-            // All granted or session-denied for this feature!
+            // All requested permissions are granted (or were filtered out by skipNagging / session denial)
             _visiblePermissionRationale.value = null
             _requestPermissionTrigger.value = null
             pendingFeatureAction?.invoke()
