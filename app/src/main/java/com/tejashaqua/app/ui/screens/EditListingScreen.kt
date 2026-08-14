@@ -116,6 +116,10 @@ fun EditListingScreen(
     var fieldErrors by remember { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
     var photoError by remember { mutableStateOf(false) }
 
+    var isWaitingForLocation by remember { mutableStateOf(false) }
+    val fetchingLocText = stringResource(R.string.fetching_location)
+    val deniedLocText = stringResource(R.string.location_permission_denied)
+
     var showDeleteDialog by remember { mutableStateOf(false) }
     var isFetchingData by remember { mutableStateOf(false) }
     val postState by listingViewModel.postState.collectAsState()
@@ -208,6 +212,131 @@ fun EditListingScreen(
     LaunchedEffect(initialLocation, initialLatLng) {
         location = initialLocation
         latLng = initialLatLng
+    }
+
+    val onActionClickInternal = {
+        // Validation logic with detailed error tracking
+        val errors = mutableMapOf<String, Boolean>()
+        
+        // Title is hidden for all categories, so we don't validate it here
+        if (location.isBlank() || location == fetchingLocText || location == deniedLocText) errors["location"] = true
+        if (selectedPhotos.isEmpty() && category != ListingCategory.JOBS) photoError = true else photoError = false
+
+        when (category) {
+            ListingCategory.FISH -> {
+                if (fishType.isBlank()) errors["fishType"] = true
+                if (sizeValue.isBlank()) errors["sizeValue"] = true
+                if (fishAge.isBlank()) errors["fishAge"] = true
+                if (quantity.isBlank()) errors["quantity"] = true
+                if (price.isBlank()) errors["price"] = true
+            }
+            ListingCategory.PRAWNS -> {
+                if (prawnType.isBlank()) errors["prawnType"] = true
+                if (hatcheryName.isBlank()) errors["hatcheryName"] = true
+                if (rateValue.isBlank()) errors["rateValue"] = true
+                if (quantity.isBlank()) errors["quantity"] = true
+            }
+            ListingCategory.EQUIPMENTS -> {
+                if (equipmentType.isBlank()) errors["equipmentType"] = true
+                if (price.isBlank()) errors["price"] = true
+            }
+            ListingCategory.VEHICLES -> {
+                if (selectedServiceType.isBlank()) errors["serviceType"] = true
+                if (vehicleName.isBlank()) errors["vehicleName"] = true
+                if (vehicleCapacity.isBlank()) errors["vehicleCapacity"] = true
+            }
+            ListingCategory.FEED -> {
+                if (businessType.isBlank()) errors["businessType"] = true
+                if (feedName.isBlank()) errors["feedName"] = true
+                if (ratePerTon.isBlank()) errors["ratePerTon"] = true
+            }
+            ListingCategory.BUSINESS -> {
+                if (businessSubCategory.isBlank()) errors["businessSubCategory"] = true
+                if (businessSubCategory == "Feed") {
+                    if (businessType.isBlank()) errors["businessType"] = true
+                    if (feedName.isBlank()) errors["feedName"] = true
+                    if (ratePerTon.isBlank()) errors["ratePerTon"] = true
+                } else if (businessSubCategory == "Medicine") {
+                    if (businessType.isBlank()) errors["businessType"] = true
+                    if (medicineName.isBlank()) errors["medicineName"] = true
+                }
+            }
+            ListingCategory.SERVICES -> {
+                if (selectedServiceType.isBlank()) errors["serviceType"] = true
+                if (selectedServiceType == "Bore Well" && boreWellType.isBlank()) errors["boreWellType"] = true
+                if (selectedServiceType == "Live Fish Vehicles") {
+                    if (vehicleName.isBlank()) errors["vehicleName"] = true
+                    if (vehicleCapacity.isBlank()) errors["vehicleCapacity"] = true
+                }
+                if (selectedServiceType == "Nets" && netType.isBlank()) errors["netType"] = true
+            }
+            ListingCategory.TANKS -> {
+                if (tankType.isBlank()) errors["tankType"] = true
+                if (tankAcres.isBlank()) errors["tankAcres"] = true
+                if (estPricePerAcre.isBlank()) errors["estPricePerAcre"] = true
+                if (tankLocation.isBlank()) errors["tankLocation"] = true
+            }
+            ListingCategory.JOBS -> {
+                if (jobType.isBlank()) errors["jobType"] = true
+                if (tankAcres.isBlank()) errors["tankAcres"] = true
+                if (salary.isBlank()) errors["salary"] = true
+                if (tankLocation.isBlank()) errors["tankLocation"] = true
+            }
+        }
+
+        fieldErrors = errors
+
+        if (errors.isNotEmpty() || photoError) {
+            Toast.makeText(context, context.getString(R.string.fill_mandatory_fields), Toast.LENGTH_SHORT).show()
+        } else {
+            val finalTitle = if (title.isBlank()) {
+                when (category) {
+                    ListingCategory.FISH -> fishType
+                    ListingCategory.PRAWNS -> prawnType
+                    ListingCategory.EQUIPMENTS -> equipmentType
+                    ListingCategory.VEHICLES -> vehicleName
+                    ListingCategory.FEED -> feedName
+                    ListingCategory.BUSINESS -> if (businessSubCategory == "Feed") feedName else if (businessSubCategory == "Medicine") medicineName else businessType
+                    ListingCategory.SERVICES -> selectedServiceType
+                    ListingCategory.TANKS -> tankType
+                    ListingCategory.JOBS -> jobType
+                }
+            } else {
+                title
+            }
+
+            val finalDescription = if (description.isBlank()) {
+                generateDefaultDescription(
+                    context, category, finalTitle, price, fishType, sizeValue, sizeType,
+                    quantity, unitType, prawnType, hatcheryName, rateValue, rateType,
+                    equipmentType, vehicleName, vehicleCapacity, feedName, ratePerTon,
+                    businessType, medicineName, businessSubCategory,
+                    tankAcres, tankLocation, jobType, salary, selectedServiceType,
+                    tankType
+                )
+            } else {
+                description
+            }
+
+            val data = buildListingMap(
+                listingId, category, finalTitle, finalDescription, price, location, latLng, userMobileNumber,
+                userName, selectedServiceType, fishType, sizeType, sizeValue, fishAge, quantity,
+                unitType, prawnType, hatcheryName, rateType, rateValue, equipmentType,
+                vehicleName, vehicleCapacity, businessType, feedName, ratePerTon, 
+                medicineName, businessSubCategory,
+                boreWellType, tankAcres, estPricePerAcre, tankLocation, jobType, salary, netType, 
+                tankType, userId, showMobileNumberPreference, joinedAt
+            )
+            
+            listingViewModel.saveListing(data, selectedPhotos)
+        }
+    }
+
+    LaunchedEffect(location) {
+        if (isWaitingForLocation && location != fetchingLocText && location != deniedLocText && location.isNotBlank()) {
+            isWaitingForLocation = false
+            onActionClickInternal()
+        }
     }
 
     // Sync contact number if it changes from outside (e.g. initial load)
@@ -701,8 +830,12 @@ fun EditListingScreen(
             }
         }
 
-        if (isFetchingData || postState is ListingViewModel.PostState.Loading) {
-            LoadingOverlay(if (isFetchingData) stringResource(R.string.fetching_details) else stringResource(R.string.saving_listing))
+        if (isFetchingData || postState is ListingViewModel.PostState.Loading || isWaitingForLocation) {
+            LoadingOverlay(
+                if (isFetchingData) stringResource(R.string.fetching_details) 
+                else if (isWaitingForLocation) stringResource(R.string.fetching_location)
+                else stringResource(R.string.saving_listing)
+            )
         }
     }
 }

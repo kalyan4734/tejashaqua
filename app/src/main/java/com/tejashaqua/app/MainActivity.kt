@@ -300,17 +300,10 @@ class MainActivity : AppCompatActivity() {
                     } else if (type == "rates") {
                         intentFlow.value = null
                         currentScreen = "aqua_rates"
-                    } else if (type == "listing" && intentToProcess.getStringExtra("listingId") != null) {
+                    } else if (type == "listing") {
                         intentFlow.value = null
-                        val lid = intentToProcess.getStringExtra("listingId") ?: ""
-                        FirebaseFirestore.getInstance().collection("listings").document(lid)
-                            .get().addOnSuccessListener { doc ->
-                                if (doc.exists()) {
-                                    val data = doc.data ?: return@addOnSuccessListener
-                                    data["id"] = doc.id
-                                    navigateToDetailedPage(data, "dashboard")
-                                }
-                            }
+                        currentScreen = "dashboard"
+                        dashboardTab = 0
                     }
                 }
 
@@ -475,7 +468,7 @@ class MainActivity : AppCompatActivity() {
 
                 LaunchedEffect(pStates[PermissionType.LOCATION], currentScreen) {
                     if (pStates[PermissionType.LOCATION] == PermissionStatus.GRANTED) {
-                        if (currentScreen == "dashboard" || currentScreen == "select_location") {
+                        if (currentScreen == "dashboard" || currentScreen == "select_location" || currentScreen == "edit_listing") {
                             locationViewModel.fetchCurrentLocation()
                         }
                     }
