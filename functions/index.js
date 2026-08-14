@@ -159,11 +159,16 @@ exports.onRateUpdated = onDocumentUpdated("aqua_rates/{type}", async (event) => 
     if (newData.notify === true) {
         const type = event.params.type;
         const price = newData.price;
-        logger.info(`Sending single notification for ${type}`);
+
+        // Capitalize for display and generalize Rohu to Fish
+        let displayType = type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
+        if (displayType === "Rohu") displayType = "Fish";
+
+        logger.info(`Sending single notification for ${displayType}`);
         const payload = {
             topic: "all_users",
             notification: {
-                title: `Today's ${type} Rates`,
+                title: `Today's ${displayType} Rates`,
                 body: `Latest price: ${price}. Tap to see all rates.`
             },
             data: {

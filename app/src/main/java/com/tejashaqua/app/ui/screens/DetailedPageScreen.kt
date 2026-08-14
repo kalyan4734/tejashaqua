@@ -261,7 +261,7 @@ fun DetailedPageScreen(
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text(stringResource(R.string.detailed_page_title), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp) },
+                title = { Text(stringResource(R.string.detailed_page_title), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 19.sp) },
                 navigationIcon = {
                     IconButton(onClick = {
                         keyboardController?.hide()
@@ -347,7 +347,7 @@ fun DetailedPageScreen(
                                 ) {
                                     Icon(Icons.Default.Phone, contentDescription = null)
                                     Spacer(modifier = Modifier.width(8.dp))
-                                    Text(stringResource(R.string.contact_us), fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                    Text(stringResource(R.string.contact_us), fontWeight = FontWeight.Bold, fontSize = 17.sp)
                                 }
                             }
 
@@ -362,7 +362,7 @@ fun DetailedPageScreen(
                             ) {
                                 Icon(Icons.Default.ChatBubbleOutline, contentDescription = null)
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text(stringResource(R.string.chat_with_seller), fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                Text(stringResource(R.string.chat_with_seller), fontWeight = FontWeight.Bold, fontSize = 17.sp)
                             }
                         }
                     }
@@ -478,7 +478,7 @@ fun DetailedPageScreen(
                             Text(
                                 text = "${pagerState.currentPage + 1}/${images.size}",
                                 color = Color.White,
-                                fontSize = 12.sp,
+                                fontSize = 13.sp,
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                             )
                         }
@@ -493,7 +493,7 @@ fun DetailedPageScreen(
                         Text(
                             text = displayCategory,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            fontSize = 12.sp,
+                            fontSize = 13.sp,
                             color = AquaBlue,
                             fontWeight = FontWeight.Bold
                         )
@@ -501,20 +501,20 @@ fun DetailedPageScreen(
                     
                     Spacer(modifier = Modifier.height(12.dp))
                     
-                    Text(text = title, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                    Text(text = title, fontSize = 21.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                     
-                    Text(text = priceLabel, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = AquaBlue)
+                    Text(text = priceLabel, fontSize = 25.sp, fontWeight = FontWeight.ExtraBold, color = AquaBlue)
                     
                     Spacer(modifier = Modifier.height(12.dp))
                     
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.AccessTime, contentDescription = null, tint = GrayText, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = getRelativeTime(context, timestamp), fontSize = 13.sp, color = GrayText)
+                        Text(text = getRelativeTime(context, timestamp), fontSize = 14.sp, color = GrayText)
                         Spacer(modifier = Modifier.width(16.dp))
                         Icon(Icons.Default.LocationOn, contentDescription = null, tint = GrayText, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = location, fontSize = 13.sp, color = GrayText)
+                        Text(text = location, fontSize = 14.sp, color = GrayText)
                     }
                 }
             }
@@ -522,16 +522,16 @@ fun DetailedPageScreen(
             // 3. Description
             item {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text(text = stringResource(R.string.description_label), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                    Text(text = stringResource(R.string.description_label), fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(text = description, fontSize = 14.sp, color = Color.DarkGray, lineHeight = 20.sp)
+                    Text(text = description, fontSize = 15.sp, color = Color.DarkGray, lineHeight = 21.sp)
                 }
             }
 
             // 5. Details section
             item {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text(text = stringResource(R.string.details_label), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                    Text(text = stringResource(R.string.details_label), fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                     Spacer(modifier = Modifier.height(12.dp))
                     
                     when(category) {
@@ -609,7 +609,7 @@ fun DetailedPageScreen(
             item {
                 Column(modifier = Modifier.padding(16.dp)) {
                     // Seller Details Header
-                    Text(text = stringResource(R.string.seller_label), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                    Text(text = stringResource(R.string.seller_label), fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                     Spacer(modifier = Modifier.height(12.dp))
                     
                     // User details above map
@@ -625,21 +625,21 @@ fun DetailedPageScreen(
                             modifier = Modifier.size(44.dp).background(Color(0xFFE0F7FA), CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(text = posterName.take(1).uppercase(), fontWeight = FontWeight.Bold, color = Color(0xFF0097A7), fontSize = 18.sp)
+                            Text(text = posterName.take(1).uppercase(), fontWeight = FontWeight.Bold, color = Color(0xFF0097A7), fontSize = 19.sp)
                         }
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
-                            Text(text = posterName, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                            Text(text = posterName, fontWeight = FontWeight.Bold, fontSize = 17.sp)
                             val joinedDate = if (sellerJoinedAt > 0) {
                                 SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(Date(sellerJoinedAt))
                             } else {
                                 stringResource(R.string.may_2024)
                             }
-                            Text(text = stringResource(R.string.member_since_label, joinedDate), fontSize = 12.sp, color = GrayText)
+                            Text(text = stringResource(R.string.member_since_label, joinedDate), fontSize = 13.sp, color = GrayText)
                         }
                     }
 
-                    Text(text = stringResource(R.string.posted_location), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                    Text(text = stringResource(R.string.posted_location), fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                     Spacer(modifier = Modifier.height(12.dp))
                     
                     val context = LocalContext.current
@@ -726,7 +726,7 @@ fun DetailedPageScreen(
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 text = location, 
-                                fontSize = 14.sp, 
+                                fontSize = 15.sp, 
                                 color = Color.Black, 
                                 maxLines = 1, 
                                 overflow = TextOverflow.Ellipsis
@@ -750,7 +750,7 @@ fun DetailedPageScreen(
             if (similarListings.isNotEmpty()) {
                 item {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text(text = stringResource(R.string.similar_listings), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                        Text(text = stringResource(R.string.similar_listings), fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                         Spacer(modifier = Modifier.height(12.dp))
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             items(items = similarListings) { data ->
@@ -903,8 +903,8 @@ fun FullScreenImageDialog(
 @Composable
 fun DetailRowItem(label: String, value: String) {
     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(text = label, color = GrayText, fontSize = 14.sp)
-        Text(text = value, color = Color.Black, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+        Text(text = label, color = GrayText, fontSize = 15.sp)
+        Text(text = value, color = Color.Black, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
     }
 }
 

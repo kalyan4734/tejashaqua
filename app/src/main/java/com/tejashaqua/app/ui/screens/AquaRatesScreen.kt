@@ -89,14 +89,14 @@ fun AquaRatesScreen(
             CenterAlignedTopAppBar(
                 title = { 
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(stringResource(R.string.today_aqua_rates), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        Text(stringResource(R.string.today_aqua_rates), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 19.sp)
                         val latestUpdate = rates.maxOfOrNull { it.lastUpdated } ?: 0L
                         if (latestUpdate > 0) {
                             val sdf = java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault())
                             Text(
                                 text = stringResource(R.string.last_updated, sdf.format(java.util.Date(latestUpdate))),
                                 color = Color.White.copy(alpha = 0.8f),
-                                fontSize = 11.sp,
+                                fontSize = 12.sp,
                                 fontWeight = FontWeight.Normal
                             )
                         }
@@ -182,7 +182,7 @@ fun RateItemCard(rate: AquaRate, onClick: () -> Unit) {
             Column {
                 Text(
                     text = rate.getDisplayName(),
-                    fontSize = 17.sp,
+                    fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.Black
                 )
@@ -191,34 +191,45 @@ fun RateItemCard(rate: AquaRate, onClick: () -> Unit) {
             Spacer(modifier = Modifier.weight(1f))
             
             Column(horizontalAlignment = Alignment.End) {
+                val isNoData = rate.price == "--" || 
+                              rate.price == "N/A" || 
+                              rate.price.lowercase(java.util.Locale.ROOT).contains("no change") ||
+                              rate.price.contains("మార్పు లేదు") ||
+                              rate.price == stringResource(R.string.no_data_available)
+                
+                val displayPrice = if (isNoData) stringResource(R.string.no_data_available) else rate.price
+                
                 Text(
-                    text = rate.price,
-                    fontSize = 18.sp,
+                    text = displayPrice,
+                    fontSize = 19.sp,
                     fontWeight = FontWeight.ExtraBold,
                     color = Color.Black
                 )
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (rate.trend != RateTrend.FLAT) {
-                        Icon(
-                            imageVector = when(rate.trend) {
-                                RateTrend.UP -> Icons.AutoMirrored.Filled.TrendingUp
-                                RateTrend.DOWN -> Icons.AutoMirrored.Filled.TrendingDown
-                                else -> Icons.AutoMirrored.Filled.TrendingFlat
-                            },
-                            contentDescription = null,
-                            tint = when(rate.trend) {
-                                RateTrend.UP -> Color(0xFF4CAF50)
-                                RateTrend.DOWN -> Color(0xFFF44336)
-                                else -> GrayText
-                            },
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                    }
-                    if (rate.change.isNotEmpty()) {
+                val isNoChange = rate.change.lowercase(java.util.Locale.ROOT).contains("no change") || 
+                                 rate.change.contains("మార్పు లేదు")
+                
+                if (rate.change.isNotEmpty() && !isNoChange) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (rate.trend != RateTrend.FLAT) {
+                            Icon(
+                                imageVector = when(rate.trend) {
+                                    RateTrend.UP -> Icons.AutoMirrored.Filled.TrendingUp
+                                    RateTrend.DOWN -> Icons.AutoMirrored.Filled.TrendingDown
+                                    else -> Icons.AutoMirrored.Filled.TrendingFlat
+                                },
+                                contentDescription = null,
+                                tint = when(rate.trend) {
+                                    RateTrend.UP -> Color(0xFF4CAF50)
+                                    RateTrend.DOWN -> Color(0xFFF44336)
+                                    else -> GrayText
+                                },
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                        }
                         Text(
                             text = rate.change,
-                            fontSize = 13.sp,
+                            fontSize = 14.sp,
                             fontWeight = FontWeight.Medium,
                             color = when(rate.trend) {
                                 RateTrend.UP -> Color(0xFF4CAF50)

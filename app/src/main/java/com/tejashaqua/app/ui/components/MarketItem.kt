@@ -141,16 +141,16 @@ fun MarketItem(
             }
             Column(modifier = Modifier.padding(8.dp)) {
                 Surface(color = categoryBgColor, shape = RoundedCornerShape(4.dp)) { 
-                    Text(category, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), fontSize = 10.sp, color = categoryColor, fontWeight = FontWeight.Bold) 
+                    Text(category, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), fontSize = 11.sp, color = categoryColor, fontWeight = FontWeight.Bold) 
                 }
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(title, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(price, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp, color = Color.Black)
+                Text(title, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(price, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp, color = Color.Black)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.LocationOn, null, tint = GrayText, modifier = Modifier.size(10.dp))
-                    Text(displayLocation, color = GrayText, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                    Text(displayLocation, color = GrayText, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                     if (timeAgo.isNotEmpty()) {
-                        Text(timeAgo, color = GrayText, fontSize = 9.sp, fontWeight = FontWeight.Medium)
+                        Text(timeAgo, color = GrayText, fontSize = 10.sp, fontWeight = FontWeight.Medium)
                     }
                 }
                 Spacer(modifier = Modifier.height(4.dp))
@@ -162,7 +162,7 @@ fun MarketItem(
                 ) {
                     Icon(Icons.Default.Person, null, tint = categoryColor, modifier = Modifier.size(12.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = stringResource(R.string.by_label, posterName), fontSize = 10.sp, color = Color.DarkGray, maxLines = 1)
+                    Text(text = stringResource(R.string.by_label, posterName), fontSize = 11.sp, color = Color.DarkGray, maxLines = 1)
                 }
             }
         }

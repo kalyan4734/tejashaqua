@@ -444,4 +444,11 @@ These terms shall be governed by and construed in accordance with the laws of In
     <string name="storage_settings_desc">Storage permission is required to select photos. Please enable it in app settings.</string>
     <string name="camera_permission_denied_settings">Camera permission is permanently denied. Please enable it in App Settings to take photos.</string>
     <string name="storage_permission_denied_settings">Storage permission is permanently denied. Please enable it in App Settings to select photos.</string>
+    <string name="notification_settings_desc">Notification access is required to receive updates. Please enable it in app settings.</string>
+    <string name="permission_required_title">Permissions Required</string>
+    <string name="permission_required_desc">To provide all features of this application, we need access to some permissions such as location, camera, photos, and notifications.</string>
+    <string name="location_rationale">Location access helps us provide location-based features and add your farm location.</string>
+    <string name="camera_rationale">Camera access is needed to take photos for your advertisement.</string>
+    <string name="photo_rationale">Photo access is needed to select images for your advertisement.</string>
+    <string name="notification_rationale">Notification access helps you receive important updates about your advertisements.</string>
 </resources>

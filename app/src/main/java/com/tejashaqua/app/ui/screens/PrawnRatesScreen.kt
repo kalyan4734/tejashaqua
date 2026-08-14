@@ -176,7 +176,9 @@ fun PrawnRatesScreen(onBackClick: () -> Unit) {
                             
                             val isNoData = price == "--" || 
                                           price == "N/A" || 
-                                          price == "No data available for today" || 
+                                          price.lowercase(java.util.Locale.ROOT).contains("no change") ||
+                                          price.contains("మార్పు లేదు") ||
+                                          price == "No data available for today" ||
                                           price == "ఈ రోజు డేటా అందుబాటులో లేదు" ||
                                           price == stringResource(R.string.no_data_available)
                                           

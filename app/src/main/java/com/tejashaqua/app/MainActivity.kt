@@ -77,13 +77,23 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import androidx.core.app.ActivityCompat
 import com.tejashaqua.app.utils.AppStateTracker
 
+import com.tejashaqua.app.ui.viewmodel.PermissionViewModel
+import com.tejashaqua.app.utils.PermissionType
+import com.tejashaqua.app.utils.PermissionStatus
+import com.tejashaqua.app.utils.PermissionHelper
+import com.tejashaqua.app.ui.components.PermissionRationaleDialog
+import com.tejashaqua.app.ui.components.AppLaunchPermissionsDialog
+import com.tejashaqua.app.ui.components.SettingsRedirectDialog
+
 class MainActivity : AppCompatActivity() {
     private lateinit var firebaseAnalytics: FirebaseAnalytics
     private val intentFlow = MutableStateFlow<Intent?>(null)
+    private var permissionViewModel: PermissionViewModel? = null
 
     override fun onResume() {
         super.onResume()
         AppStateTracker.isAppInForeground = true
+        permissionViewModel?.updatePermissionStates()
     }
 
     override fun onPause() {
@@ -178,10 +188,6 @@ class MainActivity : AppCompatActivity() {
                 // Track where the location picker was opened from
                 var locationPickerSource by remember { mutableStateOf("dashboard") }
                 var pickedListingLocation by remember { mutableStateOf<Pair<String, LatLng?>?>(null) }
-                
-                var showLocationDisclosure by remember { mutableStateOf(false) }
-                var showSettingsDialog by remember { mutableStateOf(false) }
-                var locationPermissionsToRequest by remember { mutableStateOf<Array<String>>(emptyArray()) }
 
                 // --- NAVIGATION HELPERS ---
                 val navigateToDetailedPage: (Map<String, Any>, String) -> Unit = { data, source ->
@@ -386,83 +392,69 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
 
-                val permissionLauncher = rememberLauncherForActivityResult(
+                val pViewModel: PermissionViewModel = viewModel()
+                permissionViewModel = pViewModel
+                val pStates by pViewModel.permissionStates.collectAsState()
+                val visibleRationale by pViewModel.visiblePermissionRationale.collectAsState()
+                val settingsDialogType by pViewModel.showSettingsDialog.collectAsState()
+                val requestTrigger by pViewModel.requestPermissionTrigger.collectAsState()
+
+                val locationLauncher = rememberLauncherForActivityResult(
                     ActivityResultContracts.RequestMultiplePermissions()
-                ) { permissions ->
-                    val locationGranted = permissions.getOrDefault(Manifest.permission.ACCESS_FINE_LOCATION, false) ||
-                                         permissions.getOrDefault(Manifest.permission.ACCESS_COARSE_LOCATION, false)
-                    val notificationsGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        permissions.getOrDefault(Manifest.permission.POST_NOTIFICATIONS, false)
-                    } else true
+                ) { pViewModel.handlePermissionResult(PermissionType.LOCATION, this@MainActivity) }
 
-                    if (locationGranted) {
-                        locationViewModel.fetchCurrentLocation()
-                    } else {
-                        locationViewModel.onPermissionDenied()
-                    }
+                val cameraLauncher = rememberLauncherForActivityResult(
+                    ActivityResultContracts.RequestPermission()
+                ) { pViewModel.handlePermissionResult(PermissionType.CAMERA, this@MainActivity) }
 
-                    if (!locationGranted || !notificationsGranted) {
-                        // Check if they permanently denied or just a soft deny
-                        val shouldShowLocationRationale = ActivityCompat.shouldShowRequestPermissionRationale(
-                            this@MainActivity,
-                            Manifest.permission.ACCESS_FINE_LOCATION
-                        )
-                        val shouldShowNotificationRationale = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                            ActivityCompat.shouldShowRequestPermissionRationale(this@MainActivity, Manifest.permission.POST_NOTIFICATIONS)
-                        } else false
-                        
-                        if (!shouldShowLocationRationale && !locationGranted) {
-                            // Permanently denied location
-                            showSettingsDialog = true
-                        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !shouldShowNotificationRationale && !notificationsGranted) {
-                            // Permanently denied notifications
-                            showSettingsDialog = true
-                        } else {
-                            // Soft deny (user clicked Deny). Show disclosure again to insist as requested.
-                            locationPermissionsToRequest = mutableListOf(
-                                Manifest.permission.ACCESS_FINE_LOCATION,
-                                Manifest.permission.ACCESS_COARSE_LOCATION
-                            ).apply {
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) add(Manifest.permission.POST_NOTIFICATIONS)
-                            }.toTypedArray()
-                            showLocationDisclosure = true
+                val photosLauncher = rememberLauncherForActivityResult(
+                    ActivityResultContracts.RequestPermission()
+                ) { pViewModel.handlePermissionResult(PermissionType.PHOTOS, this@MainActivity) }
+
+                val notificationsLauncher = rememberLauncherForActivityResult(
+                    ActivityResultContracts.RequestPermission()
+                ) { pViewModel.handlePermissionResult(PermissionType.NOTIFICATIONS, this@MainActivity) }
+
+                // Observe trigger to launch actual system dialogs
+                LaunchedEffect(requestTrigger) {
+                    requestTrigger?.let { type ->
+                        when (type) {
+                            PermissionType.LOCATION -> locationLauncher.launch(PermissionHelper.getPermissionsForType(type).toTypedArray())
+                            PermissionType.CAMERA -> cameraLauncher.launch(PermissionHelper.getPermissionsForType(type).first())
+                            PermissionType.PHOTOS -> photosLauncher.launch(PermissionHelper.getPermissionsForType(type).first())
+                            PermissionType.NOTIFICATIONS -> notificationsLauncher.launch(PermissionHelper.getPermissionsForType(type).first())
                         }
-                    }
-                    // Mark as shown once they have interacted with the system dialog at least once
-                    LocaleHelper.setLocationDisclosureShown(context)
-                }
-
-                val triggerPermissionFlow = {
-                    val hasLocation = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
-                                     ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
-                    val hasNotifications = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
-                    } else true
-
-                    if (!hasLocation || !hasNotifications) {
-                        val showLocationRationale = ActivityCompat.shouldShowRequestPermissionRationale(this@MainActivity, Manifest.permission.ACCESS_FINE_LOCATION)
-                        val showNotificationRationale = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                            ActivityCompat.shouldShowRequestPermissionRationale(this@MainActivity, Manifest.permission.POST_NOTIFICATIONS)
-                        } else false
-
-                        if (LocaleHelper.isLocationDisclosureShown(context) && 
-                            ((!showLocationRationale && !hasLocation) || 
-                             (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !showNotificationRationale && !hasNotifications))) {
-                            showSettingsDialog = true
-                        } else {
-                            val permissions = mutableListOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) permissions.add(Manifest.permission.POST_NOTIFICATIONS)
-                            locationPermissionsToRequest = permissions.toTypedArray()
-                            showLocationDisclosure = true
-                        }
-                    } else {
-                        locationViewModel.fetchCurrentLocation()
                     }
                 }
 
-                LaunchedEffect(currentScreen) {
-                    if (currentScreen == "dashboard" || currentScreen == "select_location") {
-                        triggerPermissionFlow()
+                // Handle Home Screen specific permissions (Location and Notifications) only after logging in
+                LaunchedEffect(currentScreen, authState) {
+                    val isHomeScreen = currentScreen == "dashboard" || currentScreen == "admin_dashboard"
+                    val isLoggedIn = authState is AuthState.Success || authState is AuthState.RequireName
+                    
+                    if (isHomeScreen && isLoggedIn) {
+                        pViewModel.requestFeaturePermissions(
+                            permissions = listOf(PermissionType.LOCATION, PermissionType.NOTIFICATIONS),
+                            skipNagging = true,
+                            mustGrantAll = false
+                        ) {
+                            // Both handled (granted or denied). If location is granted, fetch it.
+                            if (PermissionHelper.getStatus(context, PermissionType.LOCATION) == PermissionStatus.GRANTED) {
+                                locationViewModel.fetchCurrentLocation()
+                            }
+                        }
+                    } else if (currentScreen == "select_location") {
+                        if (PermissionHelper.getStatus(context, PermissionType.LOCATION) == PermissionStatus.GRANTED) {
+                            locationViewModel.fetchCurrentLocation()
+                        }
+                    }
+                }
+
+                LaunchedEffect(pStates[PermissionType.LOCATION], currentScreen) {
+                    if (pStates[PermissionType.LOCATION] == PermissionStatus.GRANTED) {
+                        if (currentScreen == "dashboard" || currentScreen == "select_location") {
+                            locationViewModel.fetchCurrentLocation()
+                        }
                     }
                 }
 
@@ -549,46 +541,25 @@ class MainActivity : AppCompatActivity() {
                         )
                     }
 
-                    if (showLocationDisclosure) {
-                        AlertDialog(
-                            onDismissRequest = {
-                                showLocationDisclosure = false
-                                permissionLauncher.launch(locationPermissionsToRequest)
-                            },
-                            title = { Text(stringResource(R.string.location_disclosure_title)) },
-                            text = { Text(stringResource(R.string.location_disclosure_desc)) },
-                            confirmButton = {
-                                TextButton(onClick = {
-                                    showLocationDisclosure = false
-                                    permissionLauncher.launch(locationPermissionsToRequest)
-                                }) {
-                                    Text(stringResource(R.string.ok))
-                                }
-                            }
+                    visibleRationale?.let { type ->
+                        PermissionRationaleDialog(
+                            type = type,
+                            onConfirm = { pViewModel.onRationaleConfirm() },
+                            onDismiss = { pViewModel.onRationaleDismiss() }
                         )
                     }
 
-                    if (showSettingsDialog) {
-                        AlertDialog(
-                            onDismissRequest = { showSettingsDialog = false },
-                            title = { Text(stringResource(R.string.location_disclosure_title)) },
-                            text = { Text(stringResource(R.string.location_settings_desc)) },
-                            confirmButton = {
-                                TextButton(onClick = {
-                                    showSettingsDialog = false
-                                    val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                        data = android.net.Uri.fromParts("package", packageName, null)
-                                    }
-                                    startActivity(intent)
-                                }) {
-                                    Text(stringResource(R.string.open_settings))
+                    settingsDialogType?.let { type ->
+                        SettingsRedirectDialog(
+                            type = type,
+                            onConfirm = {
+                                pViewModel.dismissSettingsDialog()
+                                val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                    data = android.net.Uri.fromParts("package", packageName, null)
                                 }
+                                startActivity(intent)
                             },
-                            dismissButton = {
-                                TextButton(onClick = { showSettingsDialog = false }) {
-                                    Text(stringResource(R.string.cancel))
-                                }
-                            }
+                            onDismiss = { pViewModel.dismissSettingsDialog() }
                         )
                     }
 
@@ -669,19 +640,9 @@ class MainActivity : AppCompatActivity() {
                                 },
                                 onProfileClick = { currentScreen = "profile" },
                                 onLocationClick = {
-                                    val hasLocationPermission = ContextCompat.checkSelfPermission(
-                                        this@MainActivity,
-                                        Manifest.permission.ACCESS_FINE_LOCATION
-                                    ) == PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(
-                                        this@MainActivity,
-                                        Manifest.permission.ACCESS_COARSE_LOCATION
-                                    ) == PackageManager.PERMISSION_GRANTED
-
-                                    if (hasLocationPermission) {
+                                    pViewModel.requestFeaturePermissions(listOf(PermissionType.LOCATION)) {
                                         locationPickerSource = "dashboard"
                                         currentScreen = "select_location"
-                                    } else {
-                                        triggerPermissionFlow()
                                     }
                                 },
                                 onPrawnsClick = { currentScreen = "prawn_rates" },
@@ -874,19 +835,9 @@ class MainActivity : AppCompatActivity() {
                                 onPostClick = { currentScreen = "dashboard" },
                                 onDeleteClick = { currentScreen = "dashboard" },
                                 onLocationChangeClick = {
-                                    val hasLocationPermission = ContextCompat.checkSelfPermission(
-                                        this@MainActivity,
-                                        Manifest.permission.ACCESS_FINE_LOCATION
-                                    ) == PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(
-                                        this@MainActivity,
-                                        Manifest.permission.ACCESS_COARSE_LOCATION
-                                    ) == PackageManager.PERMISSION_GRANTED
-
-                                    if (hasLocationPermission) {
+                                    pViewModel.requestFeaturePermissions(listOf(PermissionType.LOCATION)) {
                                         locationPickerSource = "listing"
                                         currentScreen = "select_location"
-                                    } else {
-                                        triggerPermissionFlow()
                                     }
                                 },
                                 joinedAt = joinedAt,

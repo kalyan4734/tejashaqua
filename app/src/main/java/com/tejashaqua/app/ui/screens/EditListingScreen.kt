@@ -47,6 +47,7 @@ import java.util.Locale
 import com.tejashaqua.app.utils.LocaleHelper
 import com.tejashaqua.app.utils.ImageUtils
 import com.tejashaqua.app.utils.CurrencyUtils
+import com.tejashaqua.app.utils.PermissionType
 import androidx.compose.ui.text.input.VisualTransformation
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -64,6 +65,7 @@ fun EditListingScreen(
     onDeleteClick: () -> Unit = {},
     onLocationChangeClick: () -> Unit,
     listingViewModel: ListingViewModel = viewModel(),
+    pViewModel: com.tejashaqua.app.ui.viewmodel.PermissionViewModel = viewModel(),
     joinedAt: Long,
     userId: String,
     showMobileNumberPreference: Boolean
@@ -145,107 +147,6 @@ fun EditListingScreen(
         }
     }
 
-    val storagePermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) {
-            galleryLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-        } else {
-            val shouldShowRationale = (context as? androidx.activity.ComponentActivity)?.let {
-                val permission = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                    android.Manifest.permission.READ_MEDIA_IMAGES
-                } else {
-                    android.Manifest.permission.READ_EXTERNAL_STORAGE
-                }
-                androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale(it, permission)
-            } ?: true
-            
-            if (!shouldShowRationale) {
-                // Permanently denied - show a toast or dialog to guide to settings
-                Toast.makeText(context, context.getString(R.string.storage_permission_denied_settings), Toast.LENGTH_LONG).show()
-            } else {
-                Toast.makeText(context, context.getString(R.string.storage_permission_required), Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-
-    var showStorageRationale by remember { mutableStateOf(false) }
-
-    if (showStorageRationale) {
-        val permission = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            android.Manifest.permission.READ_MEDIA_IMAGES
-        } else {
-            android.Manifest.permission.READ_EXTERNAL_STORAGE
-        }
-        AlertDialog(
-            onDismissRequest = { showStorageRationale = false },
-            title = { Text(stringResource(R.string.storage_permission_title)) },
-            text = { Text(stringResource(R.string.storage_permission_required)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    showStorageRationale = false
-                    storagePermissionLauncher.launch(permission)
-                }) {
-                    Text(stringResource(R.string.ok))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showStorageRationale = false }) {
-                    Text(stringResource(R.string.cancel))
-                }
-            }
-        )
-    }
-
-    val cameraPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) {
-            val uri = ImageUtils.createImageUri(context)
-            tempCameraUri = uri
-            if (uri != null) {
-                try {
-                    cameraLauncher.launch(uri)
-                } catch (e: Exception) {
-                    Toast.makeText(context, context.getString(R.string.camera_permission_denied), Toast.LENGTH_SHORT).show()
-                }
-            }
-        } else {
-            val shouldShowRationale = (context as? androidx.activity.ComponentActivity)?.let {
-                androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale(it, android.Manifest.permission.CAMERA)
-            } ?: true
-            
-            if (!shouldShowRationale) {
-                Toast.makeText(context, context.getString(R.string.camera_permission_denied_settings), Toast.LENGTH_LONG).show()
-            } else {
-                Toast.makeText(context, context.getString(R.string.camera_permission_denied), Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-
-    var showCameraRationale by remember { mutableStateOf(false) }
-
-    if (showCameraRationale) {
-        AlertDialog(
-            onDismissRequest = { showCameraRationale = false },
-            title = { Text(stringResource(R.string.camera_permission_title)) },
-            text = { Text(stringResource(R.string.camera_permission_required)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    showCameraRationale = false
-                    cameraPermissionLauncher.launch(android.Manifest.permission.CAMERA)
-                }) {
-                    Text(stringResource(R.string.ok))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showCameraRationale = false }) {
-                    Text(stringResource(R.string.cancel))
-                }
-            }
-        )
-    }
-
     var showPhotoOptions by remember { mutableStateOf(false) }
     val keyboardController = LocalSoftwareKeyboardController.current
     val currentLang = LocaleHelper.getSelectedLanguage(context) ?: "en"
@@ -266,10 +167,7 @@ fun EditListingScreen(
                             keyboardController?.hide()
                             showPhotoOptions = false
                             
-                            val permission = android.Manifest.permission.CAMERA
-                            val isGranted = androidx.core.content.ContextCompat.checkSelfPermission(context, permission) == android.content.pm.PackageManager.PERMISSION_GRANTED
-                            
-                            if (isGranted) {
+                            pViewModel.requestFeaturePermissions(listOf(PermissionType.CAMERA)) {
                                 val uri = ImageUtils.createImageUri(context)
                                 tempCameraUri = uri
                                 if (uri != null) {
@@ -279,8 +177,6 @@ fun EditListingScreen(
                                         Toast.makeText(context, "Could not open camera app", Toast.LENGTH_SHORT).show()
                                     }
                                 }
-                            } else {
-                                showCameraRationale = true
                             }
                         }
                     )
@@ -290,16 +186,8 @@ fun EditListingScreen(
                         modifier = Modifier.clickable {
                             keyboardController?.hide()
                             showPhotoOptions = false
-                            val permission = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                                android.Manifest.permission.READ_MEDIA_IMAGES
-                            } else {
-                                android.Manifest.permission.READ_EXTERNAL_STORAGE
-                            }
-                            
-                            if (androidx.core.content.ContextCompat.checkSelfPermission(context, permission) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                            pViewModel.requestFeaturePermissions(listOf(PermissionType.PHOTOS)) {
                                 galleryLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-                            } else {
-                                showStorageRationale = true
                             }
                         }
                     )
@@ -511,120 +399,123 @@ fun EditListingScreen(
                     val fetchingText = stringResource(R.string.fetching_location)
                     val onActionClick = {
                         keyboardController?.hide()
-                        // Validation logic with detailed error tracking
-                        val errors = mutableMapOf<String, Boolean>()
                         
-                        // Title is hidden for all categories, so we don't validate it here
-                        if (location.isBlank() || location == fetchingText) errors["location"] = true
-                        if (selectedPhotos.isEmpty() && category != ListingCategory.JOBS) photoError = true else photoError = false
+                        pViewModel.requestFeaturePermissions(listOf(PermissionType.LOCATION, PermissionType.CAMERA, PermissionType.PHOTOS)) {
+                            // Validation logic with detailed error tracking
+                            val errors = mutableMapOf<String, Boolean>()
+                            
+                            // Title is hidden for all categories, so we don't validate it here
+                            if (location.isBlank() || location == fetchingText) errors["location"] = true
+                            if (selectedPhotos.isEmpty() && category != ListingCategory.JOBS) photoError = true else photoError = false
 
-                        when (category) {
-                            ListingCategory.FISH -> {
-                                if (fishType.isBlank()) errors["fishType"] = true
-                                if (sizeValue.isBlank()) errors["sizeValue"] = true
-                                if (fishAge.isBlank()) errors["fishAge"] = true
-                                if (quantity.isBlank()) errors["quantity"] = true
-                                if (price.isBlank()) errors["price"] = true
-                            }
-                            ListingCategory.PRAWNS -> {
-                                if (prawnType.isBlank()) errors["prawnType"] = true
-                                if (hatcheryName.isBlank()) errors["hatcheryName"] = true
-                                if (rateValue.isBlank()) errors["rateValue"] = true
-                                if (quantity.isBlank()) errors["quantity"] = true
-                            }
-                            ListingCategory.EQUIPMENTS -> {
-                                if (equipmentType.isBlank()) errors["equipmentType"] = true
-                                if (price.isBlank()) errors["price"] = true
-                            }
-                            ListingCategory.VEHICLES -> {
-                                if (selectedServiceType.isBlank()) errors["serviceType"] = true
-                                if (vehicleName.isBlank()) errors["vehicleName"] = true
-                                if (vehicleCapacity.isBlank()) errors["vehicleCapacity"] = true
-                            }
-                            ListingCategory.FEED -> {
-                                if (businessType.isBlank()) errors["businessType"] = true
-                                if (feedName.isBlank()) errors["feedName"] = true
-                                if (ratePerTon.isBlank()) errors["ratePerTon"] = true
-                            }
-                            ListingCategory.BUSINESS -> {
-                                if (businessSubCategory.isBlank()) errors["businessSubCategory"] = true
-                                if (businessSubCategory == "Feed") {
-                                    if (businessType.isBlank()) errors["businessType"] = true
-                                    if (feedName.isBlank()) errors["feedName"] = true
-                                    if (ratePerTon.isBlank()) errors["ratePerTon"] = true
-                                } else if (businessSubCategory == "Medicine") {
-                                    if (businessType.isBlank()) errors["businessType"] = true
-                                    if (medicineName.isBlank()) errors["medicineName"] = true
+                            when (category) {
+                                ListingCategory.FISH -> {
+                                    if (fishType.isBlank()) errors["fishType"] = true
+                                    if (sizeValue.isBlank()) errors["sizeValue"] = true
+                                    if (fishAge.isBlank()) errors["fishAge"] = true
+                                    if (quantity.isBlank()) errors["quantity"] = true
+                                    if (price.isBlank()) errors["price"] = true
                                 }
-                            }
-                            ListingCategory.SERVICES -> {
-                                if (selectedServiceType.isBlank()) errors["serviceType"] = true
-                                if (selectedServiceType == "Bore Well" && boreWellType.isBlank()) errors["boreWellType"] = true
-                                if (selectedServiceType == "Live Fish Vehicles") {
+                                ListingCategory.PRAWNS -> {
+                                    if (prawnType.isBlank()) errors["prawnType"] = true
+                                    if (hatcheryName.isBlank()) errors["hatcheryName"] = true
+                                    if (rateValue.isBlank()) errors["rateValue"] = true
+                                    if (quantity.isBlank()) errors["quantity"] = true
+                                }
+                                ListingCategory.EQUIPMENTS -> {
+                                    if (equipmentType.isBlank()) errors["equipmentType"] = true
+                                    if (price.isBlank()) errors["price"] = true
+                                }
+                                ListingCategory.VEHICLES -> {
+                                    if (selectedServiceType.isBlank()) errors["serviceType"] = true
                                     if (vehicleName.isBlank()) errors["vehicleName"] = true
                                     if (vehicleCapacity.isBlank()) errors["vehicleCapacity"] = true
                                 }
-                                if (selectedServiceType == "Nets" && netType.isBlank()) errors["netType"] = true
-                            }
-                            ListingCategory.TANKS -> {
-                                if (tankType.isBlank()) errors["tankType"] = true
-                                if (tankAcres.isBlank()) errors["tankAcres"] = true
-                                if (estPricePerAcre.isBlank()) errors["estPricePerAcre"] = true
-                                if (tankLocation.isBlank()) errors["tankLocation"] = true
-                            }
-                            ListingCategory.JOBS -> {
-                                if (jobType.isBlank()) errors["jobType"] = true
-                                if (tankAcres.isBlank()) errors["tankAcres"] = true
-                                if (salary.isBlank()) errors["salary"] = true
-                                if (tankLocation.isBlank()) errors["tankLocation"] = true
-                            }
-                        }
-
-                        fieldErrors = errors
-
-                        if (errors.isNotEmpty() || photoError) {
-                            Toast.makeText(context, context.getString(R.string.fill_mandatory_fields), Toast.LENGTH_SHORT).show()
-                        } else {
-                            val finalTitle = if (title.isBlank()) {
-                                when (category) {
-                                    ListingCategory.FISH -> fishType
-                                    ListingCategory.PRAWNS -> prawnType
-                                    ListingCategory.EQUIPMENTS -> equipmentType
-                                    ListingCategory.VEHICLES -> vehicleName
-                                    ListingCategory.FEED -> feedName
-                                    ListingCategory.BUSINESS -> if (businessSubCategory == "Feed") feedName else if (businessSubCategory == "Medicine") medicineName else businessType
-                                    ListingCategory.SERVICES -> selectedServiceType
-                                    ListingCategory.TANKS -> tankType
-                                    ListingCategory.JOBS -> jobType
+                                ListingCategory.FEED -> {
+                                    if (businessType.isBlank()) errors["businessType"] = true
+                                    if (feedName.isBlank()) errors["feedName"] = true
+                                    if (ratePerTon.isBlank()) errors["ratePerTon"] = true
                                 }
-                            } else {
-                                title
+                                ListingCategory.BUSINESS -> {
+                                    if (businessSubCategory.isBlank()) errors["businessSubCategory"] = true
+                                    if (businessSubCategory == "Feed") {
+                                        if (businessType.isBlank()) errors["businessType"] = true
+                                        if (feedName.isBlank()) errors["feedName"] = true
+                                        if (ratePerTon.isBlank()) errors["ratePerTon"] = true
+                                    } else if (businessSubCategory == "Medicine") {
+                                        if (businessType.isBlank()) errors["businessType"] = true
+                                        if (medicineName.isBlank()) errors["medicineName"] = true
+                                    }
+                                }
+                                ListingCategory.SERVICES -> {
+                                    if (selectedServiceType.isBlank()) errors["serviceType"] = true
+                                    if (selectedServiceType == "Bore Well" && boreWellType.isBlank()) errors["boreWellType"] = true
+                                    if (selectedServiceType == "Live Fish Vehicles") {
+                                        if (vehicleName.isBlank()) errors["vehicleName"] = true
+                                        if (vehicleCapacity.isBlank()) errors["vehicleCapacity"] = true
+                                    }
+                                    if (selectedServiceType == "Nets" && netType.isBlank()) errors["netType"] = true
+                                }
+                                ListingCategory.TANKS -> {
+                                    if (tankType.isBlank()) errors["tankType"] = true
+                                    if (tankAcres.isBlank()) errors["tankAcres"] = true
+                                    if (estPricePerAcre.isBlank()) errors["estPricePerAcre"] = true
+                                    if (tankLocation.isBlank()) errors["tankLocation"] = true
+                                }
+                                ListingCategory.JOBS -> {
+                                    if (jobType.isBlank()) errors["jobType"] = true
+                                    if (tankAcres.isBlank()) errors["tankAcres"] = true
+                                    if (salary.isBlank()) errors["salary"] = true
+                                    if (tankLocation.isBlank()) errors["tankLocation"] = true
+                                }
                             }
 
-                            val finalDescription = if (description.isBlank()) {
-                                generateDefaultDescription(
-                                    context, category, finalTitle, price, fishType, sizeValue, sizeType,
-                                    quantity, unitType, prawnType, hatcheryName, rateValue, rateType,
-                                    equipmentType, vehicleName, vehicleCapacity, feedName, ratePerTon,
-                                    businessType, medicineName, businessSubCategory,
-                                    tankAcres, tankLocation, jobType, salary, selectedServiceType,
-                                    tankType
+                            fieldErrors = errors
+
+                            if (errors.isNotEmpty() || photoError) {
+                                Toast.makeText(context, context.getString(R.string.fill_mandatory_fields), Toast.LENGTH_SHORT).show()
+                            } else {
+                                val finalTitle = if (title.isBlank()) {
+                                    when (category) {
+                                        ListingCategory.FISH -> fishType
+                                        ListingCategory.PRAWNS -> prawnType
+                                        ListingCategory.EQUIPMENTS -> equipmentType
+                                        ListingCategory.VEHICLES -> vehicleName
+                                        ListingCategory.FEED -> feedName
+                                        ListingCategory.BUSINESS -> if (businessSubCategory == "Feed") feedName else if (businessSubCategory == "Medicine") medicineName else businessType
+                                        ListingCategory.SERVICES -> selectedServiceType
+                                        ListingCategory.TANKS -> tankType
+                                        ListingCategory.JOBS -> jobType
+                                    }
+                                } else {
+                                    title
+                                }
+
+                                val finalDescription = if (description.isBlank()) {
+                                    generateDefaultDescription(
+                                        context, category, finalTitle, price, fishType, sizeValue, sizeType,
+                                        quantity, unitType, prawnType, hatcheryName, rateValue, rateType,
+                                        equipmentType, vehicleName, vehicleCapacity, feedName, ratePerTon,
+                                        businessType, medicineName, businessSubCategory,
+                                        tankAcres, tankLocation, jobType, salary, selectedServiceType,
+                                        tankType
+                                    )
+                                } else {
+                                    description
+                                }
+
+                                val data = buildListingMap(
+                                    listingId, category, finalTitle, finalDescription, price, location, latLng, userMobileNumber,
+                                    userName, selectedServiceType, fishType, sizeType, sizeValue, fishAge, quantity,
+                                    unitType, prawnType, hatcheryName, rateType, rateValue, "", equipmentType,
+                                    vehicleName, vehicleCapacity, businessType, feedName, ratePerTon, 
+                                    medicineName, businessSubCategory,
+                                    boreWellType, tankAcres, estPricePerAcre, tankLocation, jobType, salary, netType, 
+                                    tankType, userId, showMobileNumberPreference, joinedAt
                                 )
-                            } else {
-                                description
+                                
+                                listingViewModel.saveListing(data, selectedPhotos)
                             }
-
-                            val data = buildListingMap(
-                                listingId, category, finalTitle, finalDescription, price, location, latLng, userMobileNumber,
-                                userName, selectedServiceType, fishType, sizeType, sizeValue, fishAge, quantity,
-                                unitType, prawnType, hatcheryName, rateType, rateValue, "", equipmentType,
-                                vehicleName, vehicleCapacity, businessType, feedName, ratePerTon, 
-                                medicineName, businessSubCategory,
-                                boreWellType, tankAcres, estPricePerAcre, tankLocation, jobType, salary, netType, 
-                                tankType, userId, showMobileNumberPreference, joinedAt
-                            )
-                            
-                            listingViewModel.saveListing(data, selectedPhotos)
                         }
                     }
 

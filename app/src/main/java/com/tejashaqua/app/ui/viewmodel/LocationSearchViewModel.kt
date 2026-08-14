@@ -27,7 +27,7 @@ import com.tejashaqua.app.utils.LocaleHelper
 import java.util.Locale
 
 class LocationSearchViewModel(application: Application) : AndroidViewModel(application) {
-    private val placesClient = if (Places.isInitialized()) Places.createClient(application) else null
+    private fun getPlacesClient() = if (Places.isInitialized()) Places.createClient(getApplication()) else null
     private var token = AutocompleteSessionToken.newInstance()
     private val fusedLocationClient = LocationServices.getFusedLocationProviderClient(application)
 
@@ -59,6 +59,13 @@ class LocationSearchViewModel(application: Application) : AndroidViewModel(appli
         _currentLocationName.value = name
         _currentSubLocation.value = sub
         _currentLatLng.value = latLng
+    }
+
+    fun updateLocationForLanguage(lang: String) {
+        val latLng = _currentLatLng.value
+        if (latLng != null) {
+            updateLocationData(latLng.latitude, latLng.longitude)
+        }
     }
 
     fun fetchCurrentLocation(force: Boolean = false) {
@@ -148,7 +155,8 @@ class LocationSearchViewModel(application: Application) : AndroidViewModel(appli
             return
         }
 
-        if (placesClient == null) {
+        val client = getPlacesClient()
+        if (client == null) {
             _error.value = "Places SDK not initialized"
             return
         }
@@ -158,7 +166,7 @@ class LocationSearchViewModel(application: Application) : AndroidViewModel(appli
             .setQuery(query)
             .build()
 
-        placesClient.findAutocompletePredictions(request)
+        client.findAutocompletePredictions(request)
             .addOnSuccessListener { response ->
                 _searchResults.value = response.autocompletePredictions
                 _error.value = null
@@ -170,12 +178,13 @@ class LocationSearchViewModel(application: Application) : AndroidViewModel(appli
     }
 
     fun getPlaceLatLng(placeId: String, callback: (LatLng) -> Unit) {
-        if (placesClient == null) return
+        val client = getPlacesClient()
+        if (client == null) return
 
         val placeFields = listOf(Place.Field.LAT_LNG)
         val request = FetchPlaceRequest.newInstance(placeId, placeFields)
 
-        placesClient.fetchPlace(request)
+        client.fetchPlace(request)
             .addOnSuccessListener { response ->
                 response.place.latLng?.let { latLng ->
                     val modelLatLng = LatLng(latLng.latitude, latLng.longitude)

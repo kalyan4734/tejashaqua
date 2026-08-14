@@ -90,6 +90,11 @@ fun DashboardScreen(
     var productSearchText by remember { mutableStateOf("") }
     var selectedCategoryFilter by remember { mutableStateOf("All") }
     val context = LocalContext.current
+    val currentLang = LocaleHelper.getSelectedLanguage(context) ?: "en"
+
+    LaunchedEffect(currentLang) {
+        locationViewModel.updateLocationForLanguage(currentLang)
+    }
     
     var showGraphSheet by remember { mutableStateOf(false) }
     var selectedRateForGraph by remember { mutableStateOf<AquaRate?>(null) }
@@ -355,7 +360,7 @@ fun DashboardScreen(
                                     text = fetchedName,
                                     color = Color.White,
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 16.sp,
+                                    fontSize = 17.sp,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -365,7 +370,7 @@ fun DashboardScreen(
                                 Text(
                                     text = fetchedSub,
                                     color = Color.White.copy(alpha = 0.8f),
-                                    fontSize = 11.sp,
+                                    fontSize = 12.sp,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -414,7 +419,7 @@ fun DashboardScreen(
                             stringResource(R.string.chats),
                             color = Color.White,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 22.sp
+                            fontSize = 23.sp
                         )
                     }
 
@@ -579,9 +584,9 @@ fun DashboardScreen(
                     // Marketplace Section flattened
                     item {
                         Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text(stringResource(R.string.fresh_marketplace), fontWeight = FontWeight.Bold, fontSize = 18.sp, color = DarkBlueText)
+                            Text(stringResource(R.string.fresh_marketplace), fontWeight = FontWeight.Bold, fontSize = 19.sp, color = DarkBlueText)
                             Spacer(modifier = Modifier.weight(1f))
-                            Text(stringResource(R.string.items_count, filteredListings.size), color = GrayText, fontSize = 12.sp)
+                            Text(stringResource(R.string.items_count, filteredListings.size), color = GrayText, fontSize = 13.sp)
                         }
                         Spacer(modifier = Modifier.height(12.dp))
                     }
@@ -767,14 +772,14 @@ fun DashboardScreen(
                 ) {
                     Column(modifier = Modifier.fillMaxWidth().padding(24.dp)) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Text(stringResource(R.string.welcome_title), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                            Text(stringResource(R.string.welcome_title), fontSize = 21.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                             IconButton(onClick = { 
                                 showWelcomeSheet = false
                                 onNameSkip()
                             }) { Icon(Icons.Default.Close, contentDescription = "Close") }
                         }
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text(stringResource(R.string.welcome_desc), fontSize = 14.sp, color = GrayText, lineHeight = 20.sp)
+                        Text(stringResource(R.string.welcome_desc), fontSize = 15.sp, color = GrayText, lineHeight = 21.sp)
                         Spacer(modifier = Modifier.height(24.dp))
                         OutlinedTextField(value = tempName, onValueChange = { tempName = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text(stringResource(R.string.enter_name), color = Color.Gray) }, leadingIcon = { Icon(Icons.Default.PersonOutline, contentDescription = null, tint = Color.Black) }, shape = RoundedCornerShape(12.dp), singleLine = true)
                         Spacer(modifier = Modifier.height(24.dp))
@@ -788,7 +793,7 @@ fun DashboardScreen(
                                 shape = RoundedCornerShape(12.dp), 
                                 border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE0E0E0))
                             ) {
-                                Text(stringResource(R.string.skip_now), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                                Text(stringResource(R.string.skip_now), fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                             }
                             Button(
                                 onClick = { 
@@ -801,7 +806,7 @@ fun DashboardScreen(
                                 shape = RoundedCornerShape(12.dp), 
                                 colors = ButtonDefaults.buttonColors(containerColor = AquaBlue)
                             ) {
-                                Text(stringResource(R.string.save), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                Text(stringResource(R.string.save), fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color.White)
                             }
                         }
                         Spacer(modifier = Modifier.height(16.dp))
@@ -825,7 +830,7 @@ fun DashboardScreen(
                 ) {
                     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp)) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Text(stringResource(R.string.notifications), fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                            Text(stringResource(R.string.notifications), fontSize = 23.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                             IconButton(onClick = { showNotificationsSheet = false }) { Icon(Icons.Default.Close, contentDescription = "Close") }
                         }
                         
@@ -866,9 +871,9 @@ fun DashboardScreen(
                                             }
                                             Spacer(modifier = Modifier.width(12.dp))
                                             Column(modifier = Modifier.weight(1f)) {
-                                                Text(text = if (isNew) "NEW: $title" else title, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color.Black)
-                                                Text(text = "$category posted by $posterName", fontSize = 12.sp, color = Color.Gray)
-                                                Text(text = SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault()).format(Date(timestamp)), fontSize = 10.sp, color = GrayText)
+                                                Text(text = if (isNew) "NEW: $title" else title, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color.Black)
+                                                Text(text = "$category posted by $posterName", fontSize = 13.sp, color = Color.Gray)
+                                                Text(text = SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault()).format(Date(timestamp)), fontSize = 11.sp, color = GrayText)
                                             }
                                             if (isNew) {
                                                 Box(modifier = Modifier.size(8.dp).background(Color.Red, CircleShape))
@@ -1010,7 +1015,7 @@ fun SearchHeader(
 @Composable
 fun FooterSection() {
     Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
-        Text(stringResource(R.string.footer_text), fontSize = 32.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD1D9E6), lineHeight = 38.sp)
+        Text(stringResource(R.string.footer_text), fontSize = 33.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD1D9E6), lineHeight = 39.sp)
         Spacer(modifier = Modifier.height(24.dp))
     }
 }
@@ -1067,7 +1072,7 @@ fun AquaRatesSection(onRateClick: (AquaRate) -> Unit) {
                 Text(
                     text = stringResource(R.string.today_aqua_rates),
                     fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp,
+                    fontSize = 19.sp,
                     color = DarkBlueText
                 )
                 Row(
@@ -1081,7 +1086,7 @@ fun AquaRatesSection(onRateClick: (AquaRate) -> Unit) {
                         modifier = Modifier.size(14.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(currentDate, color = GrayText, fontSize = 12.sp)
+                    Text(currentDate, color = GrayText, fontSize = 13.sp)
                 }
             }
             Surface(
@@ -1127,7 +1132,9 @@ fun RateCard(
 ) {
     val isNoData = rate.price == "--" || 
                   rate.price == "N/A" || 
-                  rate.price == "No data available for today" || 
+                  rate.price.lowercase(java.util.Locale.ROOT).contains("no change") ||
+                  rate.price.contains("మార్పు లేదు") ||
+                  rate.price == "No data available for today" ||
                   rate.price == "ఈ రోజు డేటా అందుబాటులో లేదు" ||
                   rate.price == stringResource(R.string.no_data_available)
 
@@ -1168,12 +1175,12 @@ fun RateCard(
                     Text(
                         text = displayPrice,
                         fontWeight = FontWeight.ExtraBold,
-                        fontSize = 18.sp,
+                        fontSize = 19.sp,
                         color = Color.Black
                     )
                     Text(
                         text = if (rate.isPrawn) stringResource(R.string.count_label, "100") else rate.getDisplayName(),
-                        fontSize = 13.sp,
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = if (rate.isPrawn) Color(0xFF3F51B5) else Color(0xFF009688)
                     )

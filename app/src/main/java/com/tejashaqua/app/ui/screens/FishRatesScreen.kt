@@ -191,7 +191,7 @@ fun FishRatesScreen(onBackClick: () -> Unit) {
                                             Column {
                                                 val isNoData = rate.price == "--" || 
                                                               rate.price == "N/A" || 
-                                                              rate.price == "No data available for today" || 
+                                                              rate.price == "No data available for today" ||
                                                               rate.price == "ఈ రోజు డేటా అందుబాటులో లేదు" ||
                                                               rate.price == stringResource(R.string.no_data_available)
                                                               
