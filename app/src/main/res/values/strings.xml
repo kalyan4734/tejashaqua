@@ -451,4 +451,6 @@ These terms shall be governed by and construed in accordance with the laws of In
     <string name="camera_rationale">Camera access is needed to take photos for your advertisement.</string>
     <string name="photo_rationale">Photo access is needed to select images for your advertisement.</string>
     <string name="notification_rationale">Notification access helps you receive important updates about your advertisements.</string>
+    <string name="listing_deleted_title">Listing No Longer Available</string>
+    <string name="listing_deleted_message">This ad has been deleted by the user and is no longer available.</string>
 </resources>

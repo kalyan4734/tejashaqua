@@ -140,21 +140,17 @@ fun DashboardScreen(
 
     fun loadListings(isFirstPage: Boolean = false) {
         if (isFirstPage) {
-            isLoadingListings = true
-            lastVisibleDoc = null
-            isLastPage = false
-        } else {
-            if (isLastPage || isPaginating) return
-            isPaginating = true
+            // Handled by snapshot listener below for the first page
+            return
         }
+        
+        if (isLastPage || isPaginating || lastVisibleDoc == null) return
+        isPaginating = true
 
-        var query = db.collection("listings")
+        val query = db.collection("listings")
             .orderBy("timestamp", Query.Direction.DESCENDING)
+            .startAfter(lastVisibleDoc!!)
             .limit(20)
-
-        if (!isFirstPage && lastVisibleDoc != null) {
-            query = query.startAfter(lastVisibleDoc!!)
-        }
 
         query.get().addOnSuccessListener { snapshot ->
             val newItems = snapshot.documents.map { 
@@ -163,22 +159,46 @@ fun DashboardScreen(
                 data
             }
             
-            if (isFirstPage) {
-                listings = newItems
-            } else {
-                listings = listings + newItems
-            }
+            listings = (listings + newItems).distinctBy { it["id"] }
 
             if (snapshot.documents.isNotEmpty()) {
                 lastVisibleDoc = snapshot.documents[snapshot.size() - 1]
             }
             
             isLastPage = snapshot.size() < 20
-            isLoadingListings = false
             isPaginating = false
         }.addOnFailureListener {
-            isLoadingListings = false
             isPaginating = false
+        }
+    }
+
+    // Real-time listener for the first page of listings and badge count
+    LaunchedEffect(currentUserId) {
+        val query = db.collection("listings")
+            .orderBy("timestamp", Query.Direction.DESCENDING)
+            .limit(20)
+            
+        query.addSnapshotListener { snapshot, _ ->
+            isLoadingListings = false
+            if (snapshot != null) {
+                val newFirstPage = snapshot.documents.map { 
+                    val data = it.data?.toMutableMap() ?: mutableMapOf()
+                    data["id"] = it.id
+                    data
+                }
+                
+                // Merge with existing listings
+                val existingItems = listings.filter { item -> 
+                    newFirstPage.none { it["id"] == item["id"] } 
+                }
+                
+                listings = (newFirstPage + existingItems).sortedByDescending { it["timestamp"] as? Long ?: 0L }
+                
+                // Initialize lastVisibleDoc for pagination if it's the first time
+                if (lastVisibleDoc == null && snapshot.documents.isNotEmpty()) {
+                    lastVisibleDoc = snapshot.documents.last()
+                }
+            }
         }
     }
 
@@ -199,20 +219,15 @@ fun DashboardScreen(
     // Update unread count whenever listings or lastCheckedNotifications change
     LaunchedEffect(listings, lastCheckedNotifications) {
         if (lastCheckedNotifications > 0) {
-            listings.count { data ->
+            val count = listings.count { data ->
                 val ts = data["timestamp"] as? Long ?: 0L
                 val userId = data["userId"] as? String ?: ""
                 ts > lastCheckedNotifications && userId != currentUserId
             }
+            unreadNotificationCount = count
         } else {
-            0
-        }.let { 
-            unreadNotificationCount = it
+            unreadNotificationCount = 0
         }
-    }
-
-    LaunchedEffect(Unit) {
-        loadListings(isFirstPage = true)
     }
 
     LaunchedEffect(currentUserId) {

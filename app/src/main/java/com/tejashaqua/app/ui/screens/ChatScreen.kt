@@ -19,6 +19,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -149,16 +150,20 @@ fun ChatScreen(
     val chatMessages = remember { mutableStateListOf<ChatMessage>() }
     val listState = rememberLazyListState()
     var initialMessageSent by remember { mutableStateOf(false) }
+    var listingExists by remember { mutableStateOf(true) }
 
     // Fetch full listing details if missing (e.g. when coming from ChatList)
     LaunchedEffect(listingId) {
         if (listingId.isNotEmpty()) {
-            db.collection("listings").document(listingId).get().addOnSuccessListener { doc ->
-                if (doc.exists()) {
+            db.collection("listings").document(listingId).addSnapshotListener { doc, _ ->
+                if (doc != null && doc.exists()) {
+                    listingExists = true
                     val data = doc.data
                     if (data != null) {
                         listingDetails = listingDetails + data
                     }
+                } else {
+                    listingExists = false
                 }
             }
         }
@@ -340,6 +345,7 @@ fun ChatScreen(
                         placeholder = { Text(stringResource(R.string.type_message)) },
                         shape = RoundedCornerShape(24.dp),
                         maxLines = 4,
+                        enabled = listingExists,
                         keyboardOptions = keyboardOptions,
                         keyboardActions = KeyboardActions(
                             onSend = {
@@ -352,8 +358,9 @@ fun ChatScreen(
                         colors = TextFieldDefaults.colors(
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
-                            unfocusedContainerColor = Color(0xFFF5F5F5),
-                            focusedContainerColor = Color(0xFFF5F5F5)
+                            unfocusedContainerColor = if (listingExists) Color(0xFFF5F5F5) else Color(0xFFEEEEEE),
+                            focusedContainerColor = Color(0xFFF5F5F5),
+                            disabledContainerColor = Color(0xFFEEEEEE)
                         )
                     )
                     Spacer(modifier = Modifier.width(8.dp))
@@ -365,7 +372,8 @@ fun ChatScreen(
                                 messageText = ""
                             }
                         },
-                        modifier = Modifier.background(AquaBlue, CircleShape)
+                        modifier = Modifier.background(if (listingExists) AquaBlue else Color.Gray, CircleShape),
+                        enabled = listingExists
                     ) {
                         Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send", tint = Color.White)
                     }
@@ -434,67 +442,95 @@ fun ChatScreen(
                 .fillMaxSize()
                 .background(Color.White)
         ) {
-            Surface(
-                tonalElevation = 2.dp,
-                shadowElevation = 2.dp,
-                color = Color.White,
-                onClick = { onListingClick(listingDetails) }
-            ) {
-                Row(
-                    modifier = Modifier
-                        .padding(16.dp)
-                        .fillMaxWidth()
+            if (!listingExists) {
+                Surface(
+                    color = Color(0xFFFFEBEE),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    val firstImage = images.firstOrNull()?.toString() ?: ""
-                    
-                    if (firstImage.isNotEmpty()) {
-                        AsyncImage(
-                            model = firstImage,
-                            contentDescription = null,
-                            modifier = Modifier
-                                .size(80.dp)
-                                .clip(RoundedCornerShape(8.dp)),
-                            contentScale = ContentScale.Crop,
-                            error = painterResource(id = R.drawable.app_logo)
-                        )
-                    } else {
-                        Image(
-                            painter = painterResource(id = R.drawable.app_logo),
-                            contentDescription = null,
-                            modifier = Modifier
-                                .size(80.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(Color(0xFFF5F5F5))
-                                .padding(16.dp),
-                            alpha = 0.3f
-                        )
-                    }
-                    
-                    Spacer(modifier = Modifier.width(12.dp))
-                    
-                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Surface(color = Color(0xFFE8F5E9), shape = RoundedCornerShape(4.dp)) {
-                            val listingSellerId = listingDetails["sellerId"]?.toString() 
-                                ?: listingDetails["userId"]?.toString() ?: ""
-                            val isMeSeller = currentUserId == listingSellerId
-                            val isBuying = !isMeSeller
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Info, contentDescription = null, tint = Color(0xFFC62828))
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
                             Text(
-                                if (isBuying) stringResource(R.string.buying) else stringResource(R.string.selling),
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                fontSize = 10.sp,
-                                color = Color(0xFF2E7D32),
-                                fontWeight = FontWeight.Bold
+                                text = stringResource(R.string.listing_deleted_title),
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFC62828),
+                                fontSize = 14.sp
+                            )
+                            Text(
+                                text = stringResource(R.string.listing_deleted_message),
+                                color = Color(0xFFC62828),
+                                fontSize = 12.sp
                             )
                         }
-                        Text(text = title, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(text = price, fontWeight = FontWeight.Bold, color = AquaBlue, fontSize = 16.sp)
+                    }
+                }
+            } else {
+                Surface(
+                    tonalElevation = 2.dp,
+                    shadowElevation = 2.dp,
+                    color = Color.White,
+                    onClick = { onListingClick(listingDetails) }
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .fillMaxWidth()
+                    ) {
+                        val firstImage = images.firstOrNull()?.toString() ?: ""
                         
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.AccessTime, null, tint = GrayText, modifier = Modifier.size(14.dp))
-                            Text(stringResource(R.string.recently), color = GrayText, fontSize = 12.sp)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Icon(Icons.Default.LocationOn, null, tint = GrayText, modifier = Modifier.size(14.dp))
-                            Text(" $location", color = GrayText, fontSize = 12.sp)
+                        if (firstImage.isNotEmpty()) {
+                            AsyncImage(
+                                model = firstImage,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(80.dp)
+                                    .clip(RoundedCornerShape(8.dp)),
+                                contentScale = ContentScale.Crop,
+                                error = painterResource(id = R.drawable.app_logo)
+                            )
+                        } else {
+                            Image(
+                                painter = painterResource(id = R.drawable.app_logo),
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(80.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(Color(0xFFF5F5F5))
+                                    .padding(16.dp),
+                                alpha = 0.3f
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.width(12.dp))
+                        
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Surface(color = Color(0xFFE8F5E9), shape = RoundedCornerShape(4.dp)) {
+                                val listingSellerId = listingDetails["sellerId"]?.toString() 
+                                    ?: listingDetails["userId"]?.toString() ?: ""
+                                val isMeSeller = currentUserId == listingSellerId
+                                val isBuying = !isMeSeller
+                                Text(
+                                    if (isBuying) stringResource(R.string.buying) else stringResource(R.string.selling),
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                    fontSize = 10.sp,
+                                    color = Color(0xFF2E7D32),
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            Text(text = title, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(text = price, fontWeight = FontWeight.Bold, color = AquaBlue, fontSize = 16.sp)
+                            
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.AccessTime, null, tint = GrayText, modifier = Modifier.size(14.dp))
+                                Text(stringResource(R.string.recently), color = GrayText, fontSize = 12.sp)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Icon(Icons.Default.LocationOn, null, tint = GrayText, modifier = Modifier.size(14.dp))
+                                Text(" $location", color = GrayText, fontSize = 12.sp)
+                            }
                         }
                     }
                 }

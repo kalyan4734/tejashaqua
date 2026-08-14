@@ -450,4 +450,6 @@
     <string name="camera_rationale">మీ ప్రకటన కోసం ఫోటోలు తీయడానికి కెమెరా యాక్సెస్ అవసరం.</string>
     <string name="photo_rationale">మీ ప్రకటన కోసం చిత్రాలను ఎంచుకోవడానికి ఫోటో యాక్సెస్ అవసరం.</string>
     <string name="notification_rationale">నోటిఫికేషన్ యాక్సెస్ మీ ప్రకటనల గురించి ముఖ్యమైన అప్‌డేట్‌లను స్వీకరించడంలో మీకు సహాయపడుతుంది.</string>
+    <string name="listing_deleted_title">జాబితా ఇకపై అందుబాటులో లేదు</string>
+    <string name="listing_deleted_message">ఈ ప్రకటన వినియోగదారు ద్వారా తొలగించబడింది మరియు ఇకపై అందుబాటులో లేదు.</string>
 </resources>

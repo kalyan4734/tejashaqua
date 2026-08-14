@@ -102,7 +102,8 @@ class AuthViewModel(application: android.app.Application) : AndroidViewModel(app
                         "joinedAt" to now,
                         "onboardingComplete" to false,
                         "isAdmin" to isSuperAdmin,
-                        "showMobileNumber" to false
+                        "showMobileNumber" to false,
+                        "lastCheckedNotifications" to now
                     )
                     db.collection("users").document(userId).set(user)
                 }
