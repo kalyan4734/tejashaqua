@@ -206,7 +206,7 @@ fun FishRatesScreen(onBackClick: () -> Unit) {
                                                     fontWeight = FontWeight.Bold, 
                                                     fontSize = 14.sp
                                                 )
-                                                if (rate.change.isNotEmpty() && rate.change != stringResource(R.string.no_change)) {
+                                                if (rate.change.isNotEmpty()) {
                                                     Text(
                                                         text = rate.change,
                                                         fontSize = 11.sp,

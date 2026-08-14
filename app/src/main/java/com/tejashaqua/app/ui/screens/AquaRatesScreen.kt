@@ -215,7 +215,7 @@ fun RateItemCard(rate: AquaRate, onClick: () -> Unit) {
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                     }
-                    if (rate.change.isNotEmpty() && rate.change != stringResource(R.string.no_change)) {
+                    if (rate.change.isNotEmpty()) {
                         Text(
                             text = rate.change,
                             fontSize = 13.sp,
