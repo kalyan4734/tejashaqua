@@ -96,7 +96,6 @@ fun EditListingScreen(
     var hatcheryName by remember { mutableStateOf("") }
     var rateType by remember { mutableStateOf(defaultRateType) }
     var rateValue by remember { mutableStateOf("") }
-    var plDays by remember { mutableStateOf("") }
     var equipmentType by remember { mutableStateOf("") }
     var vehicleName by remember { mutableStateOf("") }
     var vehicleCapacity by remember { mutableStateOf("") }
@@ -278,7 +277,6 @@ fun EditListingScreen(
                                 hatcheryName = doc.getString("hatcheryName") ?: ""
                                 rateType = doc.getString("rateType") ?: "Paise"
                                 rateValue = doc.getString("rateValue") ?: ""
-                                plDays = doc.getString("plDays") ?: ""
                                 quantity = doc.getString("quantity") ?: ""
                                 unitType = doc.getString("unitType") ?: "Lakhs"
                             }
@@ -416,7 +414,7 @@ fun EditListingScreen(
                                     if (quantity.isBlank()) errors["quantity"] = true
                                     if (price.isBlank()) errors["price"] = true
                                 }
-                                ListingCategory.PRAWNS -> {
+                        ListingCategory.PRAWNS -> {
                                     if (prawnType.isBlank()) errors["prawnType"] = true
                                     if (hatcheryName.isBlank()) errors["hatcheryName"] = true
                                     if (rateValue.isBlank()) errors["rateValue"] = true
@@ -507,7 +505,7 @@ fun EditListingScreen(
                                 val data = buildListingMap(
                                     listingId, category, finalTitle, finalDescription, price, location, latLng, userMobileNumber,
                                     userName, selectedServiceType, fishType, sizeType, sizeValue, fishAge, quantity,
-                                    unitType, prawnType, hatcheryName, rateType, rateValue, "", equipmentType,
+                                    unitType, prawnType, hatcheryName, rateType, rateValue, equipmentType,
                                     vehicleName, vehicleCapacity, businessType, feedName, ratePerTon, 
                                     medicineName, businessSubCategory,
                                     boreWellType, tankAcres, estPricePerAcre, tankLocation, jobType, salary, netType, 
@@ -590,7 +588,6 @@ fun EditListingScreen(
                             hatcheryName, { hatcheryName = it },
                             rateType, { rateType = it },
                             rateValue, { rateValue = it },
-                            plDays, { plDays = it },
                             quantity, { quantity = it },
                             unitType, { unitType = it },
                             errors = fieldErrors,
@@ -794,7 +791,6 @@ private fun buildListingMap(
     hatcheryName: String,
     rateType: String,
     rateValue: String,
-    plDays: String,
     equipmentType: String,
     vehicleName: String,
     vehicleCapacity: String,
@@ -849,7 +845,6 @@ private fun buildListingMap(
             data["hatcheryName"] = hatcheryName
             data["rateType"] = rateType
             data["rateValue"] = rateValue
-            data["plDays"] = plDays
             data["quantity"] = quantity
             data["unitType"] = unitType
         }
@@ -998,7 +993,6 @@ fun PrawnFields(
     hatcheryName: String, onHatcheryNameChange: (String) -> Unit,
     rateType: String, onRateTypeChange: (String) -> Unit,
     rateValue: String, onRateValueChange: (String) -> Unit,
-    @Suppress("UNUSED_PARAMETER") plDays: String, @Suppress("UNUSED_PARAMETER") onPlDaysChange: (String) -> Unit,
     quantity: String, onQuantityChange: (String) -> Unit,
     unitType: String, onUnitTypeChange: (String) -> Unit,
     errors: Map<String, Boolean> = emptyMap(),

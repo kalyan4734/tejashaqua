@@ -545,7 +545,6 @@ fun DetailedPageScreen(
                         ListingCategory.PRAWNS -> {
                             DetailRowItem(stringResource(R.string.hatchery_name_label), listingData["hatcheryName"]?.toString() ?: stringResource(R.string.not_available_short))
                             DetailRowItem(stringResource(R.string.prawn_type_label), listingData["prawnType"]?.toString() ?: stringResource(R.string.not_available_short))
-                            DetailRowItem(stringResource(R.string.pl_days_label), listingData["plDays"]?.toString() ?: stringResource(R.string.not_available_short))
                             DetailRowItem(stringResource(R.string.quantity_label), "${listingData["quantity"] ?: ""} ${listingData["unitType"] ?: ""}")
                             DetailRowItem(stringResource(R.string.rate_label), priceLabel)
                         }
