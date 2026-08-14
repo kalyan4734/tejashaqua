@@ -339,11 +339,10 @@ fun ChatScreen(
                         modifier = Modifier.weight(1f),
                         placeholder = { Text(stringResource(R.string.type_message)) },
                         shape = RoundedCornerShape(24.dp),
-                        singleLine = true,
+                        maxLines = 4,
                         keyboardOptions = keyboardOptions,
                         keyboardActions = KeyboardActions(
                             onSend = {
-                                keyboardController?.hide()
                                 if (messageText.isNotBlank()) {
                                     sendMessage(messageText)
                                     messageText = ""
@@ -473,7 +472,7 @@ fun ChatScreen(
                     
                     Spacer(modifier = Modifier.width(12.dp))
                     
-                    Column {
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Surface(color = Color(0xFFE8F5E9), shape = RoundedCornerShape(4.dp)) {
                             val listingSellerId = listingDetails["sellerId"]?.toString() 
                                 ?: listingDetails["userId"]?.toString() ?: ""
@@ -523,74 +522,79 @@ fun ChatBubble(message: ChatMessage, senderName: String) {
     val timeString = timeFormat.format(java.util.Date(message.timestamp))
     val context = LocalContext.current
 
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = if (message.isFromMe) Alignment.End else Alignment.Start
-    ) {
-        Row(
-            verticalAlignment = Alignment.Bottom,
-            horizontalArrangement = if (message.isFromMe) Arrangement.End else Arrangement.Start,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Surface(
-                color = if (message.isFromMe) AquaBlue else Color.White,
-                shape = RoundedCornerShape(
-                    topStart = 12.dp,
-                    topEnd = 12.dp,
-                    bottomStart = if (message.isFromMe) 12.dp else 4.dp,
-                    bottomEnd = if (message.isFromMe) 4.dp else 12.dp
-                ),
-                shadowElevation = 0.5.dp,
-                modifier = Modifier.widthIn(max = 240.dp)
-            ) {
-                Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) {
-                    val phoneRegex = remember { Regex("""(\+91|0)?[6-9][0-9]{9}""") }
-                    val annotatedString = buildAnnotatedString {
-                        append(message.text)
-                        val matches = phoneRegex.findAll(message.text)
-                        for (match in matches) {
-                            addStringAnnotation(
-                                tag = "phone",
-                                annotation = match.value,
-                                start = match.range.first,
-                                end = match.range.last + 1
-                            )
-                            addStyle(
-                                style = SpanStyle(
-                                    color = if (message.isFromMe) Color(0xFF81D4FA) else Color(0xFF1976D2),
-                                    textDecoration = TextDecoration.Underline,
-                                    fontWeight = FontWeight.ExtraBold
-                                ),
-                                start = match.range.first,
-                                end = match.range.last + 1
-                            )
-                        }
-                    }
+    val bubbleColor = if (message.isFromMe) AquaBlue else Color.White
+    val contentColor = if (message.isFromMe) Color.White else Color.Black
+    val alignment = if (message.isFromMe) Alignment.End else Alignment.Start
+    
+    val shape = RoundedCornerShape(
+        topStart = 16.dp,
+        topEnd = 16.dp,
+        bottomStart = if (message.isFromMe) 16.dp else 2.dp,
+        bottomEnd = if (message.isFromMe) 2.dp else 16.dp
+    )
 
-                    ClickableText(
-                        text = annotatedString,
-                        style = TextStyle(
-                            color = if (message.isFromMe) Color.White else Color.Black,
-                            fontSize = 13.sp,
-                            lineHeight = 18.sp
-                        ),
-                        onClick = { offset ->
-                            annotatedString.getStringAnnotations(tag = "phone", start = offset, end = offset)
-                                .firstOrNull()?.let { annotation ->
-                                    val intent = Intent(Intent.ACTION_DIAL).apply {
-                                        data = Uri.parse("tel:${annotation.item}")
-                                    }
-                                    context.startActivity(intent)
-                                }
-                        }
-                    )
-                    Text(
-                        text = timeString,
-                        fontSize = 8.sp,
-                        color = if (message.isFromMe) Color.White.copy(alpha = 0.7f) else GrayText,
-                        modifier = Modifier.align(Alignment.End).padding(top = 1.dp)
-                    )
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp),
+        horizontalAlignment = alignment
+    ) {
+        Surface(
+            color = bubbleColor,
+            shape = shape,
+            shadowElevation = 1.dp,
+            modifier = Modifier.widthIn(max = 280.dp)
+        ) {
+            Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+                val phoneRegex = remember { Regex("""(\+91|0)?[6-9][0-9]{9}""") }
+                val annotatedString = buildAnnotatedString {
+                    append(message.text)
+                    val matches = phoneRegex.findAll(message.text)
+                    for (match in matches) {
+                        addStringAnnotation(
+                            tag = "phone",
+                            annotation = match.value,
+                            start = match.range.first,
+                            end = match.range.last + 1
+                        )
+                        addStyle(
+                            style = SpanStyle(
+                                color = if (message.isFromMe) Color(0xFFE1F5FE) else Color(0xFF1976D2),
+                                textDecoration = TextDecoration.Underline,
+                                fontWeight = FontWeight.ExtraBold
+                            ),
+                            start = match.range.first,
+                            end = match.range.last + 1
+                        )
+                    }
                 }
+
+                ClickableText(
+                    text = annotatedString,
+                    style = TextStyle(
+                        color = contentColor,
+                        fontSize = 15.sp,
+                        lineHeight = 20.sp
+                    ),
+                    onClick = { offset ->
+                        annotatedString.getStringAnnotations(tag = "phone", start = offset, end = offset)
+                            .firstOrNull()?.let { annotation ->
+                                val intent = Intent(Intent.ACTION_DIAL).apply {
+                                    data = Uri.parse("tel:${annotation.item}")
+                                }
+                                context.startActivity(intent)
+                            }
+                    }
+                )
+                
+                Text(
+                    text = timeString,
+                    fontSize = 10.sp,
+                    color = if (message.isFromMe) Color.White.copy(alpha = 0.8f) else GrayText,
+                    modifier = Modifier
+                        .align(Alignment.End)
+                        .padding(top = 4.dp)
+                )
             }
         }
     }

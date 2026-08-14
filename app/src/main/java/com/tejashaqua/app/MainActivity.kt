@@ -235,14 +235,15 @@ class MainActivity : AppCompatActivity() {
                     val intentToProcess = currentIntent
                     if (intentToProcess == null || userId.isEmpty()) return@LaunchedEffect
                     
-                    android.util.Log.d("NAV", "Checking intent: action=${intentToProcess.action}, extras=${intentToProcess.extras?.keySet()?.joinToString()}")
-
                     val type = intentToProcess.getStringExtra("type") ?: (if (intentToProcess.action == "OPEN_CHAT") "chat" else if (intentToProcess.action == "OPEN_RATES") "rates" else null)
                     val chatId = intentToProcess.getStringExtra("chatId")
 
-                    android.util.Log.d("NAV", "Type: $type, ChatId: $chatId")
+                    android.util.Log.d("NAV", "Processing intent: type=$type, chatId=$chatId, action=${intentToProcess.action}")
 
                     if (type == "chat" && chatId != null) {
+                        // Consume intent immediately to prevent double processing
+                        intentFlow.value = null
+                        
                         FirebaseFirestore.getInstance().collection("chats").document(chatId)
                             .get().addOnSuccessListener { doc ->
                                 if (doc.exists()) {
@@ -264,20 +265,43 @@ class MainActivity : AppCompatActivity() {
                                         updatedData["images"] = listOf(img)
                                     }
 
-                                    // Notifications also need the flicker-free fetch
-                                    navigateToDetailedPage(updatedData, "dashboard")
-                                    dashboardTab = 2
-                                    shouldSendInitialChatMessage = false
-                                    currentScreen = "chat"
-
-                                    // Clear intent data to prevent re-navigation
-                                    intentFlow.value = null
+                                    // Pre-fetch detailed info if possible but don't overwrite screen
+                                    val sellerId = updatedData["userId"].toString()
+                                    if (sellerId.isNotEmpty()) {
+                                        FirebaseFirestore.getInstance().collection("users").document(sellerId).get()
+                                            .addOnSuccessListener { sellerDoc ->
+                                                val showMobile = sellerDoc.getBoolean("showMobileNumber") ?: false
+                                                val joined = sellerDoc.getLong("joinedAt") ?: 0L
+                                                updatedData["sellerShowMobile"] = showMobile
+                                                updatedData["sellerJoinedAt"] = joined
+                                                
+                                                selectedListingData = updatedData
+                                                chatSourceScreen = "dashboard"
+                                                dashboardTab = 2
+                                                shouldSendInitialChatMessage = false
+                                                currentScreen = "chat"
+                                            }
+                                            .addOnFailureListener {
+                                                selectedListingData = updatedData
+                                                chatSourceScreen = "dashboard"
+                                                dashboardTab = 2
+                                                shouldSendInitialChatMessage = false
+                                                currentScreen = "chat"
+                                            }
+                                    } else {
+                                        selectedListingData = updatedData
+                                        chatSourceScreen = "dashboard"
+                                        dashboardTab = 2
+                                        shouldSendInitialChatMessage = false
+                                        currentScreen = "chat"
+                                    }
                                 }
                             }
                     } else if (type == "rates") {
-                        currentScreen = "aqua_rates"
                         intentFlow.value = null
+                        currentScreen = "aqua_rates"
                     } else if (type == "listing" && intentToProcess.getStringExtra("listingId") != null) {
+                        intentFlow.value = null
                         val lid = intentToProcess.getStringExtra("listingId") ?: ""
                         FirebaseFirestore.getInstance().collection("listings").document(lid)
                             .get().addOnSuccessListener { doc ->
@@ -285,7 +309,6 @@ class MainActivity : AppCompatActivity() {
                                     val data = doc.data ?: return@addOnSuccessListener
                                     data["id"] = doc.id
                                     navigateToDetailedPage(data, "dashboard")
-                                    intentFlow.value = null
                                 }
                             }
                     }
@@ -501,6 +524,12 @@ class MainActivity : AppCompatActivity() {
                                         )
                                     }
                                 }
+                            
+                            // Also ensure token is up to date in Firestore
+                            FirebaseMessaging.getInstance().token.addOnSuccessListener { token ->
+                                FirebaseFirestore.getInstance().collection("users").document(userId)
+                                    .update("fcmToken", token)
+                            }
 
                             if (currentScreen == "otp" || currentScreen == "splash" || currentScreen == "login") {
                                 currentScreen = if (isAdmin) "admin_dashboard" else "dashboard"

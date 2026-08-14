@@ -34,6 +34,7 @@ import androidx.compose.ui.text.intl.LocaleList
 import android.net.Uri
 import com.tejashaqua.app.utils.LocaleHelper
 import com.tejashaqua.app.utils.ImageUtils
+import com.tejashaqua.app.utils.PermissionType
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -56,7 +57,8 @@ fun EditProfileScreen(
     currentPhone: String,
     onBackClick: () -> Unit,
     onProfileUpdated: (String) -> Unit,
-    authViewModel: AuthViewModel = viewModel()
+    authViewModel: AuthViewModel = viewModel(),
+    pViewModel: com.tejashaqua.app.ui.viewmodel.PermissionViewModel = viewModel()
 ) {
     var name by remember { mutableStateOf(currentName) }
     var showMobileNumber by remember { mutableStateOf(false) }
@@ -119,10 +121,12 @@ fun EditProfileScreen(
                         modifier = Modifier.clickable {
                             keyboardController?.hide()
                             showPhotoOptions = false
-                            val uri = ImageUtils.createImageUri(context)
-                            tempCameraUri = uri
-                            if (uri != null) {
-                                cameraLauncher.launch(uri)
+                            pViewModel.requestFeaturePermissions(listOf(PermissionType.CAMERA)) {
+                                val uri = ImageUtils.createImageUri(context)
+                                tempCameraUri = uri
+                                if (uri != null) {
+                                    cameraLauncher.launch(uri)
+                                }
                             }
                         }
                     )
@@ -132,7 +136,9 @@ fun EditProfileScreen(
                         modifier = Modifier.clickable {
                             keyboardController?.hide()
                             showPhotoOptions = false
-                            galleryLauncher.launch("image/*")
+                            pViewModel.requestFeaturePermissions(listOf(PermissionType.PHOTOS)) {
+                                galleryLauncher.launch("image/*")
+                            }
                         }
                     )
                 }

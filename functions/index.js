@@ -158,18 +158,24 @@ exports.onRateUpdated = onDocumentUpdated("aqua_rates/{type}", async (event) => 
     const newData = event.data.after.data();
     if (newData.notify === true) {
         const type = event.params.type;
-        const price = newData.price;
+        const price = newData.price || "--";
 
         // Capitalize for display and generalize Rohu to Fish
         let displayType = type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
         if (displayType === "Rohu") displayType = "Fish";
+
+        // Filter out "no change" from notification body
+        const isNoChange = price.toLowerCase().includes("no change") || price.includes("మార్పు లేదు");
+        const body = isNoChange
+            ? `New rates updated. Tap to see all rates.`
+            : `Latest price: ${price}. Tap to see all rates.`;
 
         logger.info(`Sending single notification for ${displayType}`);
         const payload = {
             topic: "all_users",
             notification: {
                 title: `Today's ${displayType} Rates`,
-                body: `Latest price: ${price}. Tap to see all rates.`
+                body: body
             },
             data: {
                 type: "rates",
@@ -222,7 +228,8 @@ exports.onChatMessageCreated = onDocumentCreated("chats/{chatId}/messages/{messa
         data: {
             type: "chat",
             chatId: chatId,
-            senderId: message.senderId
+            senderId: message.senderId,
+            click_action: "OPEN_CHAT"
         },
         android: {
             priority: "high",
@@ -233,19 +240,38 @@ exports.onChatMessageCreated = onDocumentCreated("chats/{chatId}/messages/{messa
         }
     };
 
-    if (!fcmToken) {
-        // Fallback to topic if token is missing
-        logger.info(`FCM Token missing for ${recipientId}, trying topic subscription`);
-        return admin.messaging().send({
+    if (fcmToken) {
+        try {
+            await admin.messaging().send({
+                token: fcmToken,
+                ...notificationPayload
+            });
+            logger.info(`Notification sent to token for ${recipientId}`);
+            return null;
+        } catch (error) {
+            logger.error(`Error sending to token for ${recipientId}:`, error);
+            // If token is invalid, consider removing it from user doc
+            if (error.code === 'messaging/registration-token-not-registered' ||
+                error.code === 'messaging/invalid-registration-token') {
+                await admin.firestore().collection("users").doc(recipientId).update({ fcmToken: admin.firestore.FieldValue.delete() });
+            }
+            // Fall through to topic delivery if token fails
+        }
+    }
+
+    // Fallback to the personal topic as a secondary mechanism
+    // This is more reliable than individual tokens which expire often.
+    try {
+        await admin.messaging().send({
             topic: `user_${recipientId}`,
             ...notificationPayload
         });
+        logger.info(`Notification sent to topic user_${recipientId}`);
+    } catch (error) {
+        logger.error(`Error sending to topic user_${recipientId}:`, error);
     }
 
-    return admin.messaging().send({
-        token: fcmToken,
-        ...notificationPayload
-    });
+    return null;
 });
 
 /**

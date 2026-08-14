@@ -400,7 +400,7 @@ fun EditListingScreen(
                     val onActionClick = {
                         keyboardController?.hide()
                         
-                        pViewModel.requestFeaturePermissions(listOf(PermissionType.LOCATION, PermissionType.CAMERA, PermissionType.PHOTOS)) {
+                        pViewModel.requestFeaturePermissions(listOf(PermissionType.LOCATION)) {
                             // Validation logic with detailed error tracking
                             val errors = mutableMapOf<String, Boolean>()
                             
