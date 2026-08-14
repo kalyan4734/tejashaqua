@@ -151,7 +151,21 @@ fun EditListingScreen(
         if (isGranted) {
             galleryLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
         } else {
-            Toast.makeText(context, context.getString(R.string.storage_permission_required), Toast.LENGTH_SHORT).show()
+            val shouldShowRationale = (context as? androidx.activity.ComponentActivity)?.let {
+                val permission = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                    android.Manifest.permission.READ_MEDIA_IMAGES
+                } else {
+                    android.Manifest.permission.READ_EXTERNAL_STORAGE
+                }
+                androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale(it, permission)
+            } ?: true
+            
+            if (!shouldShowRationale) {
+                // Permanently denied - show a toast or dialog to guide to settings
+                Toast.makeText(context, context.getString(R.string.storage_permission_denied_settings), Toast.LENGTH_LONG).show()
+            } else {
+                Toast.makeText(context, context.getString(R.string.storage_permission_required), Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -197,7 +211,15 @@ fun EditListingScreen(
                 }
             }
         } else {
-            Toast.makeText(context, context.getString(R.string.camera_permission_denied), Toast.LENGTH_SHORT).show()
+            val shouldShowRationale = (context as? androidx.activity.ComponentActivity)?.let {
+                androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale(it, android.Manifest.permission.CAMERA)
+            } ?: true
+            
+            if (!shouldShowRationale) {
+                Toast.makeText(context, context.getString(R.string.camera_permission_denied_settings), Toast.LENGTH_LONG).show()
+            } else {
+                Toast.makeText(context, context.getString(R.string.camera_permission_denied), Toast.LENGTH_SHORT).show()
+            }
         }
     }
 

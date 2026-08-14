@@ -59,7 +59,7 @@ fun AquaRatesScreen(
                 if (value != null) {
                     val fetchedMap = value.documents.associateBy({ it.id.lowercase(java.util.Locale.ROOT) }, { doc ->
                         val price = doc.getString("price") ?: "--"
-                        val change = doc.getString("change") ?: context.getString(R.string.no_change)
+                        val change = doc.getString("change") ?: ""
                         val trendStr = doc.getString("trend") ?: "FLAT"
                         val trend = try { RateTrend.valueOf(trendStr) } catch (e: Exception) { RateTrend.FLAT }
                         val isPrawn = doc.getBoolean("isPrawn") ?: (doc.id.lowercase(java.util.Locale.ROOT) == "prawns")
@@ -70,7 +70,7 @@ fun AquaRatesScreen(
 
                     // Merge with the fixed list of fish types
                     rates = fishTypes.map { fish ->
-                        fetchedMap[fish.lowercase(java.util.Locale.ROOT)] ?: AquaRate(fish, "--", context.getString(R.string.no_change), RateTrend.FLAT, isPrawn = fish.lowercase(java.util.Locale.ROOT) == "prawns")
+                        fetchedMap[fish.lowercase(java.util.Locale.ROOT)] ?: AquaRate(fish, "--", "", RateTrend.FLAT, isPrawn = fish.lowercase(java.util.Locale.ROOT) == "prawns")
                     }
                 }
                 
@@ -186,11 +186,6 @@ fun RateItemCard(rate: AquaRate, onClick: () -> Unit) {
                     fontWeight = FontWeight.Bold,
                     color = Color.Black
                 )
-                Text(
-                    text = stringResource(R.string.fresh_water_fish),
-                    fontSize = 12.sp,
-                    color = GrayText
-                )
             }
             
             Spacer(modifier = Modifier.weight(1f))
@@ -220,16 +215,18 @@ fun RateItemCard(rate: AquaRate, onClick: () -> Unit) {
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                     }
-                    Text(
-                        text = rate.change,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = when(rate.trend) {
-                            RateTrend.UP -> Color(0xFF4CAF50)
-                            RateTrend.DOWN -> Color(0xFFF44336)
-                            else -> GrayText
-                        }
-                    )
+                    if (rate.change.isNotEmpty() && rate.change != stringResource(R.string.no_change)) {
+                        Text(
+                            text = rate.change,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = when(rate.trend) {
+                                RateTrend.UP -> Color(0xFF4CAF50)
+                                RateTrend.DOWN -> Color(0xFFF44336)
+                                else -> GrayText
+                            }
+                        )
+                    }
                 }
             }
         }

@@ -195,7 +195,7 @@ fun FishRatesAdmin(selectedDate: Long, onBackClick: () -> Unit) {
                 onCheckedChange = { 
                     noDataAvailable = it
                     if (it) {
-                        rates = rates.map { r -> r.copy(price = context.getString(R.string.no_data_available), change = context.getString(R.string.no_change), trend = RateTrend.FLAT) }
+                        rates = rates.map { r -> r.copy(price = context.getString(R.string.no_data_available), change = "", trend = RateTrend.FLAT) }
                     }
                 }
             )
@@ -463,7 +463,7 @@ fun PrawnRatesAdmin(selectedDate: Long, onBackClick: () -> Unit) {
                         val currentVal = price100.filter { it.isDigit() || it == '.' }.toDoubleOrNull() ?: 0.0
                         
                         var trend = RateTrend.FLAT
-                        var change = context.getString(R.string.no_change)
+                        var change = ""
                         
                         if (!isNoData && previousSummaryPrice > 0 && currentVal > 0) {
                             val diff = (currentVal - previousSummaryPrice).toInt()
@@ -475,7 +475,7 @@ fun PrawnRatesAdmin(selectedDate: Long, onBackClick: () -> Unit) {
                             change = when {
                                 diff > 0 -> "+₹$diff"
                                 diff < 0 -> "-₹${Math.abs(diff)}"
-                                else -> context.getString(R.string.no_change)
+                                else -> ""
                             }
                         }
 

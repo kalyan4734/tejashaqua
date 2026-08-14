@@ -30,7 +30,14 @@ import androidx.compose.ui.unit.sp
 import com.tejashaqua.app.R
 import com.tejashaqua.app.ui.theme.AquaBlue
 import com.tejashaqua.app.ui.theme.GrayText
+import com.tejashaqua.app.ui.viewmodel.AuthViewModel
 import com.tejashaqua.app.utils.LocaleHelper
+import com.tejashaqua.app.utils.SmsBroadcastReceiver
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import android.app.Activity
+import com.google.android.gms.auth.api.phone.SmsRetriever
 import kotlinx.coroutines.delay
 
 @Composable
@@ -39,10 +46,66 @@ fun OtpScreen(
     onVerifyClick: (String) -> Unit,
     onResendClick: () -> Unit,
     onBackClick: () -> Unit,
-    isLoading: Boolean = false
+    isLoading: Boolean = false,
+    authViewModel: AuthViewModel = viewModel()
 ) {
     var otpValue by remember { mutableStateOf("") }
     var timerSeconds by remember { mutableIntStateOf(24) }
+
+    val autoOtp by authViewModel.autoOtp.collectAsState()
+
+    // Launcher for the SMS User Consent "Allow" popup
+    val consentLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK && result.data != null) {
+            val message = result.data?.getStringExtra(SmsRetriever.EXTRA_SMS_MESSAGE)
+            message?.let {
+                // Extract 6-digit OTP from message using the same regex
+                val pattern = Regex("(?<!\\d)(\\d{6})(?!\\d)")
+                val match = pattern.find(it)
+                match?.groupValues?.get(1)?.let { code ->
+                    otpValue = code
+                }
+            }
+        }
+    }
+
+    // Listen for auto-filled OTP
+    LaunchedEffect(autoOtp) {
+        autoOtp?.let {
+            otpValue = it
+            authViewModel.clearAutoOtp()
+        }
+    }
+
+    // Initialize SMS Retriever
+    DisposableEffect(Unit) {
+        authViewModel.startOtpRetriever()
+        
+        SmsBroadcastReceiver.setOtpListener(object : SmsBroadcastReceiver.OtpListener {
+            override fun onOtpReceived(otp: String) {
+                authViewModel.setAutoOtp(otp)
+            }
+
+            override fun onConsentIntentReceived(intent: android.content.Intent) {
+                consentLauncher.launch(intent)
+            }
+
+            override fun onOtpTimeout() {
+                android.util.Log.d("OtpScreen", "SMS Retrieval timed out")
+            }
+        })
+
+        onDispose {
+            SmsBroadcastReceiver.setOtpListener(object : SmsBroadcastReceiver.OtpListener {
+                override fun onOtpReceived(otp: String) {}
+                override fun onConsentIntentReceived(intent: android.content.Intent) {}
+                override fun onOtpTimeout() {}
+            })
+            authViewModel.clearAutoOtp()
+        }
+    }
 
     val context = LocalContext.current
     val scrollState = rememberScrollState()

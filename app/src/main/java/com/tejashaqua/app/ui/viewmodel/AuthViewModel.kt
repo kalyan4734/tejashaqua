@@ -14,6 +14,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.functions.FirebaseFunctions
 import com.google.firebase.messaging.FirebaseMessaging
+import com.google.android.gms.auth.api.phone.SmsRetriever
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,6 +42,9 @@ class AuthViewModel(application: android.app.Application) : AndroidViewModel(app
     
     private val _authState = MutableStateFlow<AuthState>(AuthState.Idle)
     val authState: StateFlow<AuthState> = _authState
+
+    private val _autoOtp = MutableStateFlow<String?>(null)
+    val autoOtp: StateFlow<String?> = _autoOtp
 
     private var pendingPhoneNumber: String = ""
     private var loadingTimeoutJob: Job? = null
@@ -140,6 +144,34 @@ class AuthViewModel(application: android.app.Application) : AndroidViewModel(app
     fun clearVerificationData() {
         pendingPhoneNumber = ""
         _authState.value = AuthState.Idle
+    }
+
+    fun startOtpRetriever() {
+        // 1. Try SMS Retriever (Silent, needs Hash)
+        val client = SmsRetriever.getClient(getApplication())
+        client.startSmsRetriever()
+            .addOnSuccessListener {
+                android.util.Log.d("AuthViewModel", "SMS Retriever started")
+            }
+            .addOnFailureListener {
+                android.util.Log.e("AuthViewModel", "SMS Retriever failed", it)
+            }
+            
+        // 2. Also start SMS User Consent (Needs "Allow" click, works WITHOUT Hash)
+        client.startSmsUserConsent(null) // null listens to any OTP-like message from non-contacts
+            .addOnSuccessListener {
+                android.util.Log.d("AuthViewModel", "SMS User Consent started")
+            }
+    }
+
+    fun setAutoOtp(otp: String) {
+        if (otp.length == 6 && otp.all { it.isDigit() }) {
+            _autoOtp.value = otp
+        }
+    }
+
+    fun clearAutoOtp() {
+        _autoOtp.value = null
     }
 
     fun sendOtp(phoneNumber: String, activity: Activity? = null) {

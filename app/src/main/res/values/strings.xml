@@ -139,7 +139,6 @@
     <string name="feed_name_label">Feed Name</string>
     <string name="business_type_label">Business Type</string>
     <string name="job_type_label">Job Type</string>
-    <string name="fresh_water_fish">Fresh Water Fish</string>
     <!-- Select Location -->
     <string name="select_location_title">Select Location</string>
     <string name="search_location_placeholder">Search city, area, or district…</string>
@@ -442,4 +441,8 @@ These terms shall be governed by and construed in accordance with the laws of In
     <string name="show_mobile_number_desc">If disabled, buyers can only contact you via chat.</string>
     <string name="location_settings_desc">Location permission is required to use this feature. Please enable it in app settings.</string>
     <string name="open_settings">Open Settings</string>
+    <string name="camera_settings_desc">Camera permission is required to take photos. Please enable it in app settings.</string>
+    <string name="storage_settings_desc">Storage permission is required to select photos. Please enable it in app settings.</string>
+    <string name="camera_permission_denied_settings">Camera permission is permanently denied. Please enable it in App Settings to take photos.</string>
+    <string name="storage_permission_denied_settings">Storage permission is permanently denied. Please enable it in App Settings to select photos.</string>
 </resources>

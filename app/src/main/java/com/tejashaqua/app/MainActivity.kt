@@ -103,6 +103,12 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // --- PRINT APP HASH FOR OTP AUTO-FILL ---
+        // Copy this string from Logcat and add it to your MSG91 SMS Template
+        val helper = com.tejashaqua.app.utils.AppSignatureHelper(this)
+        android.util.Log.d("AppSignature", "App Hash: ${helper.appSignatures}")
+
         intentFlow.value = intent
         firebaseAnalytics = FirebaseAnalytics.getInstance(this)
         LocaleHelper.applySavedLocale(this)
@@ -383,64 +389,80 @@ class MainActivity : AppCompatActivity() {
                 val permissionLauncher = rememberLauncherForActivityResult(
                     ActivityResultContracts.RequestMultiplePermissions()
                 ) { permissions ->
-                    val isGranted = permissions.getOrDefault(
-                        Manifest.permission.ACCESS_FINE_LOCATION,
-                        false
-                    ) || permissions.getOrDefault(Manifest.permission.ACCESS_COARSE_LOCATION, false)
-                    if (isGranted) {
+                    val locationGranted = permissions.getOrDefault(Manifest.permission.ACCESS_FINE_LOCATION, false) ||
+                                         permissions.getOrDefault(Manifest.permission.ACCESS_COARSE_LOCATION, false)
+                    val notificationsGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        permissions.getOrDefault(Manifest.permission.POST_NOTIFICATIONS, false)
+                    } else true
+
+                    if (locationGranted) {
                         locationViewModel.fetchCurrentLocation()
                     } else {
                         locationViewModel.onPermissionDenied()
+                    }
+
+                    if (!locationGranted || !notificationsGranted) {
+                        // Check if they permanently denied or just a soft deny
+                        val shouldShowLocationRationale = ActivityCompat.shouldShowRequestPermissionRationale(
+                            this@MainActivity,
+                            Manifest.permission.ACCESS_FINE_LOCATION
+                        )
+                        val shouldShowNotificationRationale = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            ActivityCompat.shouldShowRequestPermissionRationale(this@MainActivity, Manifest.permission.POST_NOTIFICATIONS)
+                        } else false
+                        
+                        if (!shouldShowLocationRationale && !locationGranted) {
+                            // Permanently denied location
+                            showSettingsDialog = true
+                        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !shouldShowNotificationRationale && !notificationsGranted) {
+                            // Permanently denied notifications
+                            showSettingsDialog = true
+                        } else {
+                            // Soft deny (user clicked Deny). Show disclosure again to insist as requested.
+                            locationPermissionsToRequest = mutableListOf(
+                                Manifest.permission.ACCESS_FINE_LOCATION,
+                                Manifest.permission.ACCESS_COARSE_LOCATION
+                            ).apply {
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) add(Manifest.permission.POST_NOTIFICATIONS)
+                            }.toTypedArray()
+                            showLocationDisclosure = true
+                        }
+                    }
+                    // Mark as shown once they have interacted with the system dialog at least once
+                    LocaleHelper.setLocationDisclosureShown(context)
+                }
+
+                val triggerPermissionFlow = {
+                    val hasLocation = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+                                     ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                    val hasNotifications = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+                    } else true
+
+                    if (!hasLocation || !hasNotifications) {
+                        val showLocationRationale = ActivityCompat.shouldShowRequestPermissionRationale(this@MainActivity, Manifest.permission.ACCESS_FINE_LOCATION)
+                        val showNotificationRationale = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            ActivityCompat.shouldShowRequestPermissionRationale(this@MainActivity, Manifest.permission.POST_NOTIFICATIONS)
+                        } else false
+
+                        if (LocaleHelper.isLocationDisclosureShown(context) && 
+                            ((!showLocationRationale && !hasLocation) || 
+                             (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !showNotificationRationale && !hasNotifications))) {
+                            showSettingsDialog = true
+                        } else {
+                            val permissions = mutableListOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) permissions.add(Manifest.permission.POST_NOTIFICATIONS)
+                            locationPermissionsToRequest = permissions.toTypedArray()
+                            showLocationDisclosure = true
+                        }
+                    } else {
+                        locationViewModel.fetchCurrentLocation()
                     }
                 }
 
                 LaunchedEffect(currentScreen) {
                     if (currentScreen == "dashboard" || currentScreen == "select_location") {
-                        val hasLocationPermission = ContextCompat.checkSelfPermission(
-                            context,
-                            Manifest.permission.ACCESS_FINE_LOCATION
-                        ) == PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(
-                            context,
-                            Manifest.permission.ACCESS_COARSE_LOCATION
-                        ) == PackageManager.PERMISSION_GRANTED
-
-                        if (hasLocationPermission) {
-                            // Already granted, just fetch
-                            locationViewModel.fetchCurrentLocation()
-
-                            // Only check for other permissions if we haven't done the initial request yet
-                            if (!LocaleHelper.isLocationDisclosureShown(context)) {
-                                val others = mutableListOf<String>()
-                                if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-                                    others.add(Manifest.permission.CAMERA)
-                                }
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && 
-                                    ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                                    others.add(Manifest.permission.POST_NOTIFICATIONS)
-                                }
-                                if (others.isNotEmpty()) {
-                                    permissionLauncher.launch(others.toTypedArray())
-                                }
-                                LocaleHelper.setLocationDisclosureShown(context)
-                            }
-                        } else if (!LocaleHelper.isLocationDisclosureShown(context) || currentScreen == "select_location" || currentScreen == "dashboard") {
-                            // Not granted and disclosure not shown yet OR entering select_location screen OR entering dashboard
-                            val permissions = mutableListOf(
-                                Manifest.permission.ACCESS_FINE_LOCATION,
-                                Manifest.permission.ACCESS_COARSE_LOCATION,
-                                Manifest.permission.CAMERA
-                            )
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                permissions.add(Manifest.permission.POST_NOTIFICATIONS)
-                            }
-                            locationPermissionsToRequest = permissions.toTypedArray()
-                            showLocationDisclosure = true
-                            // We set it as shown when the dialog is actually triggered
-                            LocaleHelper.setLocationDisclosureShown(context)
-                        } else {
-                            // Already shown once, don't nag again but update UI state
-                            locationViewModel.onPermissionDenied()
-                        }
+                        triggerPermissionFlow()
                     }
                 }
 
@@ -546,35 +568,28 @@ class MainActivity : AppCompatActivity() {
                         )
                     }
 
-                    if (networkStatus == NetworkObserver.Status.Lost || networkStatus == NetworkObserver.Status.Unavailable) {
-                        Surface(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .statusBarsPadding()
-                                .zIndex(10f),
-                            color = Color(0xFFF44336)
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .padding(vertical = 4.dp, horizontal = 16.dp),
-                                horizontalArrangement = Arrangement.Center,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    Icons.Default.WifiOff,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = stringResource(R.string.no_internet_connection),
-                                    color = Color.White,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
+                    if (showSettingsDialog) {
+                        AlertDialog(
+                            onDismissRequest = { showSettingsDialog = false },
+                            title = { Text(stringResource(R.string.location_disclosure_title)) },
+                            text = { Text(stringResource(R.string.location_settings_desc)) },
+                            confirmButton = {
+                                TextButton(onClick = {
+                                    showSettingsDialog = false
+                                    val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                        data = android.net.Uri.fromParts("package", packageName, null)
+                                    }
+                                    startActivity(intent)
+                                }) {
+                                    Text(stringResource(R.string.open_settings))
+                                }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = { showSettingsDialog = false }) {
+                                    Text(stringResource(R.string.cancel))
+                                }
                             }
-                        }
+                        )
                     }
 
                     if (needsUpdate) {
@@ -646,8 +661,6 @@ class MainActivity : AppCompatActivity() {
 
                             "dashboard" -> DashboardScreen(
                                 currentUserId = userId,
-                                locationName = currentLocationName,
-                                subLocation = currentSubLocation,
                                 onAddClick = {
                                     isEditMode = false
                                     selectedListingId = null
@@ -668,11 +681,7 @@ class MainActivity : AppCompatActivity() {
                                         locationPickerSource = "dashboard"
                                         currentScreen = "select_location"
                                     } else {
-                                        locationPermissionsToRequest = arrayOf(
-                                            Manifest.permission.ACCESS_FINE_LOCATION,
-                                            Manifest.permission.ACCESS_COARSE_LOCATION
-                                        )
-                                        showLocationDisclosure = true
+                                        triggerPermissionFlow()
                                     }
                                 },
                                 onPrawnsClick = { currentScreen = "prawn_rates" },
@@ -877,11 +886,7 @@ class MainActivity : AppCompatActivity() {
                                         locationPickerSource = "listing"
                                         currentScreen = "select_location"
                                     } else {
-                                        locationPermissionsToRequest = arrayOf(
-                                            Manifest.permission.ACCESS_FINE_LOCATION,
-                                            Manifest.permission.ACCESS_COARSE_LOCATION
-                                        )
-                                        showLocationDisclosure = true
+                                        triggerPermissionFlow()
                                     }
                                 },
                                 joinedAt = joinedAt,

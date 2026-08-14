@@ -61,8 +61,6 @@ import com.tejashaqua.app.ui.components.SellerPostsDialog
 @Composable
 fun DashboardScreen(
     currentUserId: String,
-    locationName: String,
-    subLocation: String,
     onAddClick: () -> Unit,
     onProfileClick: () -> Unit,
     onLocationClick: () -> Unit,
@@ -113,10 +111,8 @@ fun DashboardScreen(
     val fetchedSub by locationViewModel.currentSubLocation.collectAsState()
     val keyboardController = LocalSoftwareKeyboardController.current
 
-    val fetchingLocText = stringResource(R.string.fetching_location)
-
     LaunchedEffect(fetchedName, fetchedSub) {
-        if (fetchedName.isNotBlank() && fetchedName != fetchingLocText) {
+        if (fetchedName.isNotBlank()) {
             onLocationFetched(fetchedName, fetchedSub)
         }
     }
@@ -356,7 +352,7 @@ fun DashboardScreen(
                         Column(modifier = Modifier.weight(1f)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    text = locationName,
+                                    text = fetchedName,
                                     color = Color.White,
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 16.sp,
@@ -365,9 +361,9 @@ fun DashboardScreen(
                                 )
                                 Icon(Icons.Default.KeyboardArrowDown, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
                             }
-                            if (subLocation.isNotEmpty()) {
+                            if (fetchedSub.isNotEmpty()) {
                                 Text(
-                                    text = subLocation,
+                                    text = fetchedSub,
                                     color = Color.White.copy(alpha = 0.8f),
                                     fontSize = 11.sp,
                                     maxLines = 1,
@@ -1037,7 +1033,7 @@ fun AquaRatesSection(onRateClick: (AquaRate) -> Unit) {
                 if (value != null) {
                     val fetchedMap = value.documents.associateBy({ it.id.lowercase(java.util.Locale.ROOT) }, { doc ->
                         val price = doc.getString("price") ?: "--"
-                        val change = doc.getString("change") ?: context.getString(R.string.no_change)
+                        val change = doc.getString("change") ?: ""
                         val trendStr = doc.getString("trend") ?: "FLAT"
                         val trend = try { RateTrend.valueOf(trendStr) } catch (_: Exception) { RateTrend.FLAT }
                         val isPrawn = doc.getBoolean("isPrawn") ?: (doc.id.lowercase(java.util.Locale.ROOT) == "prawns")
@@ -1047,14 +1043,14 @@ fun AquaRatesSection(onRateClick: (AquaRate) -> Unit) {
 
                     // Merge with the fixed list of fish types
                     rates = fishTypes.map { fish ->
-                        fetchedMap[fish.lowercase(java.util.Locale.ROOT)] ?: AquaRate(fish, "--", context.getString(R.string.no_change), RateTrend.FLAT, isPrawn = fish.lowercase(java.util.Locale.ROOT) == "prawns")
+                        fetchedMap[fish.lowercase(java.util.Locale.ROOT)] ?: AquaRate(fish, "--", "", RateTrend.FLAT, isPrawn = fish.lowercase(java.util.Locale.ROOT) == "prawns")
                     }
                 }
                 
                 if (rates.all { it.price == "--" }) {
                     rates = listOf(
                         AquaRate("Prawns", context.getString(R.string.no_data_available), context.getString(R.string.view_all_prices), RateTrend.FLAT, isPrawn = true),
-                        AquaRate("Rohu", context.getString(R.string.no_data_available), context.getString(R.string.no_change), RateTrend.FLAT)
+                        AquaRate("Rohu", context.getString(R.string.no_data_available), "", RateTrend.FLAT)
                     )
                 }
                 isLoading = false

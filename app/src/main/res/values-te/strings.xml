@@ -139,7 +139,6 @@
     <string name="feed_name_label">మేత పేరు</string>
     <string name="business_type_label">వ్యాపార రకం</string>
     <string name="job_type_label">ఉద్యోగ రకం</string>
-    <string name="fresh_water_fish">మంచినీటి చేపలు</string>
     <!-- Select Location -->
     <string name="select_location_title">స్థానాన్ని ఎంచుకోండి</string>
     <string name="search_location_placeholder">నగరం, ప్రాంతం లేదా జిల్లా కోసం వెతకండి…</string>
@@ -441,4 +440,8 @@
     <string name="show_mobile_number_desc">దీన్ని నిలిపివేస్తే, కొనుగోలుదారులు మిమ్మల్ని చాట్ ద్వారా మాత్రమే సంప్రదించగలరు.</string>
     <string name="location_settings_desc">ఈ ఫీచర్‌ని ఉపయోగించడానికి స్థాన అనుమతి అవసరం. దయచేసి యాప్ సెట్టింగ్‌లలో దీన్ని ప్రారంభించండి.</string>
     <string name="open_settings">సెట్టింగ్‌లను ప్రారంభించండి</string>
+    <string name="camera_settings_desc">ఫోటోలు తీయడానికి కెమెరా అనుమతి అవసరం. దయచేసి యాప్ సెట్టింగ్‌లలో దీన్ని ప్రారంభించండి.</string>
+    <string name="storage_settings_desc">ఫోటోలను ఎంచుకోవడానికి స్టోరేజ్ అనుమతి అవసరం. దయచేసి యాప్ సెట్టింగ్‌లలో దీన్ని ప్రారంభించండి.</string>
+    <string name="camera_permission_denied_settings">కెమెరా అనుమతి శాశ్వతంగా నిరాకరించబడింది. ఫోటోలు తీయడానికి దయచేసి యాప్ సెట్టింగ్‌లలో దీన్ని ప్రారంభించండి.</string>
+    <string name="storage_permission_denied_settings">స్టోరేజ్ అనుమతి శాశ్వతంగా నిరాకరించబడింది. ఫోటోలను ఎంచుకోవడానికి దయచేసి యాప్ సెట్టింగ్‌లలో దీన్ని ప్రారంభించండి.</string>
 </resources>

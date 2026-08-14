@@ -18,6 +18,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import android.location.Geocoder
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
 import com.google.android.gms.maps.model.LatLng
 import com.tejashaqua.app.R
 import com.tejashaqua.app.utils.LocaleHelper
@@ -67,8 +70,18 @@ class LocationSearchViewModel(application: Application) : AndroidViewModel(appli
         }
 
         try {
+            val priority = if (ContextCompat.checkSelfPermission(
+                    getApplication(),
+                    android.Manifest.permission.ACCESS_FINE_LOCATION
+                ) == PackageManager.PERMISSION_GRANTED
+            ) {
+                Priority.PRIORITY_HIGH_ACCURACY
+            } else {
+                Priority.PRIORITY_BALANCED_POWER_ACCURACY
+            }
+
             val cts = CancellationTokenSource()
-            fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, cts.token)
+            fusedLocationClient.getCurrentLocation(priority, cts.token)
                 .addOnSuccessListener { currentLoc ->
                     Log.d("LocationVM", "getCurrentLocation success: $currentLoc")
                     if (currentLoc != null) {
@@ -116,9 +129,14 @@ class LocationSearchViewModel(application: Application) : AndroidViewModel(appli
                     _currentLocationName.value = address.locality ?: address.subAdminArea ?: getApplication<Application>().getString(R.string.unknown_location)
                     _currentSubLocation.value = address.getAddressLine(0) ?: ""
                     _currentLatLng.value = LatLng(latitude, longitude)
+                } else {
+                    _currentLocationName.value = getApplication<Application>().getString(R.string.unknown_location)
+                    _currentSubLocation.value = "$latitude, $longitude"
                 }
             } catch (e: Exception) {
+                Log.e("LocationVM", "Geocoder error", e)
                 _currentLocationName.value = getApplication<Application>().getString(R.string.unknown_location)
+                _currentSubLocation.value = "$latitude, $longitude"
             }
         }
     }
