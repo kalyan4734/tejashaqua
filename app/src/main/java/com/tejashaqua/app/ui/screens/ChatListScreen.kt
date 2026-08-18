@@ -84,28 +84,31 @@ fun ChatListScreen(
                 
                 val chatList = snapshot.documents.mapNotNull { doc ->
                     val data = doc.data ?: return@mapNotNull null
-                    val sellerId = data["sellerId"] as? String ?: ""
-                    val buyerId = data["buyerId"] as? String ?: ""
+                    val sellerId = data["sellerId"]?.toString() ?: ""
+                    val buyerId = data["buyerId"]?.toString() ?: ""
                     val isBuying = if (sellerId.isNotEmpty()) sellerId != currentUserId else buyerId == currentUserId
                     
                     val unreadCounts = data["unreadCounts"] as? Map<*, *>
-                    val unreadCount = (unreadCounts?.get(currentUserId) as? Long)?.toInt() ?: 
-                                     (data["unreadCounts.$currentUserId"] as? Long)?.toInt() ?: 0
+                    val unreadCount = (unreadCounts?.get(currentUserId) as? Number)?.toInt() ?: 
+                                     (data["unreadCounts.$currentUserId"] as? Number)?.toInt() ?: 0
 
-                    val listingId = data["listingId"] as? String ?: ""
+                    val listingId = data["listingId"]?.toString() ?: ""
 
                     ChatListItemData(
                         chatId = doc.id,
-                        name = if (isBuying) data["sellerName"] as? String ?: "Seller" else data["buyerName"] as? String ?: "Buyer",
-                        otherUserId = if (isBuying) data["sellerId"] as? String ?: "" else data["buyerId"] as? String ?: "",
+                        name = if (isBuying) data["sellerName"]?.toString() ?: "Seller" else data["buyerName"]?.toString() ?: "Buyer",
+                        otherUserId = if (isBuying) data["sellerId"]?.toString() ?: "" else data["buyerId"]?.toString() ?: "",
                         type = if (isBuying) "Buying" else "Selling",
                         listingId = listingId,
-                        listingInfo = data["listingTitle"] as? String ?: "Listing",
-                        lastMessage = data["lastMessage"] as? String ?: "",
-                        time = (data["lastMessageTimestamp"] as? com.google.firebase.Timestamp)?.toDate()?.time ?: 
-                               (data["lastMessageTimestamp"] as? Long) ?: 0L,
+                        listingInfo = data["listingTitle"]?.toString() ?: "Listing",
+                        lastMessage = data["lastMessage"]?.toString() ?: "",
+                        time = when (val ts = data["lastMessageTimestamp"]) {
+                            is com.google.firebase.Timestamp -> ts.toDate().time
+                            is Number -> ts.toLong()
+                            else -> 0L
+                        },
                         unreadCount = unreadCount,
-                        listingImage = data["listingImage"] as? String,
+                        listingImage = data["listingImage"]?.toString(),
                         fullData = data + mapOf("id" to listingId)
                     )
                 }.sortedByDescending { it.time }

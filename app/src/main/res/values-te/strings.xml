@@ -285,8 +285,8 @@
     <string name="tank_sell">అమ్మకం</string>
 
     <!-- Job Types -->
-    <string name="job_watchman">చెరువు వద్ద కాపలాదారు (మేత వేయడానికి)</string>
-    <string name="job_supervisor">చెరువు పర్యవేక్షకుడు</string>
+    <string name="job_watchman">జీతగాడు (మేత వేయడానికి)</string>
+    <string name="job_supervisor">గుమాస్తా</string>
     <string name="job_electrician">ఎలక్ట్రీషియన్</string>
     <string name="job_technician">టెక్నీషియన్</string>
 

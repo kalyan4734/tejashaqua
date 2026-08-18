@@ -33,7 +33,7 @@ class ListingViewModel(application: Application) : AndroidViewModel(application)
             _postState.value = PostState.Loading
             try {
                 val userId = data["userId"]?.toString() ?: ""
-                val existingListingId = data["id"] as? String
+                val existingListingId = data["id"]?.toString()
                 
                 // Enforce 2-listing limit for new posts
                 if (existingListingId == null && userId.isNotEmpty()) {
@@ -62,6 +62,11 @@ class ListingViewModel(application: Application) : AndroidViewModel(application)
                 }
 
                 val uploadedUrls = uploadImages(toUpload)
+                
+                if (toUpload.isNotEmpty() && uploadedUrls.isEmpty()) {
+                    throw Exception("Failed to upload photos. Please check your network.")
+                }
+
                 val finalUrls = existingUrls + uploadedUrls
                 
                 val listingId = existingListingId ?: db.collection("listings").document().id

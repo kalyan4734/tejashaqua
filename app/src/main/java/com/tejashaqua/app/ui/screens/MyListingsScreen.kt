@@ -122,17 +122,17 @@ fun MyListingsScreen(
                                     val type = doc.getString("rateType") ?: "Paise"
                                     if (type.contains("Paise", ignoreCase = true)) "$formattedRate Paise/Seed" else "₹$formattedRate/Seed"
                                 }
-                                "FEED" -> "₹${CurrencyUtils.formatPrice(doc.get("ratePerTon") ?: naText)}/$tonText"
+                                "FEED" -> "₹${CurrencyUtils.formatPrice(doc.get("ratePerTon")?.toString() ?: naText)}/$tonText"
                                 "BUSINESS" -> {
                                     if (doc.getString("businessSubCategory") == "Feed") {
-                                        "₹${CurrencyUtils.formatPrice(doc.get("ratePerTon") ?: naText)}/$tonText"
+                                        "₹${CurrencyUtils.formatPrice(doc.get("ratePerTon")?.toString() ?: naText)}/$tonText"
                                     } else {
-                                        "₹${CurrencyUtils.formatPrice(doc.get("price") ?: doc.get("rateValue") ?: naText)}"
+                                        "₹${CurrencyUtils.formatPrice(doc.get("price")?.toString() ?: doc.get("rateValue")?.toString() ?: naText)}"
                                     }
                                 }
-                                "JOBS" -> "₹${CurrencyUtils.formatPrice(doc.get("salary") ?: naText)}"
-                                "TANKS" -> "₹${CurrencyUtils.formatPrice(doc.get("estPricePerAcre") ?: naText)}/$acreText"
-                                else -> "₹${CurrencyUtils.formatPrice(doc.get("price") ?: doc.get("rateValue") ?: naText)}"
+                                "JOBS" -> "₹${CurrencyUtils.formatPrice(doc.get("salary")?.toString() ?: naText)}"
+                                "TANKS" -> "₹${CurrencyUtils.formatPrice(doc.get("estPricePerAcre")?.toString() ?: naText)}/$acreText"
+                                else -> "₹${CurrencyUtils.formatPrice(doc.get("price")?.toString() ?: doc.get("rateValue")?.toString() ?: naText)}"
                             }
 
                             UserListing(

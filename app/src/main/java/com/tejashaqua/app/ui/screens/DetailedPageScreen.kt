@@ -552,15 +552,15 @@ fun DetailedPageScreen(
                     when(category) {
                         ListingCategory.FISH -> {
                             DetailRowItem(stringResource(R.string.fish_type_label), listingData["fishType"]?.toString() ?: stringResource(R.string.not_available_short))
-                            DetailRowItem(stringResource(R.string.size_label), "${listingData["sizeValue"] ?: ""} ${listingData["sizeType"] ?: ""}")
-                            DetailRowItem(stringResource(R.string.fish_age_label), stringResource(R.string.months_suffix, listingData["fishAge"] ?: ""))
+                            DetailRowItem(stringResource(R.string.size_label), "${listingData["sizeValue"]?.toString() ?: ""} ${listingData["sizeType"]?.toString() ?: ""}")
+                            DetailRowItem(stringResource(R.string.fish_age_label), stringResource(R.string.months_suffix, listingData["fishAge"]?.toString() ?: ""))
                             DetailRowItem(stringResource(R.string.quantity_label), CurrencyUtils.formatPrice(listingData["quantity"]))
                             DetailRowItem(stringResource(R.string.price_label), priceLabel)
                         }
                         ListingCategory.PRAWNS -> {
                             DetailRowItem(stringResource(R.string.hatchery_name_label), listingData["hatcheryName"]?.toString() ?: stringResource(R.string.not_available_short))
                             DetailRowItem(stringResource(R.string.prawn_type_label), listingData["prawnType"]?.toString() ?: stringResource(R.string.not_available_short))
-                            DetailRowItem(stringResource(R.string.quantity_label), "${listingData["quantity"] ?: ""} ${listingData["unitType"] ?: ""}")
+                            DetailRowItem(stringResource(R.string.quantity_label), "${listingData["quantity"]?.toString() ?: ""} ${listingData["unitType"]?.toString() ?: ""}")
                             DetailRowItem(stringResource(R.string.rate_label), priceLabel)
                         }
                         ListingCategory.EQUIPMENTS -> {
@@ -600,7 +600,7 @@ fun DetailedPageScreen(
                             }
                         }
                         ListingCategory.TANKS -> {
-                            DetailRowItem(stringResource(R.string.tank_acres_label), stringResource(R.string.acres_suffix, listingData["tankAcres"] ?: stringResource(R.string.not_available_short)))
+                            DetailRowItem(stringResource(R.string.tank_acres_label), stringResource(R.string.acres_suffix, listingData["tankAcres"]?.toString() ?: stringResource(R.string.not_available_short)))
                             DetailRowItem(stringResource(R.string.est_price_per_acre_label), priceLabel)
                             DetailRowItem(stringResource(R.string.tank_location_label), listingData["tankLocation"]?.toString() ?: stringResource(R.string.not_available_short))
                         }

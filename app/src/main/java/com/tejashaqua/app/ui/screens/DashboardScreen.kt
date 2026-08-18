@@ -176,12 +176,12 @@ fun DashboardScreen(
             .orderBy("timestamp", Query.Direction.DESCENDING)
             .limit(20)
             
-        query.addSnapshotListener { snapshot, _ ->
+                query.addSnapshotListener { snapshot, _ ->
             isLoadingListings = false
             snapshot?.let {
-                val newFirstPage = it.documents.map { 
-                    val data = it.data?.toMutableMap() ?: mutableMapOf()
-                    data["id"] = it.id
+                val newFirstPage = it.documents.map { doc ->
+                    val data = doc.data?.toMutableMap() ?: mutableMapOf()
+                    data["id"] = doc.id
                     data
                 }
                 
@@ -190,7 +190,7 @@ fun DashboardScreen(
                     newFirstPage.none { it["id"] == item["id"] } 
                 }
                 
-                listings = (newFirstPage + existingItems).sortedByDescending { it["timestamp"] as? Long ?: 0L }
+                listings = (newFirstPage + existingItems).sortedByDescending { (it["timestamp"] as? Number)?.toLong() ?: 0L }
                 
                 // Initialize lastVisibleDoc for pagination if it's the first time
                 if (lastVisibleDoc == null && snapshot.documents.isNotEmpty()) {
@@ -218,8 +218,8 @@ fun DashboardScreen(
     LaunchedEffect(listings, lastCheckedNotifications) {
         unreadNotificationCount = if (lastCheckedNotifications > 0) {
             listings.count { data ->
-                val ts = data["timestamp"] as? Long ?: 0L
-                val userId = data["userId"] as? String ?: ""
+                val ts = (data["timestamp"] as? Number)?.toLong() ?: 0L
+                val userId = data["userId"]?.toString() ?: ""
                 ts > lastCheckedNotifications && userId != currentUserId
             }
         } else {
@@ -244,10 +244,10 @@ fun DashboardScreen(
     val filteredListings = remember {
         derivedStateOf {
             val filtered = listings.filter { data ->
-                val title = (data["title"] as? String)?.lowercase() ?: ""
-                val location = (data["location"] as? String)?.lowercase() ?: ""
-                val category = (data["category"] as? String) ?: ""
-                val userId = (data["userId"] as? String) ?: ""
+                val title = data["title"]?.toString()?.lowercase() ?: ""
+                val location = data["location"]?.toString()?.lowercase() ?: ""
+                val category = data["category"]?.toString() ?: ""
+                val userId = data["userId"]?.toString() ?: ""
                 
                 if (blockedUsers.contains(userId)) return@filter false
 
@@ -282,7 +282,7 @@ fun DashboardScreen(
 
     val selectedSellerPosts = remember(selectedSellerId, listings) {
         if (selectedSellerId.isEmpty()) emptyList()
-        else listings.filter { (it["userId"] as? String) == selectedSellerId }
+        else listings.filter { item -> item["userId"]?.toString() == selectedSellerId }
     }
 
     // Chat State
@@ -309,28 +309,31 @@ fun DashboardScreen(
                 
                 chats = snapshot.documents.mapNotNull { doc ->
                     val data = doc.data ?: return@mapNotNull null
-                    val sellerId = data["sellerId"] as? String ?: ""
-                    val buyerId = data["buyerId"] as? String ?: ""
+                    val sellerId = data["sellerId"]?.toString() ?: ""
+                    val buyerId = data["buyerId"]?.toString() ?: ""
                     val isBuying = if (sellerId.isNotEmpty()) sellerId != currentUserId else buyerId == currentUserId
                     
                     val unreadCounts = data["unreadCounts"] as? Map<*, *>
-                    val unreadCount = (unreadCounts?.get(currentUserId) as? Long)?.toInt() ?: 
-                                     (data["unreadCounts.$currentUserId"] as? Long)?.toInt() ?: 0
+                    val unreadCount = (unreadCounts?.get(currentUserId) as? Number)?.toInt() ?: 
+                                     (data["unreadCounts.$currentUserId"] as? Number)?.toInt() ?: 0
 
-                    val lid = data["listingId"] as? String ?: ""
+                    val lid = data["listingId"]?.toString() ?: ""
 
                     ChatListItemData(
                         chatId = doc.id,
-                        name = if (isBuying) data["sellerName"] as? String ?: context.getString(R.string.seller_label) else data["buyerName"] as? String ?: context.getString(R.string.buyer_label),
-                        otherUserId = if (isBuying) data["sellerId"] as? String ?: "" else data["buyerId"] as? String ?: "",
+                        name = if (isBuying) data["sellerName"]?.toString() ?: context.getString(R.string.seller_label) else data["buyerName"]?.toString() ?: context.getString(R.string.buyer_label),
+                        otherUserId = if (isBuying) data["sellerId"]?.toString() ?: "" else data["buyerId"]?.toString() ?: "",
                         type = if (isBuying) "Buying" else "Selling",
                         listingId = lid,
-                        listingInfo = data["listingTitle"] as? String ?: "Listing",
-                        lastMessage = data["lastMessage"] as? String ?: "",
-                        time = (data["lastMessageTimestamp"] as? com.google.firebase.Timestamp)?.toDate()?.time ?: 
-                               (data["lastMessageTimestamp"] as? Long) ?: 0L,
+                        listingInfo = data["listingTitle"]?.toString() ?: "Listing",
+                        lastMessage = data["lastMessage"]?.toString() ?: "",
+                        time = when (val ts = data["lastMessageTimestamp"]) {
+                            is com.google.firebase.Timestamp -> ts.toDate().time
+                            is Number -> ts.toLong()
+                            else -> 0L
+                        },
                         unreadCount = unreadCount,
-                        listingImage = data["listingImage"] as? String,
+                        listingImage = data["listingImage"]?.toString(),
                         fullData = data + mapOf("id" to lid)
                     )
                 }.sortedByDescending { it.time }

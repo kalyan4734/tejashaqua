@@ -28,6 +28,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.android.gms.common.ConnectionResult
+import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.maps.model.LatLng
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.firestore.FirebaseFirestore
@@ -113,6 +115,12 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
+        // --- CHECK GOOGLE PLAY SERVICES ---
+        val availability = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(this)
+        if (availability != ConnectionResult.SUCCESS) {
+            GoogleApiAvailability.getInstance().getErrorDialog(this, availability, 9000)?.show()
+        }
+
         // --- PRINT APP HASH FOR OTP AUTO-FILL ---
         // Copy this string from Logcat and add it to your MSG91 SMS Template
         val helper = com.tejashaqua.app.utils.AppSignatureHelper(this)
@@ -280,26 +288,41 @@ class MainActivity : AppCompatActivity() {
 
                                     // Pre-fetch detailed info if possible but don't overwrite screen
                                     val sellerId = updatedData["userId"].toString()
-                                    if (sellerId.isNotEmpty()) {
-                                        FirebaseFirestore.getInstance().collection("users").document(sellerId).get()
-                                            .addOnSuccessListener { sellerDoc ->
-                                                val showMobile = sellerDoc.getBoolean("showMobileNumber") ?: false
-                                                val joined = sellerDoc.getLong("joinedAt") ?: 0L
-                                                updatedData["sellerShowMobile"] = showMobile
-                                                updatedData["sellerJoinedAt"] = joined
-                                                
-                                                selectedListingData = updatedData
-                                                chatSourceScreen = "dashboard"
-                                                dashboardTab = 2
-                                                shouldSendInitialChatMessage = false
-                                                currentScreen = "chat"
+                                    if (sellerId.isNotEmpty() && lid.isNotEmpty()) {
+                                        // Check if listing exists first
+                                        FirebaseFirestore.getInstance().collection("listings").document(lid).get()
+                                            .addOnSuccessListener { listingDoc ->
+                                                if (listingDoc.exists()) {
+                                                    FirebaseFirestore.getInstance().collection("users").document(sellerId).get()
+                                                        .addOnSuccessListener { sellerDoc ->
+                                                            val showMobile = sellerDoc.getBoolean("showMobileNumber") ?: false
+                                                            val joined = sellerDoc.getLong("joinedAt") ?: 0L
+                                                            updatedData["sellerShowMobile"] = showMobile
+                                                            updatedData["sellerJoinedAt"] = joined
+                                                            
+                                                            selectedListingData = updatedData
+                                                            chatSourceScreen = "dashboard"
+                                                            dashboardTab = 2
+                                                            shouldSendInitialChatMessage = false
+                                                            currentScreen = "chat"
+                                                        }
+                                                        .addOnFailureListener {
+                                                            selectedListingData = updatedData
+                                                            chatSourceScreen = "dashboard"
+                                                            dashboardTab = 2
+                                                            shouldSendInitialChatMessage = false
+                                                            currentScreen = "chat"
+                                                        }
+                                                } else {
+                                                    // Listing doesn't exist anymore
+                                                    Toast.makeText(context, context.getString(R.string.listing_deleted_title), Toast.LENGTH_SHORT).show()
+                                                    currentScreen = "dashboard"
+                                                    dashboardTab = 2 // Go to chat list instead
+                                                }
                                             }
                                             .addOnFailureListener {
-                                                selectedListingData = updatedData
-                                                chatSourceScreen = "dashboard"
+                                                currentScreen = "dashboard"
                                                 dashboardTab = 2
-                                                shouldSendInitialChatMessage = false
-                                                currentScreen = "chat"
                                             }
                                     } else {
                                         selectedListingData = updatedData
@@ -308,7 +331,15 @@ class MainActivity : AppCompatActivity() {
                                         shouldSendInitialChatMessage = false
                                         currentScreen = "chat"
                                     }
+                                } else {
+                                    // Chat doesn't exist
+                                    currentScreen = "dashboard"
+                                    dashboardTab = 2
                                 }
+                            }
+                            .addOnFailureListener {
+                                currentScreen = "dashboard"
+                                dashboardTab = 2
                             }
                     } else if (type == "rates") {
                         intentFlow.value = null

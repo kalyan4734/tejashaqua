@@ -205,7 +205,7 @@ class AuthViewModel(application: android.app.Application) : AndroidViewModel(app
                         android.util.Log.d("AuthViewModel", "OTP Sent successfully via MSG91")
                         _authState.value = AuthState.OtpSent("msg91_session")
                     } else {
-                        val message = response?.get("message") as? String ?: "Failed to send OTP"
+                        val message = response?.get("message")?.toString() ?: "Failed to send OTP"
                         _authState.value = AuthState.Error(message)
                     }
                 }
@@ -237,7 +237,7 @@ class AuthViewModel(application: android.app.Application) : AndroidViewModel(app
                     android.util.Log.d("AuthViewModel", "OTP Resent successfully")
                     _authState.value = AuthState.OtpSent("msg91_session_resend")
                 } else {
-                    val message = response?.get("message") as? String ?: "Failed to resend OTP"
+                    val message = response?.get("message")?.toString() ?: "Failed to resend OTP"
                     _authState.value = AuthState.Error(message)
                 }
             }
@@ -270,7 +270,7 @@ class AuthViewModel(application: android.app.Application) : AndroidViewModel(app
                 .addOnSuccessListener { result ->
                     val response = result.data as? Map<*, *>
                     if (response?.get("success") == true) {
-                        val customToken = response["customToken"] as? String
+                        val customToken = response["customToken"]?.toString()
                         if (customToken != null) {
                             signInWithCustomToken(customToken)
                         } else {
@@ -279,7 +279,7 @@ class AuthViewModel(application: android.app.Application) : AndroidViewModel(app
                         }
                     } else {
                         stopLoadingTimeout()
-                        val message = response?.get("message") as? String ?: "Invalid OTP"
+                        val message = response?.get("message")?.toString() ?: "Invalid OTP"
                         _authState.value = AuthState.Error(message)
                     }
                 }
