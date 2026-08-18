@@ -15,6 +15,7 @@ import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.functions.FirebaseFunctions
 import com.google.firebase.messaging.FirebaseMessaging
 import com.google.android.gms.auth.api.phone.SmsRetriever
+import com.tejashaqua.app.R
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -177,7 +178,7 @@ class AuthViewModel(application: android.app.Application) : AndroidViewModel(app
 
     fun sendOtp(phoneNumber: String, activity: Activity? = null) {
         if (phoneNumber.length != 10) {
-            _authState.value = AuthState.Error("Please enter a valid 10-digit phone number.")
+            _authState.value = AuthState.Error(getApplication<android.app.Application>().getString(R.string.invalid_phone_error))
             return
         }
         
@@ -248,11 +249,11 @@ class AuthViewModel(application: android.app.Application) : AndroidViewModel(app
 
     fun verifyOtp(otp: String) {
         if (otp.length != 6) {
-            _authState.value = AuthState.Error("Please enter a 6-digit OTP.")
+            _authState.value = AuthState.Error(getApplication<android.app.Application>().getString(R.string.otp_6_digit_error))
             return
         }
         if (pendingPhoneNumber.isEmpty()) {
-            _authState.value = AuthState.Error("Session expired. Please resend OTP.")
+            _authState.value = AuthState.Error(getApplication<android.app.Application>().getString(R.string.session_expired_error))
             return
         }
         

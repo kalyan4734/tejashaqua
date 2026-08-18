@@ -1,7 +1,6 @@
 package com.tejashaqua.app.ui.screens
 
 import android.widget.Toast
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -229,7 +228,7 @@ fun FishRatesAdmin(selectedDate: Long, onBackClick: () -> Unit) {
                                     }
                                     newChange = when {
                                         diff > 0 -> "+₹$diff"
-                                        diff < 0 -> "-₹${Math.abs(diff)}"
+                                        diff < 0 -> "-₹${kotlin.math.abs(diff)}"
                                         else -> ""
                                     }
                                 }
@@ -474,7 +473,7 @@ fun PrawnRatesAdmin(selectedDate: Long, onBackClick: () -> Unit) {
                             }
                             change = when {
                                 diff > 0 -> "+₹$diff"
-                                diff < 0 -> "-₹${Math.abs(diff)}"
+                                diff < 0 -> "-₹${kotlin.math.abs(diff)}"
                                 else -> ""
                             }
                         }

@@ -1,7 +1,6 @@
 package com.tejashaqua.app.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -55,18 +54,27 @@ fun AquaRatesScreen(
 
     LaunchedEffect(Unit) {
         db.collection("aqua_rates")
-            .addSnapshotListener { value, error ->
+            .addSnapshotListener { value, _ ->
                 if (value != null) {
-                    val fetchedMap = value.documents.associateBy({ it.id.lowercase(java.util.Locale.ROOT) }, { doc ->
+                    val fetchedMap = value.documents.associateBy(
+                        { it.id.lowercase(java.util.Locale.ROOT) }
+                    ) { doc ->
                         val price = doc.getString("price") ?: "--"
                         val change = doc.getString("change") ?: ""
                         val trendStr = doc.getString("trend") ?: "FLAT"
-                        val trend = try { RateTrend.valueOf(trendStr) } catch (e: Exception) { RateTrend.FLAT }
+                        val trend = try { RateTrend.valueOf(trendStr) } catch (_: Exception) { RateTrend.FLAT }
                         val isPrawn = doc.getBoolean("isPrawn") ?: (doc.id.lowercase(java.util.Locale.ROOT) == "prawns")
-                        val lastUpdated = doc.getLong("lastUpdated") ?: 0L
+                        
+                        // Robust retrieval of lastUpdated (handles Long and Timestamp)
+                        val lastUpdated = when (val ts = doc.get("lastUpdated")) {
+                            is Long -> ts
+                            is com.google.firebase.Timestamp -> ts.toDate().time
+                            is Number -> ts.toLong()
+                            else -> 0L
+                        }
                         
                         AquaRate(doc.id, price, change, trend, isPrawn, lastUpdated)
-                    })
+                    }
 
                     // Merge with the fixed list of fish types
                     rates = fishTypes.map { fish ->

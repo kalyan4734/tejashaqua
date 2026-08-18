@@ -53,6 +53,7 @@ import com.tejashaqua.app.ui.theme.GrayText
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.withContext
 
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.tejashaqua.app.ui.viewmodel.UserActionViewModel
@@ -669,23 +670,25 @@ fun DetailedPageScreen(
 
                     LaunchedEffect(fullLocation) {
                         if (lat == null || lng == null) {
-                            try {
-                                val geocoder = Geocoder(context, Locale.getDefault())
-                                val addresses = geocoder.getFromLocationName(fullLocation, 1)
-                                if (!addresses.isNullOrEmpty()) {
-                                    val address = addresses[0]
-                                    lat = address.latitude
-                                    lng = address.longitude
+                            withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                try {
+                                    val geocoder = Geocoder(context, Locale.getDefault())
+                                    val addresses = geocoder.getFromLocationName(fullLocation, 1)
+                                    if (!addresses.isNullOrEmpty()) {
+                                        val address = addresses[0]
+                                        lat = address.latitude
+                                        lng = address.longitude
+                                    }
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
                                 }
-                            } catch (e: Exception) {
-                                e.printStackTrace()
                             }
                         }
                     }
 
                     LaunchedEffect(lat, lng) {
                         if (lat != null && lng != null) {
-                            cameraPositionState.move(CameraUpdateFactory.newLatLngZoom(LatLng(lat!!, lng!!), 13f))
+                            cameraPositionState.animate(CameraUpdateFactory.newLatLngZoom(LatLng(lat!!, lng!!), 13f))
                         }
                     }
 
@@ -711,16 +714,22 @@ fun DetailedPageScreen(
                         GoogleMap(
                             modifier = Modifier.fillMaxSize(),
                             cameraPositionState = cameraPositionState,
-                            properties = MapProperties(isMyLocationEnabled = hasLocationPermission),
+                            properties = MapProperties(
+                                isMyLocationEnabled = hasLocationPermission,
+                                mapType = MapType.NORMAL
+                            ),
                             uiSettings = MapUiSettings(
                                 zoomControlsEnabled = false,
                                 mapToolbarEnabled = true,
                                 myLocationButtonEnabled = hasLocationPermission,
-                                compassEnabled = false
+                                compassEnabled = false,
+                                scrollGesturesEnabled = false, // Disable scroll inside LazyColumn to avoid conflicts
+                                zoomGesturesEnabled = true
                             )
                         ) {
+                            val markerPos = LatLng(lat ?: finalLat, lng ?: finalLng)
                             Marker(
-                                state = MarkerState(position = LatLng(lat ?: finalLat, lng ?: finalLng)),
+                                state = MarkerState(position = markerPos),
                                 title = location,
                                 icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)
                             )

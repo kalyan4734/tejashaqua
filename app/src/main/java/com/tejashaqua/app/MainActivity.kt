@@ -1,6 +1,5 @@
 package com.tejashaqua.app
 
-import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -164,6 +163,7 @@ class MainActivity : AppCompatActivity() {
 
                 var dashboardTab by remember { mutableIntStateOf(0) }
                 var showNoInternetDialog by remember { mutableStateOf(false) }
+                var isNavigatingToDetailedPage by remember { mutableStateOf(false) }
 
                 var lastBackPressTime by remember { mutableLongStateOf(0L) }
 
@@ -210,10 +210,12 @@ class MainActivity : AppCompatActivity() {
                         listingBackStack = emptyList()
                         currentScreen = "detailed_page"
                     } else {
+                        isNavigatingToDetailedPage = true
                         // ALWAYS fetch user preference before navigating to ensure NO flicker
                         // Firestore 'get()' will use cache if available, so it's very fast.
                         FirebaseFirestore.getInstance().collection("users").document(sellerId).get()
                             .addOnSuccessListener { doc ->
+                                isNavigatingToDetailedPage = false
                                 val updatedData = data.toMutableMap()
                                 val showMobile = doc.getBoolean("showMobileNumber") ?: false
                                 val joined = doc.getLong("joinedAt") ?: 0L
@@ -230,6 +232,7 @@ class MainActivity : AppCompatActivity() {
                                 currentScreen = "detailed_page"
                             }
                             .addOnFailureListener {
+                                isNavigatingToDetailedPage = false
                                 selectedListingData = data
                                 detailedPageSource = source
                                 if (source != "detailed_page") {
@@ -408,10 +411,11 @@ class MainActivity : AppCompatActivity() {
                                     if (locationPickerSource == "listing") "edit_listing" else "dashboard"
                             }
                             "language_selection" -> {
-                                if (languageSelectionSource == "profile") {
-                                    currentScreen = "profile"
+                                currentScreen = if (languageSelectionSource == "profile") {
+                                    "profile"
                                 } else {
                                     finish()
+                                    "splash" // Unreachable but needed for type
                                 }
                             }
                         }
@@ -566,41 +570,6 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 Box(modifier = Modifier.fillMaxSize()) {
-                    if (showNoInternetDialog) {
-                        AlertDialog(
-                            onDismissRequest = { showNoInternetDialog = false },
-                            title = { Text(stringResource(R.string.no_internet_title)) },
-                            text = { Text(stringResource(R.string.no_internet_desc)) },
-                            confirmButton = {
-                                TextButton(onClick = { showNoInternetDialog = false }) {
-                                    Text(stringResource(R.string.ok))
-                                }
-                            }
-                        )
-                    }
-
-                    visibleRationale?.let { type ->
-                        PermissionRationaleDialog(
-                            type = type,
-                            onConfirm = { pViewModel.onRationaleConfirm() },
-                            onDismiss = { pViewModel.onRationaleDismiss() }
-                        )
-                    }
-
-                    settingsDialogType?.let { type ->
-                        SettingsRedirectDialog(
-                            type = type,
-                            onConfirm = {
-                                pViewModel.dismissSettingsDialog()
-                                val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                    data = android.net.Uri.fromParts("package", packageName, null)
-                                }
-                                startActivity(intent)
-                            },
-                            onDismiss = { pViewModel.dismissSettingsDialog() }
-                        )
-                    }
-
                     if (needsUpdate) {
                         ForceUpdateScreen(updateUrl = updateUrl)
                     } else {
@@ -870,7 +839,9 @@ class MainActivity : AppCompatActivity() {
                                     currentScreen =
                                         if (isEditMode) "my_listings" else "select_category"
                                 },
-                                onPostClick = { currentScreen = "dashboard" },
+                                onPostClick = { data ->
+                                    navigateToDetailedPage(data, "dashboard")
+                                },
                                 onDeleteClick = { currentScreen = "dashboard" },
                                 onLocationChangeClick = {
                                     pViewModel.requestFeaturePermissions(listOf(PermissionType.LOCATION)) {
@@ -967,10 +938,49 @@ class MainActivity : AppCompatActivity() {
                             "admin_dashboard" -> AdminDashboardScreen(
                                 onBackClick = { currentScreen = "dashboard" })
                         }
+                    }
 
-                        if (authState is AuthState.Loading) {
-                            LoadingOverlay(stringResource(R.string.signing_in))
-                        }
+                    if (isNavigatingToDetailedPage) {
+                        LoadingOverlay(stringResource(R.string.fetching_details))
+                    }
+
+                    if (authState is AuthState.Loading) {
+                        LoadingOverlay(stringResource(R.string.signing_in))
+                    }
+
+                    if (showNoInternetDialog) {
+                        AlertDialog(
+                            onDismissRequest = { showNoInternetDialog = false },
+                            title = { Text(stringResource(R.string.no_internet_title)) },
+                            text = { Text(stringResource(R.string.no_internet_desc)) },
+                            confirmButton = {
+                                TextButton(onClick = { showNoInternetDialog = false }) {
+                                    Text(stringResource(R.string.ok))
+                                }
+                            }
+                        )
+                    }
+
+                    visibleRationale?.let { type ->
+                        PermissionRationaleDialog(
+                            type = type,
+                            onConfirm = { pViewModel.onRationaleConfirm() },
+                            onDismiss = { pViewModel.onRationaleDismiss() }
+                        )
+                    }
+
+                    settingsDialogType?.let { type ->
+                        SettingsRedirectDialog(
+                            type = type,
+                            onConfirm = {
+                                pViewModel.dismissSettingsDialog()
+                                val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                    data = android.net.Uri.fromParts("package", packageName, null)
+                                }
+                                startActivity(intent)
+                            },
+                            onDismiss = { pViewModel.dismissSettingsDialog() }
+                        )
                     }
                 }
             }

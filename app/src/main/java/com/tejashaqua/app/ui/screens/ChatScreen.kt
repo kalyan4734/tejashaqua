@@ -545,7 +545,7 @@ fun ChatScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(chatMessages) { msg ->
-                    ChatBubble(msg, if (!msg.isFromMe) sellerName else currentUserName)
+                    ChatBubble(msg, if (!msg.isFromMe) sellerName else currentUserName, listingExists)
                 }
             }
         }
@@ -553,7 +553,7 @@ fun ChatScreen(
 }
 
 @Composable
-fun ChatBubble(message: ChatMessage, senderName: String) {
+fun ChatBubble(message: ChatMessage, senderName: String, listingExists: Boolean = true) {
     val timeFormat = remember { java.text.SimpleDateFormat("hh:mm a", java.util.Locale.getDefault()) }
     val timeString = timeFormat.format(java.util.Date(message.timestamp))
     val context = LocalContext.current
@@ -583,45 +583,68 @@ fun ChatBubble(message: ChatMessage, senderName: String) {
         ) {
             Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
                 val phoneRegex = remember { Regex("""(\+91|0)?[6-9][0-9]{9}""") }
+                
+                // If listing is inactive, completely remove phone numbers from the text
+                val processedText = if (!listingExists) {
+                    message.text.replace(phoneRegex, "[Number Hidden]")
+                } else {
+                    message.text
+                }
+
                 val annotatedString = buildAnnotatedString {
-                    append(message.text)
-                    val matches = phoneRegex.findAll(message.text)
-                    for (match in matches) {
-                        addStringAnnotation(
-                            tag = "phone",
-                            annotation = match.value,
-                            start = match.range.first,
-                            end = match.range.last + 1
-                        )
-                        addStyle(
-                            style = SpanStyle(
-                                color = if (message.isFromMe) Color(0xFFE1F5FE) else Color(0xFF1976D2),
-                                textDecoration = TextDecoration.Underline,
-                                fontWeight = FontWeight.ExtraBold
-                            ),
-                            start = match.range.first,
-                            end = match.range.last + 1
-                        )
+                    append(processedText)
+                    
+                    // Only add phone annotations if listing is active
+                    if (listingExists) {
+                        val matches = phoneRegex.findAll(processedText)
+                        for (match in matches) {
+                            addStringAnnotation(
+                                tag = "phone",
+                                annotation = match.value,
+                                start = match.range.first,
+                                end = match.range.last + 1
+                            )
+                            addStyle(
+                                style = SpanStyle(
+                                    color = if (message.isFromMe) Color(0xFFE1F5FE) else Color(0xFF1976D2),
+                                    textDecoration = TextDecoration.Underline,
+                                    fontWeight = FontWeight.ExtraBold
+                                ),
+                                start = match.range.first,
+                                end = match.range.last + 1
+                            )
+                        }
                     }
                 }
 
-                ClickableText(
-                    text = annotatedString,
-                    style = TextStyle(
-                        color = contentColor,
-                        fontSize = 15.sp,
-                        lineHeight = 20.sp
-                    ),
-                    onClick = { offset ->
-                        annotatedString.getStringAnnotations(tag = "phone", start = offset, end = offset)
-                            .firstOrNull()?.let { annotation ->
-                                val intent = Intent(Intent.ACTION_DIAL).apply {
-                                    data = Uri.parse("tel:${annotation.item}")
+                if (listingExists) {
+                    ClickableText(
+                        text = annotatedString,
+                        style = TextStyle(
+                            color = contentColor,
+                            fontSize = 15.sp,
+                            lineHeight = 20.sp
+                        ),
+                        onClick = { offset ->
+                            annotatedString.getStringAnnotations(tag = "phone", start = offset, end = offset)
+                                .firstOrNull()?.let { annotation ->
+                                    val intent = Intent(Intent.ACTION_DIAL).apply {
+                                        data = Uri.parse("tel:${annotation.item}")
+                                    }
+                                    context.startActivity(intent)
                                 }
-                                context.startActivity(intent)
-                            }
-                    }
-                )
+                        }
+                    )
+                } else {
+                    Text(
+                        text = annotatedString.text,
+                        style = TextStyle(
+                            color = contentColor,
+                            fontSize = 15.sp,
+                            lineHeight = 20.sp
+                        )
+                    )
+                }
                 
                 Text(
                     text = timeString,

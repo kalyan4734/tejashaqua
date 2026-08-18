@@ -1,6 +1,5 @@
 package com.tejashaqua.app.ui.screens
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -21,7 +20,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -153,9 +151,9 @@ fun DashboardScreen(
             .limit(20)
 
         query.get().addOnSuccessListener { snapshot ->
-            val newItems = snapshot.documents.map { 
-                val data = it.data?.toMutableMap() ?: mutableMapOf()
-                data["id"] = it.id
+            val newItems = snapshot.documents.map { doc -> 
+                val data = doc.data?.toMutableMap() ?: mutableMapOf()
+                data["id"] = doc.id
                 data
             }
             
@@ -180,8 +178,8 @@ fun DashboardScreen(
             
         query.addSnapshotListener { snapshot, _ ->
             isLoadingListings = false
-            if (snapshot != null) {
-                val newFirstPage = snapshot.documents.map { 
+            snapshot?.let {
+                val newFirstPage = it.documents.map { 
                     val data = it.data?.toMutableMap() ?: mutableMapOf()
                     data["id"] = it.id
                     data
@@ -218,15 +216,14 @@ fun DashboardScreen(
 
     // Update unread count whenever listings or lastCheckedNotifications change
     LaunchedEffect(listings, lastCheckedNotifications) {
-        if (lastCheckedNotifications > 0) {
-            val count = listings.count { data ->
+        unreadNotificationCount = if (lastCheckedNotifications > 0) {
+            listings.count { data ->
                 val ts = data["timestamp"] as? Long ?: 0L
                 val userId = data["userId"] as? String ?: ""
                 ts > lastCheckedNotifications && userId != currentUserId
             }
-            unreadNotificationCount = count
         } else {
-            unreadNotificationCount = 0
+            0
         }
     }
 
@@ -320,18 +317,21 @@ fun DashboardScreen(
                     val unreadCount = (unreadCounts?.get(currentUserId) as? Long)?.toInt() ?: 
                                      (data["unreadCounts.$currentUserId"] as? Long)?.toInt() ?: 0
 
+                    val lid = data["listingId"] as? String ?: ""
+
                     ChatListItemData(
                         chatId = doc.id,
                         name = if (isBuying) data["sellerName"] as? String ?: context.getString(R.string.seller_label) else data["buyerName"] as? String ?: context.getString(R.string.buyer_label),
                         otherUserId = if (isBuying) data["sellerId"] as? String ?: "" else data["buyerId"] as? String ?: "",
                         type = if (isBuying) "Buying" else "Selling",
+                        listingId = lid,
                         listingInfo = data["listingTitle"] as? String ?: "Listing",
                         lastMessage = data["lastMessage"] as? String ?: "",
                         time = (data["lastMessageTimestamp"] as? com.google.firebase.Timestamp)?.toDate()?.time ?: 
                                (data["lastMessageTimestamp"] as? Long) ?: 0L,
                         unreadCount = unreadCount,
                         listingImage = data["listingImage"] as? String,
-                        fullData = data + mapOf("id" to (data["listingId"] ?: ""))
+                        fullData = data + mapOf("id" to lid)
                     )
                 }.sortedByDescending { it.time }
             }
@@ -1051,19 +1051,19 @@ fun AquaRatesSection(onRateClick: (AquaRate) -> Unit) {
         db.collection("aqua_rates")
             .addSnapshotListener { value, _ ->
                 if (value != null) {
-                    val fetchedMap = value.documents.associateBy({ it.id.lowercase(java.util.Locale.ROOT) }, { doc ->
+                    val fetchedMap = value.documents.associateBy({ it.id.lowercase(Locale.ROOT) }, { doc ->
                         val price = doc.getString("price") ?: "--"
                         val change = doc.getString("change") ?: ""
                         val trendStr = doc.getString("trend") ?: "FLAT"
                         val trend = try { RateTrend.valueOf(trendStr) } catch (_: Exception) { RateTrend.FLAT }
-                        val isPrawn = doc.getBoolean("isPrawn") ?: (doc.id.lowercase(java.util.Locale.ROOT) == "prawns")
+                        val isPrawn = doc.getBoolean("isPrawn") ?: (doc.id.lowercase(Locale.ROOT) == "prawns")
                         
                         AquaRate(doc.id, price, change, trend, isPrawn)
                     })
 
                     // Merge with the fixed list of fish types
                     rates = fishTypes.map { fish ->
-                        fetchedMap[fish.lowercase(java.util.Locale.ROOT)] ?: AquaRate(fish, "--", "", RateTrend.FLAT, isPrawn = fish.lowercase(java.util.Locale.ROOT) == "prawns")
+                        fetchedMap[fish.lowercase(Locale.ROOT)] ?: AquaRate(fish, "--", "", RateTrend.FLAT, isPrawn = fish.lowercase(Locale.ROOT) == "prawns")
                     }
                 }
                 

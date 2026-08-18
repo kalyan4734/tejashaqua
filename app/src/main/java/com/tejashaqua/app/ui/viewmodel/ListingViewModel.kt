@@ -82,11 +82,11 @@ class ListingViewModel(application: Application) : AndroidViewModel(application)
                 // Show local notification for feedback
                 NotificationUtils.showLocalNotification(
                     getApplication(),
-                    "Ad Posted Successfully!",
-                    "Your listing '$title' is now live."
+                    getApplication<Application>().getString(R.string.ad_posted_success),
+                    getApplication<Application>().getString(R.string.ad_posted_desc, title)
                 )
 
-                _postState.value = PostState.Success
+                _postState.value = PostState.Success(finalData)
             } catch (e: Exception) {
                 _postState.value = PostState.Error(e.localizedMessage ?: "Failed to post listing")
             }
@@ -147,7 +147,7 @@ class ListingViewModel(application: Application) : AndroidViewModel(application)
             try {
                 val doc = db.collection("listings").document(listingId).get().await()
                 if (doc.exists()) {
-                    val images = doc.get("images") as? List<*>
+                    val images = doc["images"] as? List<*>
                     images?.forEach { imageUrl ->
                         try {
                             storage.getReferenceFromUrl(imageUrl.toString()).delete().await()
@@ -170,7 +170,7 @@ class ListingViewModel(application: Application) : AndroidViewModel(application)
     sealed class PostState {
         object Idle : PostState()
         object Loading : PostState()
-        object Success : PostState()
+        data class Success(val data: Map<String, Any>) : PostState()
         data class Error(val message: String) : PostState()
     }
 }

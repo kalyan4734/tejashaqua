@@ -190,6 +190,15 @@ fun OtpScreen(
             color = Color.Black
         )
 
+        if (otpValue.isEmpty() && !isLoading) {
+            Text(
+                text = stringResource(R.string.waiting_for_otp),
+                fontSize = 12.sp,
+                color = AquaBlue.copy(alpha = 0.7f),
+                modifier = Modifier.padding(top = 4.dp)
+            )
+        }
+
         Spacer(modifier = Modifier.height(16.dp))
 
         BasicTextField(

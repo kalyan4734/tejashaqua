@@ -452,4 +452,11 @@
     <string name="notification_rationale">నోటిఫికేషన్ యాక్సెస్ మీ ప్రకటనల గురించి ముఖ్యమైన అప్‌డేట్‌లను స్వీకరించడంలో మీకు సహాయపడుతుంది.</string>
     <string name="listing_deleted_title">జాబితా ఇకపై అందుబాటులో లేదు</string>
     <string name="listing_deleted_message">ఈ ప్రకటన వినియోగదారు ద్వారా తొలగించబడింది మరియు ఇకపై అందుబాటులో లేదు.</string>
+    <string name="inactive">నిష్క్రియంగా ఉంది</string>
+    <string name="session_expired_error">సెషన్ ముగిసింది. దయచేసి OTPని మళ్లీ పంపండి.</string>
+    <string name="otp_6_digit_error">దయచేసి 6-అంకెల OTPని నమోదు చేయండి.</string>
+    <string name="ad_posted_success">ప్రకటన విజయవంతంగా పోస్ట్ చేయబడింది!</string>
+    <string name="ad_posted_desc">మీ ప్రకటన \'%s\' ఇప్పుడు లైవ్‌లో ఉంది.</string>
+    <string name="otp_verify_failed">ధృవీకరణ విఫలమైంది. దయచేసి మళ్లీ ప్రయత్నించండి.</string>
+    <string name="waiting_for_otp">OTP కోసం వేచి ఉంది…</string>
 </resources>

@@ -5,7 +5,6 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.result.launch
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -43,7 +42,6 @@ import com.tejashaqua.app.ui.theme.AquaBlue
 import com.tejashaqua.app.ui.viewmodel.ListingViewModel
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.intl.LocaleList
-import java.util.Locale
 import com.tejashaqua.app.utils.LocaleHelper
 import com.tejashaqua.app.utils.ImageUtils
 import com.tejashaqua.app.utils.CurrencyUtils
@@ -61,7 +59,7 @@ fun EditListingScreen(
     initialLocation: String,
     initialLatLng: LatLng? = null,
     onBackClick: () -> Unit,
-    onPostClick: () -> Unit,
+    onPostClick: (Map<String, Any>) -> Unit,
     onDeleteClick: () -> Unit = {},
     onLocationChangeClick: () -> Unit,
     listingViewModel: ListingViewModel = viewModel(),
@@ -133,7 +131,7 @@ fun EditListingScreen(
     ) { success ->
         if (success) {
             tempCameraUri?.let { uri ->
-                selectedPhotos = selectedPhotos + uri.toString()
+                selectedPhotos += uri.toString()
                 photoError = false
             }
         }
@@ -145,7 +143,7 @@ fun EditListingScreen(
         val remainingSlots = 5 - selectedPhotos.size
         if (remainingSlots > 0 && uris.isNotEmpty()) {
             val toAdd = uris.take(remainingSlots).map { it.toString() }
-            selectedPhotos = selectedPhotos + toAdd
+            selectedPhotos += toAdd
             if (uris.size > remainingSlots) {
                 Toast.makeText(context, "Only 5 photos allowed. Added $remainingSlots photos.", Toast.LENGTH_SHORT).show()
             }
@@ -161,7 +159,10 @@ fun EditListingScreen(
 
     if (showPhotoOptions) {
         AlertDialog(
-            onDismissRequest = { showPhotoOptions = false },
+            onDismissRequest = { 
+                keyboardController?.hide()
+                showPhotoOptions = false 
+            },
             title = { Text(stringResource(R.string.choose_photo_source)) },
             text = {
                 Column {
@@ -178,7 +179,7 @@ fun EditListingScreen(
                                 if (uri != null) {
                                     try {
                                         cameraLauncher.launch(uri)
-                                    } catch (e: Exception) {
+                                    } catch (_: Exception) {
                                         Toast.makeText(context, "Could not open camera app", Toast.LENGTH_SHORT).show()
                                     }
                                 }
@@ -222,7 +223,7 @@ fun EditListingScreen(
         
         // Title is hidden for all categories, so we don't validate it here
         if (location.isBlank() || location == fetchingLocText || location == deniedLocText || location == failedLocText) errors["location"] = true
-        if (selectedPhotos.isEmpty() && category != ListingCategory.JOBS) photoError = true else photoError = false
+        photoError = selectedPhotos.isEmpty() && category != ListingCategory.JOBS
 
         when (category) {
             ListingCategory.FISH -> {
@@ -291,7 +292,7 @@ fun EditListingScreen(
         if (errors.isNotEmpty() || photoError) {
             Toast.makeText(context, context.getString(R.string.fill_mandatory_fields), Toast.LENGTH_SHORT).show()
         } else {
-            val finalTitle = if (title.isBlank()) {
+            val finalTitle = title.ifBlank {
                 when (category) {
                     ListingCategory.FISH -> fishType
                     ListingCategory.PRAWNS -> prawnType
@@ -303,11 +304,9 @@ fun EditListingScreen(
                     ListingCategory.TANKS -> tankType
                     ListingCategory.JOBS -> jobType
                 }
-            } else {
-                title
             }
 
-            val finalDescription = if (description.isBlank()) {
+            val finalDescription = description.ifBlank {
                 generateDefaultDescription(
                     context, category, finalTitle, price, fishType, sizeValue, sizeType,
                     quantity, unitType, prawnType, hatcheryName, rateValue, rateType,
@@ -316,8 +315,6 @@ fun EditListingScreen(
                     tankAcres, tankLocation, jobType, salary, selectedServiceType,
                     tankType
                 )
-            } else {
-                description
             }
 
             val data = buildListingMap(
@@ -462,9 +459,8 @@ fun EditListingScreen(
                         }
 
                         // Handle images if any
-                        val imageUrls = doc.get("images") as? List<String>
-                        if (imageUrls != null) {
-                            selectedPhotos = imageUrls
+                        (doc.get("images") as? List<*>)?.let { imageUrls ->
+                            selectedPhotos = imageUrls.filterIsInstance<String>()
                         }
                     }
                 }
@@ -475,11 +471,13 @@ fun EditListingScreen(
     }
 
     LaunchedEffect(postState) {
-        if (postState is ListingViewModel.PostState.Success) {
+        val currentState = postState
+        if (currentState is ListingViewModel.PostState.Success) {
+            val data = currentState.data
             listingViewModel.resetState()
-            onPostClick()
-        } else if (postState is ListingViewModel.PostState.Error) {
-            val message = (postState as ListingViewModel.PostState.Error).message
+            onPostClick(data)
+        } else if (currentState is ListingViewModel.PostState.Error) {
+            val message = currentState.message
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
         }
     }
@@ -1216,7 +1214,7 @@ fun BusinessFields(
 
         SearchableListingDropdown(
             label = stringResource(R.string.business_type_label),
-            value = if (businessType.isNotEmpty()) businessType else businessSubCategory,
+            value = businessType.ifEmpty { businessSubCategory },
             options = listOf(fishFeed, prawnFeed, fishMed, prawnMed, othersStr),
             onSelectionChange = {
                 if (it == othersStr) {
@@ -1356,8 +1354,6 @@ fun ServiceFields(
         val boreWell = stringResource(R.string.service_bore_well)
         val fishVehicles = stringResource(R.string.service_live_fish_vehicles)
         val nets = stringResource(R.string.service_nets)
-        val chartWriting = stringResource(R.string.service_chart_writing)
-        val earthMovers = stringResource(R.string.service_earth_movers)
 
         SearchableListingDropdown(
             label = stringResource(R.string.service_type_label),
@@ -1720,7 +1716,7 @@ fun ListingDropdown(label: String, value: String, options: List<String>, onSelec
                 value = value,
                 onValueChange = {},
                 readOnly = true,
-                modifier = Modifier.fillMaxWidth().menuAnchor(),
+                modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable),
                 shape = RoundedCornerShape(12.dp),
                 isError = isError,
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },

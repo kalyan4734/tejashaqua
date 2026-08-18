@@ -14,6 +14,9 @@ setGlobalOptions({ region: "asia-south1" });
 const MSG91_AUTH_KEY = defineSecret("MSG91_AUTH_KEY");
 const MSG91_TEMPLATE_ID = defineSecret("MSG91_TEMPLATE_ID");
 
+const TEST_PHONE = "919999999999";
+const TEST_OTP = "123456";
+
 const normalizePhoneNumber = (phoneNumber) => {
   if (!phoneNumber) return "";
   let cleaned = phoneNumber.replace(/\D/g, "");
@@ -28,6 +31,11 @@ exports.sendOtp = onCall({
   const phoneNumber = request.data.phoneNumber;
   if (!phoneNumber) return {success: false, message: "Phone number is required"};
   const formattedPhone = normalizePhoneNumber(phoneNumber);
+
+  if (formattedPhone === TEST_PHONE) {
+    logger.info(`Test account login attempt: ${formattedPhone}`);
+    return {success: true};
+  }
 
   try {
     const response = await axios.get("https://control.msg91.com/api/v5/otp", {
@@ -55,6 +63,19 @@ exports.verifyOtp = onCall({
   if (!phoneNumber || !otp) return {success: false, message: "Phone and OTP required"};
 
   const formattedPhone = normalizePhoneNumber(phoneNumber);
+
+  if (formattedPhone === TEST_PHONE && otp === TEST_OTP) {
+    logger.info(`Test account login success: ${formattedPhone}`);
+    const fullPhoneNumber = "+" + formattedPhone;
+    let userRecord;
+    try {
+      userRecord = await admin.auth().getUserByPhoneNumber(fullPhoneNumber);
+    } catch (e) {
+      userRecord = await admin.auth().createUser({ phoneNumber: fullPhoneNumber });
+    }
+    const customToken = await admin.auth().createCustomToken(userRecord.uid);
+    return { success: true, customToken: customToken };
+  }
 
   try {
     // 1. Verify with MSG91
@@ -104,6 +125,9 @@ exports.resendOtp = onCall({
   const phoneNumber = request.data.phoneNumber;
   if (!phoneNumber) return {success: false, message: "Phone number is required"};
   const formattedPhone = normalizePhoneNumber(phoneNumber);
+
+  if (formattedPhone === TEST_PHONE) return {success: true};
+
   try {
     const response = await axios.get("https://control.msg91.com/api/v5/otp/retry", {
       params: { authkey: MSG91_AUTH_KEY.value(), mobile: formattedPhone, retrytype: "text" }

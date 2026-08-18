@@ -453,4 +453,12 @@ These terms shall be governed by and construed in accordance with the laws of In
     <string name="notification_rationale">Notification access helps you receive important updates about your advertisements.</string>
     <string name="listing_deleted_title">Listing No Longer Available</string>
     <string name="listing_deleted_message">This ad has been deleted by the user and is no longer available.</string>
+    <string name="inactive">Inactive</string>
+    <string name="session_expired_error">Session expired. Please resend OTP.</string>
+    <string name="otp_6_digit_error">Please enter a 6-digit OTP.</string>
+    <string name="ad_posted_success">Ad Posted Successfully!</string>
+    <string name="ad_posted_desc">Your listing \'%s\' is now live.</string>
+    <string name="otp_verify_failed">Verification failed. Please try again.</string>
+    <string name="waiting_for_otp">Waiting for OTP…</string>
+    <string name="google_maps_key" translatable="false">AIzaSyD5VUXOhcaF840JnM5YaUMIH1cx2Qdj4QM</string>
 </resources>

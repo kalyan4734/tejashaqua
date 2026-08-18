@@ -36,7 +36,7 @@ class TejashAquaApplication : Application() {
         if (!Places.isInitialized()) {
             val lang = LocaleHelper.getSelectedLanguage(this) ?: "en"
             val locale = Locale.forLanguageTag(lang)
-            Places.initialize(this, "AIzaSyC1H1cs7ieShx2j_s66MsOJO6YOi5S_TjQ", locale)
+            Places.initialize(this, getString(R.string.google_maps_key), locale)
         }
     }
 }

@@ -92,18 +92,21 @@ fun ChatListScreen(
                     val unreadCount = (unreadCounts?.get(currentUserId) as? Long)?.toInt() ?: 
                                      (data["unreadCounts.$currentUserId"] as? Long)?.toInt() ?: 0
 
+                    val listingId = data["listingId"] as? String ?: ""
+
                     ChatListItemData(
                         chatId = doc.id,
                         name = if (isBuying) data["sellerName"] as? String ?: "Seller" else data["buyerName"] as? String ?: "Buyer",
                         otherUserId = if (isBuying) data["sellerId"] as? String ?: "" else data["buyerId"] as? String ?: "",
                         type = if (isBuying) "Buying" else "Selling",
+                        listingId = listingId,
                         listingInfo = data["listingTitle"] as? String ?: "Listing",
                         lastMessage = data["lastMessage"] as? String ?: "",
                         time = (data["lastMessageTimestamp"] as? com.google.firebase.Timestamp)?.toDate()?.time ?: 
                                (data["lastMessageTimestamp"] as? Long) ?: 0L,
                         unreadCount = unreadCount,
                         listingImage = data["listingImage"] as? String,
-                        fullData = data + mapOf("id" to (data["listingId"] ?: ""))
+                        fullData = data + mapOf("id" to listingId)
                     )
                 }.sortedByDescending { it.time }
                 
@@ -225,23 +228,57 @@ fun ChatListScreen(
 
 @Composable
 fun ChatListItem(chat: ChatListItemData, onClick: () -> Unit) {
+    val db = FirebaseFirestore.getInstance()
+    var listingExists by remember(chat.listingId) { mutableStateOf(true) }
+
+    LaunchedEffect(chat.listingId) {
+        if (chat.listingId.isNotEmpty()) {
+            db.collection("listings").document(chat.listingId)
+                .addSnapshotListener { snapshot, _ ->
+                    listingExists = snapshot != null && snapshot.exists()
+                }
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() }
+            .background(if (listingExists) Color.Transparent else Color(0xFFF9F9F9))
             .padding(16.dp)
     ) {
-        Surface(
-            color = Color(0xFFF5F5F5),
-            shape = RoundedCornerShape(4.dp),
-            modifier = Modifier.padding(bottom = 8.dp)
-        ) {
-            Text(
-                text = chat.listingInfo,
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                fontSize = 11.sp,
-                color = Color.Black
-            )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Surface(
+                color = if (listingExists) Color(0xFFF5F5F5) else Color(0xFFEEEEEE),
+                shape = RoundedCornerShape(4.dp),
+                modifier = Modifier.padding(bottom = 8.dp).weight(1f, fill = false)
+            ) {
+                Text(
+                    text = chat.listingInfo,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                    fontSize = 11.sp,
+                    color = if (listingExists) Color.Black else Color.Gray,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            
+            if (!listingExists) {
+                Spacer(modifier = Modifier.width(8.dp))
+                Surface(
+                    color = Color(0xFFFFEBEE),
+                    shape = RoundedCornerShape(4.dp),
+                    modifier = Modifier.padding(bottom = 8.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.inactive),
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        fontSize = 10.sp,
+                        color = Color(0xFFC62828),
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
         }
         
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -249,7 +286,7 @@ fun ChatListItem(chat: ChatListItemData, onClick: () -> Unit) {
                 modifier = Modifier
                     .size(48.dp)
                     .clip(CircleShape)
-                    .background(AquaBlue.copy(alpha = 0.1f)),
+                    .background(if (listingExists) AquaBlue.copy(alpha = 0.1f) else Color.LightGray.copy(alpha = 0.2f)),
                 contentAlignment = Alignment.Center
             ) {
                 if (!chat.listingImage.isNullOrBlank()) {
@@ -258,12 +295,13 @@ fun ChatListItem(chat: ChatListItemData, onClick: () -> Unit) {
                         contentDescription = null,
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop,
-                        error = androidx.compose.ui.res.painterResource(id = R.drawable.app_logo)
+                        error = androidx.compose.ui.res.painterResource(id = R.drawable.app_logo),
+                        alpha = if (listingExists) 1f else 0.5f
                     )
                 } else {
                     Text(
                         text = chat.name.split(" ").filter { it.isNotEmpty() }.map { it.take(1) }.joinToString("").uppercase(),
-                        color = AquaBlue,
+                        color = if (listingExists) AquaBlue else Color.Gray,
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -273,17 +311,22 @@ fun ChatListItem(chat: ChatListItemData, onClick: () -> Unit) {
             
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(text = chat.name, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color.Black)
+                    Text(
+                        text = chat.name, 
+                        fontWeight = FontWeight.Bold, 
+                        fontSize = 15.sp, 
+                        color = if (listingExists) Color.Black else Color.Gray
+                    )
                     Spacer(modifier = Modifier.width(8.dp))
                     Surface(
-                        color = if (chat.type == "Buying") Color(0xFFE8F5E9) else Color(0xFFE3F2FD),
+                        color = if (!listingExists) Color(0xFFEEEEEE) else if (chat.type == "Buying") Color(0xFFE8F5E9) else Color(0xFFE3F2FD),
                         shape = RoundedCornerShape(4.dp)
                     ) {
                         Text(
                             text = if (chat.type == "Buying") stringResource(R.string.buying) else stringResource(R.string.selling),
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                             fontSize = 10.sp,
-                            color = if (chat.type == "Buying") Color(0xFF2E7D32) else AquaBlue,
+                            color = if (!listingExists) Color.Gray else if (chat.type == "Buying") Color(0xFF2E7D32) else AquaBlue,
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -291,8 +334,8 @@ fun ChatListItem(chat: ChatListItemData, onClick: () -> Unit) {
                 Text(
                     text = chat.lastMessage,
                     fontSize = 13.sp,
-                    color = if (chat.unreadCount > 0) Color.Black else Color.Gray,
-                    fontWeight = if (chat.unreadCount > 0) FontWeight.Bold else FontWeight.Normal,
+                    color = if (!listingExists) Color.LightGray else if (chat.unreadCount > 0) Color.Black else Color.Gray,
+                    fontWeight = if (listingExists && chat.unreadCount > 0) FontWeight.Bold else FontWeight.Normal,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -300,7 +343,7 @@ fun ChatListItem(chat: ChatListItemData, onClick: () -> Unit) {
             
             Column(horizontalAlignment = Alignment.End) {
                 Text(text = formatTime(chat.time), fontSize = 11.sp, color = GrayText)
-                if (chat.unreadCount > 0) {
+                if (chat.unreadCount > 0 && listingExists) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Badge(containerColor = AquaBlue, contentColor = Color.White) {
                         Text(chat.unreadCount.toString())
@@ -328,6 +371,7 @@ data class ChatListItemData(
     val name: String,
     val otherUserId: String,
     val type: String,
+    val listingId: String,
     val listingInfo: String,
     val lastMessage: String,
     val time: Long,

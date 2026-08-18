@@ -87,7 +87,7 @@ fun LanguageSelectionScreen(
                     
                     // Re-initialize Places SDK with the new locale
                     val locale = java.util.Locale.forLanguageTag(selectedLanguage)
-                    com.google.android.libraries.places.api.Places.initialize(context.applicationContext, "AIzaSyD5VUXOhcaF840JnM5YaUMIH1cx2Qdj4QM", locale)
+                    com.google.android.libraries.places.api.Places.initialize(context.applicationContext, context.getString(R.string.google_maps_key), locale)
 
                     onLanguageSelected()
                     (context as? android.app.Activity)?.recreate()

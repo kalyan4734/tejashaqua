@@ -268,24 +268,38 @@ fun ListingCard(
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedButton(
                     onClick = onDeleteClick,
-                    modifier = Modifier.weight(1f).height(48.dp),
+                    modifier = Modifier.weight(0.9f).height(48.dp),
                     shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(horizontal = 4.dp),
                     border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFD32F2F))
                 ) {
-                    Icon(Icons.Outlined.Delete, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color(0xFFD32F2F))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringResource(R.string.delete), fontWeight = FontWeight.Bold, color = Color(0xFFD32F2F))
+                    Icon(Icons.Outlined.Delete, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color(0xFFD32F2F))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = stringResource(R.string.delete),
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFD32F2F),
+                        fontSize = 13.sp,
+                        maxLines = 1
+                    )
                 }
 
                 Button(
                     onClick = onEditClick,
-                    modifier = Modifier.weight(1f).height(48.dp),
+                    modifier = Modifier.weight(1.1f).height(48.dp),
                     shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(horizontal = 4.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = AquaBlue)
                 ) {
-                    Icon(Icons.Outlined.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringResource(R.string.edit_post), fontWeight = FontWeight.Bold)
+                    Icon(Icons.Outlined.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = stringResource(R.string.edit_post),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
             }
         }
