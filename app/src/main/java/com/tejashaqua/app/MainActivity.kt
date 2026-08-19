@@ -973,7 +973,7 @@ class MainActivity : AppCompatActivity() {
                                     isEditMode = true
                                     pickedListingLocation = null
                                     selectedCategory = try {
-                                        ListingCategory.valueOf(categoryStr)
+                                        ListingCategory.valueOf(categoryStr.uppercase().trim())
                                     } catch (_: Exception) {
                                         ListingCategory.FISH
                                     }

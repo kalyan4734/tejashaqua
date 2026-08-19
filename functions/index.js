@@ -152,7 +152,7 @@ exports.onListingCreated = onDocumentCreated("listings/{listingId}", async (even
 
     const title = listing.title || "New Ad";
     const category = listing.category || "Listing";
-    const posterName = listing.posterName || "User";
+    const posterName = listing.posterName || (userId ? `User_${userId.slice(-4)}` : "User");
     const userId = listing.userId || "";
 
     logger.info(`Processing new listing: ${title} by ${posterName} (UserID: ${userId})`);
@@ -314,16 +314,36 @@ exports.onChatMessageCreated = onDocumentCreated("chats/{chatId}/messages/{messa
 });
 
 /**
- * Synchronizes privacy settings across all listings when a user updates their profile.
+ * Triggered when a new user is created.
+ * Assigns a random default name like User_1234.
+ */
+exports.onUserCreated = onDocumentCreated("users/{userId}", async (event) => {
+    const userData = event.data.data();
+    if (!userData) return null;
+
+    if (!userData.name || userData.name === "User") {
+        const userId = event.params.userId;
+        const randomName = `User_${Math.floor(1000 + Math.random() * 9000)}`;
+        logger.info(`Assigning default name ${randomName} to user ${userId}`);
+        return event.data.ref.update({ name: randomName });
+    }
+    return null;
+});
+
+/**
+ * Synchronizes user profile changes (name, privacy) across all listings and chats.
  */
 exports.onUserUpdated = onDocumentUpdated("users/{userId}", async (event) => {
     const before = event.data.before.data();
     const after = event.data.after.data();
+    const userId = event.params.userId;
 
+    const batch = admin.firestore().batch();
+    let needsUpdate = false;
+
+    // 1. Sync Mobile Visibility to Listings
     if (before.showMobileNumber !== after.showMobileNumber) {
-        const userId = event.params.userId;
         const newValue = after.showMobileNumber || false;
-
         logger.info(`Updating mobile visibility for user ${userId} to ${newValue}`);
 
         const listingsSnapshot = await admin.firestore()
@@ -331,13 +351,48 @@ exports.onUserUpdated = onDocumentUpdated("users/{userId}", async (event) => {
             .where("userId", "==", userId)
             .get();
 
-        if (listingsSnapshot.empty) return null;
-
-        const batch = admin.firestore().batch();
         listingsSnapshot.docs.forEach((doc) => {
             batch.update(doc.ref, { sellerShowMobile: newValue });
         });
+        needsUpdate = true;
+    }
 
+    // 2. Sync Name to Listings and Chats
+    if (before.name !== after.name && after.name) {
+        const newName = after.name;
+        logger.info(`Syncing name change for user ${userId} to ${newName}`);
+
+        // Update all listings by this user
+        const listingsSnapshot = await admin.firestore()
+            .collection("listings")
+            .where("userId", "==", userId)
+            .get();
+        listingsSnapshot.docs.forEach((doc) => {
+            batch.update(doc.ref, { posterName: newName });
+        });
+
+        // Update all chats where user is seller
+        const chatsAsSeller = await admin.firestore()
+            .collection("chats")
+            .where("sellerId", "==", userId)
+            .get();
+        chatsAsSeller.docs.forEach((doc) => {
+            batch.update(doc.ref, { sellerName: newName });
+        });
+
+        // Update all chats where user is buyer
+        const chatsAsBuyer = await admin.firestore()
+            .collection("chats")
+            .where("buyerId", "==", userId)
+            .get();
+        chatsAsBuyer.docs.forEach((doc) => {
+            batch.update(doc.ref, { buyerName: newName });
+        });
+
+        needsUpdate = true;
+    }
+
+    if (needsUpdate) {
         return batch.commit();
     }
     return null;

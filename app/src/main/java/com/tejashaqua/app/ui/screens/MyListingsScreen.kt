@@ -38,6 +38,7 @@ data class UserListing(
     val id: String = "",
     val title: String = "",
     val category: String = "",
+    val rawCategory: String = "",
     val price: String = "",
     val unit: String = "",
     val location: String = "",
@@ -144,6 +145,7 @@ fun MyListingsScreen(
                                 id = doc.id,
                                 title = doc.getString("title")?.takeIf { it.isNotBlank() } ?: context.getString(R.string.no_title),
                                 category = displayCategory,
+                                rawCategory = categoryStr,
                                 price = priceLabel,
                                 unit = "", // Unit is now included in priceLabel
                                 location = fullLocation.split(",").firstOrNull()?.trim() ?: fullLocation,
@@ -192,7 +194,7 @@ fun MyListingsScreen(
                             listing = listing,
                             onEditClick = { 
                                 keyboardController?.hide()
-                                onEditClick(listing.id, listing.category) 
+                                onEditClick(listing.id, listing.rawCategory)
                             },
                             onDeleteClick = {
                                 keyboardController?.hide()

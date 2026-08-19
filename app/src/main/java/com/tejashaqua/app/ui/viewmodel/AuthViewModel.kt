@@ -96,9 +96,10 @@ class AuthViewModel(application: android.app.Application) : AndroidViewModel(app
                     val isSuperAdmin = adminNumbers.contains(phone)
 
                     val now = System.currentTimeMillis()
+                    val randomName = "User_${(1000..9999).random()}"
                     val user = hashMapOf(
                         "uid" to userId,
-                        "name" to "User",
+                        "name" to randomName,
                         "phone" to phone,
                         "joinedAt" to now,
                         "onboardingComplete" to false,

@@ -185,9 +185,14 @@ fun DashboardScreen(
                     data
                 }
                 
-                // Merge with existing listings
+                // Get the timestamp of the oldest item in the new first page to know where the snapshot boundary is
+                val oldestInSnapshot = newFirstPage.lastOrNull()?.get("timestamp") as? Number ?: 0L
+                
+                // Keep existing items only if they are older than our current snapshot's oldest item.
+                // This ensures that deletions within the first page are correctly reflected.
                 val existingItems = listings.filter { item -> 
-                    newFirstPage.none { it["id"] == item["id"] } 
+                    val itemTs = (item["timestamp"] as? Number)?.toLong() ?: 0L
+                    itemTs < oldestInSnapshot.toLong() && newFirstPage.none { it["id"] == item["id"] }
                 }
                 
                 listings = (newFirstPage + existingItems).sortedByDescending { (it["timestamp"] as? Number)?.toLong() ?: 0L }
