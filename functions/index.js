@@ -145,16 +145,19 @@ exports.resendOtp = onCall({
  */
 exports.onListingCreated = onDocumentCreated("listings/{listingId}", async (event) => {
     const listing = event.data.data();
-    if (!listing) return null;
+    if (!listing) {
+        logger.error("No listing data found for event:", event.params.listingId);
+        return null;
+    }
 
     const title = listing.title || "New Ad";
     const category = listing.category || "Listing";
     const posterName = listing.posterName || "User";
+    const userId = listing.userId || "";
 
-    logger.info(`New listing created: ${title} in ${category} by ${posterName}`);
+    logger.info(`Processing new listing: ${title} by ${posterName} (UserID: ${userId})`);
 
-    const payload = {
-        topic: "all_listings",
+    const notificationPayload = {
         notification: {
             title: `New Ad in ${category}`,
             body: `${title} posted by ${posterName}`
@@ -162,17 +165,28 @@ exports.onListingCreated = onDocumentCreated("listings/{listingId}", async (even
         data: {
             type: "listing",
             listingId: event.params.listingId,
-            category: category
+            category: category,
+            posterId: userId,
+            title: `New Ad in ${category}`,
+            body: `${title} posted by ${posterName}`,
+            click_action: "OPEN_LISTING"
         },
         android: {
             priority: "high",
             notification: {
-                sound: "default"
+                sound: "default",
+                channelId: "general_notifications_v2",
+                clickAction: "OPEN_LISTING"
             }
         }
     };
 
-    return admin.messaging().send(payload);
+    // Send only to all_users topic.
+    // This reaches everyone, including the poster's other devices.
+    // We remove the duplicate sends to all_listings and personal topics.
+    return admin.messaging().send({ topic: "all_users", ...notificationPayload })
+        .then(res => logger.info("Notification sent to all_users:", res))
+        .catch(err => logger.error("Error sending notification:", err));
 });
 
 /**
@@ -209,6 +223,7 @@ exports.onRateUpdated = onDocumentUpdated("aqua_rates/{type}", async (event) => 
                 priority: "high",
                 notification: {
                     sound: "default",
+                    channelId: "general_notifications",
                     clickAction: "OPEN_RATES"
                 }
             }

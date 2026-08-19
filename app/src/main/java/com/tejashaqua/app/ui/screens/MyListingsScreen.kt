@@ -96,6 +96,11 @@ fun MyListingsScreen(
             db.collection("listings")
                 .whereEqualTo("userId", currentUserId)
                 .addSnapshotListener { snapshot, error ->
+                    if (error != null) {
+                        android.util.Log.e("MyListings", "Error fetching listings", error)
+                        isLoading = false
+                        return@addSnapshotListener
+                    }
                     if (snapshot != null) {
                         listings = snapshot.documents.map { doc ->
                             val fullLocation = doc.getString("location") ?: ""

@@ -32,11 +32,16 @@ class ListingViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             _postState.value = PostState.Loading
             try {
-                val userId = data["userId"]?.toString() ?: ""
+                val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
+                val userId = data["userId"]?.toString()?.takeIf { it.isNotEmpty() } ?: auth.currentUser?.uid ?: ""
                 val existingListingId = data["id"]?.toString()
                 
+                if (userId.isEmpty()) {
+                    throw Exception("User not authenticated")
+                }
+                
                 // Enforce 2-listing limit for new posts
-                if (existingListingId == null && userId.isNotEmpty()) {
+                if (existingListingId == null) {
                     val userListings = db.collection("listings")
                         .whereEqualTo("userId", userId)
                         .get()
@@ -73,6 +78,7 @@ class ListingViewModel(application: Application) : AndroidViewModel(application)
                 val title = data["title"]?.toString() ?: "Listing"
                 val finalData = data.toMutableMap()
                 finalData["id"] = listingId
+                finalData["userId"] = userId
                 finalData["timestamp"] = System.currentTimeMillis()
                 finalData["images"] = finalUrls
 
@@ -84,12 +90,10 @@ class ListingViewModel(application: Application) : AndroidViewModel(application)
                 bundle.putString(FirebaseAnalytics.Param.CONTENT_TYPE, data["category"]?.toString() ?: "unknown")
                 analytics.logEvent(FirebaseAnalytics.Event.SELECT_CONTENT, bundle)
 
-                // Show local notification for feedback
-                NotificationUtils.showLocalNotification(
-                    getApplication(),
-                    getApplication<Application>().getString(R.string.ad_posted_success),
-                    getApplication<Application>().getString(R.string.ad_posted_desc, title)
-                )
+                // Show local notification only if the post is successful
+                // We'll skip the local notification here because the server will 
+                // send a broadcast notification that the device will receive anyway.
+                // This prevents the "redundant" notification on the posting device.
 
                 _postState.value = PostState.Success(finalData)
             } catch (e: Exception) {

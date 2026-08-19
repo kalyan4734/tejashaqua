@@ -1,6 +1,9 @@
 package com.tejashaqua.app
 
 import android.app.Application
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.os.Build
 import com.google.android.libraries.places.api.Places
 import com.google.firebase.FirebaseApp
 import com.google.firebase.appcheck.FirebaseAppCheck
@@ -28,15 +31,35 @@ class TejashAquaApplication : Application() {
             )
         }
 
-        // Subscribe to all_listings topic for push notifications
+        // Subscribe to topics for push notifications
         FirebaseMessaging.getInstance().subscribeToTopic("all_listings")
-        // Subscribe to all_users topic for rate updates
         FirebaseMessaging.getInstance().subscribeToTopic("all_users")
+
+        createNotificationChannel()
         
         if (!Places.isInitialized()) {
             val lang = LocaleHelper.getSelectedLanguage(this) ?: "en"
             val locale = Locale.forLanguageTag(lang)
             Places.initialize(this, getString(R.string.google_maps_key), locale)
+        }
+    }
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channelId = "general_notifications_v2"
+            val name = "General Notifications"
+            val descriptionText = "Notifications for listings and rates"
+            val importance = NotificationManager.IMPORTANCE_HIGH
+            val channel = NotificationChannel(channelId, name, importance).apply {
+                description = descriptionText
+                enableLights(true)
+                lightColor = android.graphics.Color.BLUE
+                enableVibration(true)
+                setShowBadge(true)
+                lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
+            }
+            val notificationManager = getSystemService(NotificationManager::class.java)
+            notificationManager.createNotificationChannel(channel)
         }
     }
 }

@@ -60,6 +60,11 @@
             </intent-filter>
 
             <intent-filter>
+                <action android:name="OPEN_LISTING" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+
+            <intent-filter>
                 <action android:name="OPEN_RATES" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>

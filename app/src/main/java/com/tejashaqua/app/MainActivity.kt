@@ -256,7 +256,11 @@ class MainActivity : AppCompatActivity() {
                     val intentToProcess = currentIntent
                     if (intentToProcess == null || userId.isEmpty()) return@LaunchedEffect
                     
-                    val type = intentToProcess.getStringExtra("type") ?: (if (intentToProcess.action == "OPEN_CHAT") "chat" else if (intentToProcess.action == "OPEN_RATES") "rates" else null)
+                    val type = intentToProcess.getStringExtra("type") 
+                        ?: if (intentToProcess.action == "OPEN_CHAT") "chat" 
+                        else if (intentToProcess.action == "OPEN_RATES") "rates" 
+                        else if (intentToProcess.action == "OPEN_LISTING") "listing"
+                        else null
                     val chatId = intentToProcess.getStringExtra("chatId")
 
                     android.util.Log.d("NAV", "Processing intent: type=$type, chatId=$chatId, action=${intentToProcess.action}")
@@ -552,25 +556,17 @@ class MainActivity : AppCompatActivity() {
                             joinedAt = state.joinedAt
                             isAdmin = state.isAdmin
 
-                            // Subscribe to personal topic for chat notifications
-                            FirebaseMessaging.getInstance().subscribeToTopic("user_$userId")
-                                .addOnCompleteListener { task ->
-                                    if (task.isSuccessful) {
-                                        android.util.Log.d(
-                                            "FCM",
-                                            "Subscribed to personal topic: user_$userId"
-                                        )
-                                    } else {
-                                        android.util.Log.e(
-                                            "FCM",
-                                            "Failed to subscribe to personal topic",
-                                            task.exception
-                                        )
-                                    }
-                                }
-                            
+                            // Subscribe to all required topics
+                            val messaging = FirebaseMessaging.getInstance()
+                            val topics = listOf("all_users", "all_listings", "user_$userId")
+                            topics.forEach { topic ->
+                                messaging.subscribeToTopic(topic)
+                                    .addOnSuccessListener { android.util.Log.d("FCM", "Subscribed to $topic") }
+                                    .addOnFailureListener { e -> android.util.Log.e("FCM", "Failed to subscribe to $topic", e) }
+                            }
+
                             // Also ensure token is up to date in Firestore
-                            FirebaseMessaging.getInstance().token.addOnSuccessListener { token ->
+                            messaging.token.addOnSuccessListener { token ->
                                 FirebaseFirestore.getInstance().collection("users").document(userId)
                                     .update("fcmToken", token)
                             }
@@ -583,6 +579,18 @@ class MainActivity : AppCompatActivity() {
                         is AuthState.RequireName -> {
                             mobileNumber = state.phoneNumber
                             isAdmin = state.isAdmin
+                            userId = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: ""
+                            
+                            // Also subscribe here just in case they are stuck on onboarding
+                            val uid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+                            if (uid != null) {
+                                val messaging = FirebaseMessaging.getInstance()
+                                val topics = listOf("all_users", "all_listings", "user_$uid")
+                                topics.forEach { topic ->
+                                    messaging.subscribeToTopic(topic)
+                                }
+                            }
+
                             currentScreen = "dashboard"
                         }
 
@@ -916,6 +924,12 @@ class MainActivity : AppCompatActivity() {
                                 },
                                 onAboutClick = { currentScreen = "about_app" },
                                 onLogoutClick = {
+                                    val currentId = userId
+                                    if (currentId.isNotEmpty()) {
+                                        FirebaseMessaging.getInstance().unsubscribeFromTopic("user_$currentId")
+                                        FirebaseMessaging.getInstance().unsubscribeFromTopic("all_users")
+                                        FirebaseMessaging.getInstance().unsubscribeFromTopic("admins")
+                                    }
                                     authViewModel.logout()
                                 },
                                 onChangeLanguageClick = {

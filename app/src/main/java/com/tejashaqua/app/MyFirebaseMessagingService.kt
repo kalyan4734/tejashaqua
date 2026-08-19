@@ -16,8 +16,21 @@ class
 MyFirebaseMessagingService : FirebaseMessagingService() {
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
-        val type = remoteMessage.data["type"]
-        val chatId = remoteMessage.data["chatId"]
+        val data = remoteMessage.data
+        val type = data["type"]
+        val chatId = data["chatId"]
+
+        android.util.Log.d("FCM", "Message received. Data: $data")
+
+        val currentUserId = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+        val posterId = data["posterId"]
+
+        // If this is a listing notification and I am the one who posted it, 
+        // skip showing the notification on this specific device.
+        if (type == "listing" && posterId != null && posterId == currentUserId) {
+            android.util.Log.d("FCM", "Skipping own listing notification on posting device")
+            return
+        }
 
         // If it's a chat message, check if we should show a notification
         if (type == "chat" && chatId != null) {
@@ -28,22 +41,28 @@ MyFirebaseMessagingService : FirebaseMessagingService() {
             }
         }
 
-        android.util.Log.d("FCM", "Message received: ${remoteMessage.notification?.title}")
-        
-        var title = remoteMessage.notification?.title ?: remoteMessage.data["title"] ?: "Tejash Aqua"
-        var body = remoteMessage.notification?.body ?: remoteMessage.data["body"] ?: ""
+        val title = remoteMessage.notification?.title ?: data["title"] ?: "Tejash Aqua"
+        val body = remoteMessage.notification?.body ?: data["body"] ?: ""
         
         // Clean up "(no change)", "No Change", and Telugu equivalent from notification body and title
         val noChangeRegex = Regex("\\(?no change\\)?|\\(?మార్పు లేదు\\)?", RegexOption.IGNORE_CASE)
         
-        title = title.replace(noChangeRegex, "").trim()
-        body = body.replace(noChangeRegex, "").trim()
+        val cleanTitle = title.replace(noChangeRegex, "").trim()
+        val cleanBody = body.replace(noChangeRegex, "").trim()
         
-        sendNotification(title, body, remoteMessage.data)
+        sendNotification(cleanTitle, cleanBody, data)
     }
 
     override fun onNewToken(token: String) {
         android.util.Log.d("FCM", "New token: $token")
+        // Update token in Firestore if user is logged in
+        val userId = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+        if (userId != null) {
+            com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                .collection("users")
+                .document(userId)
+                .update("fcmToken", token)
+        }
     }
 
     private fun sendNotification(title: String, messageBody: String, data: Map<String, String> = emptyMap()) {
@@ -52,22 +71,28 @@ MyFirebaseMessagingService : FirebaseMessagingService() {
             data.forEach { (key, value) ->
                 putExtra(key, value)
             }
+            // Explicitly set action if present in data
+            data["click_action"]?.let { action = it }
         }
+        
         val pendingIntent = PendingIntent.getActivity(
             this, System.currentTimeMillis().toInt(), intent,
             PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val channelId = "general_notifications"
+        val channelId = "general_notifications_v2"
         val defaultSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+        
         val notificationBuilder = NotificationCompat.Builder(this, channelId)
-            .setSmallIcon(R.mipmap.ic_launcher) // Using mipmap for better compatibility
+            .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(title)
             .setContentText(messageBody)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
             .setSound(defaultSoundUri)
             .setContentIntent(pendingIntent)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
 
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
@@ -81,11 +106,11 @@ MyFirebaseMessagingService : FirebaseMessagingService() {
                 enableLights(true)
                 lightColor = android.graphics.Color.BLUE
                 enableVibration(true)
+                setShowBadge(true)
             }
             notificationManager.createNotificationChannel(channel)
         }
 
-        // Use a unique ID for each notification so they don't overwrite
         val notificationId = System.currentTimeMillis().toInt()
         notificationManager.notify(notificationId, notificationBuilder.build())
     }
