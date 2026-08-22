@@ -314,14 +314,14 @@ fun DashboardScreen(
             val currentPos = userLatLng
             if (currentPos != null) {
                 filtered.sortedBy { data ->
-                    val lat = (data["lat"] as? Number)?.toDouble()
-                    val lng = (data["lng"] as? Number)?.toDouble()
-                    if (lat != null && lng != null) {
-                        val results = FloatArray(1)
-                        android.location.Location.distanceBetween(currentPos.latitude, currentPos.longitude, lat, lng, results)
-                        results[0]
+                    val lat = (data["lat"] as? Number)?.toDouble() ?: 0.0
+                    val lng = (data["lng"] as? Number)?.toDouble() ?: 0.0
+                    if (lat != 0.0 && lng != 0.0) {
+                        val dLat = lat - currentPos.latitude
+                        val dLng = lng - currentPos.longitude
+                        dLat * dLat + dLng * dLng
                     } else {
-                        Float.MAX_VALUE
+                        Double.MAX_VALUE
                     }
                 }
             } else {
@@ -329,6 +329,10 @@ fun DashboardScreen(
             }
         }
     }.value
+
+    val chunkedListings = remember(filteredListings) {
+        filteredListings.chunked(2)
+    }
 
     val selectedSellerPosts = remember(selectedSellerId, listings) {
         if (selectedSellerId.isEmpty()) emptyList()
@@ -741,12 +745,17 @@ fun DashboardScreen(
                             }
                         }
                     } else {
-                        val chunkedItems = filteredListings.chunked(2)
-                        items(chunkedItems.size) { index ->
-                            val rowItems = chunkedItems[index]
+                        items(
+                            count = chunkedListings.size,
+                            key = { index -> 
+                                val row = chunkedListings[index]
+                                row.joinToString("-") { it["id"]?.toString() ?: "" }
+                            }
+                        ) { index ->
+                            val rowItems = chunkedListings[index]
                             
                             // Load more when reaching near the end
-                            if (index >= chunkedItems.size - 2 && !isLastPage && !isPaginating && productSearchText.isBlank() && selectedCategoryFilter == "All") {
+                            if (index >= chunkedListings.size - 2 && !isLastPage && !isPaginating && productSearchText.isBlank() && selectedCategoryFilter == "All") {
                                 SideEffect {
                                     loadListings(isFirstPage = false)
                                 }
