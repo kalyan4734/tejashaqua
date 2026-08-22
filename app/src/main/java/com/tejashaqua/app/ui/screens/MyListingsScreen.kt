@@ -123,17 +123,23 @@ fun MyListingsScreen(
                             val acreText = context.getString(R.string.unit_acre)
                             val priceLabel = when (categoryStr.uppercase()) {
                                 "PRAWNS" -> {
-                                    val rate = doc.get("rateValue")?.toString() ?: naText
-                                    val formattedRate = CurrencyUtils.formatPrice(rate)
-                                    val type = doc.getString("rateType") ?: "Paise"
-                                    if (type.contains("Paise", ignoreCase = true)) "$formattedRate Paise/Seed" else "₹$formattedRate/Seed"
+                                    val rateVal = doc.get("rateValue")?.toString()?.takeIf { it.isNotBlank() } ?: naText
+                                    if (rateVal == naText) naText else {
+                                        val formattedRate = CurrencyUtils.formatPrice(rateVal)
+                                        val type = doc.getString("rateType") ?: "Paise"
+                                        if (type.contains("Paise", ignoreCase = true)) "$formattedRate Paise/Seed" else "₹$formattedRate/Seed"
+                                    }
                                 }
                                 "FEED" -> "₹${CurrencyUtils.formatPrice(doc.get("ratePerTon")?.toString() ?: naText)}/$tonText"
                                 "BUSINESS" -> {
                                     if (doc.getString("businessSubCategory") == "Feed") {
-                                        "₹${CurrencyUtils.formatPrice(doc.get("ratePerTon")?.toString() ?: naText)}/$tonText"
+                                        "₹${CurrencyUtils.formatPrice(doc.get("ratePerTon")?.toString()?.takeIf { it.isNotBlank() } ?: naText)}/$tonText"
                                     } else {
-                                        "₹${CurrencyUtils.formatPrice(doc.get("price")?.toString() ?: doc.get("rateValue")?.toString() ?: doc.get("ratePerTon")?.toString() ?: naText)}"
+                                        val displayVal = doc.get("price")?.toString()?.takeIf { it.isNotBlank() }
+                                            ?: doc.get("rateValue")?.toString()?.takeIf { it.isNotBlank() }
+                                            ?: doc.get("ratePerTon")?.toString()?.takeIf { it.isNotBlank() }
+                                            ?: naText
+                                        "₹${CurrencyUtils.formatPrice(displayVal)}"
                                     }
                                 }
                                 "JOBS" -> "₹${CurrencyUtils.formatPrice(doc.get("salary")?.toString() ?: naText)}"

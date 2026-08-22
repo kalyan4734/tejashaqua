@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -23,9 +24,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import com.tejashaqua.app.R
 import androidx.compose.ui.text.style.TextOverflow
@@ -1632,6 +1636,7 @@ fun ListingTextField(
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     accentColor: Color = AquaBlue
 ) {
+    val focusManager = LocalFocusManager.current
     val visualTransformation = if (keyboardOptions.keyboardType == KeyboardType.Number ||
         keyboardOptions.keyboardType == KeyboardType.Decimal) {
         CurrencyUtils.IndianNumberVisualTransformation()
@@ -1653,8 +1658,16 @@ fun ListingTextField(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
             minLines = minLines,
+            singleLine = minLines == 1,
             isError = isError,
-            keyboardOptions = keyboardOptions,
+            keyboardOptions = if (minLines == 1 && keyboardOptions.imeAction == ImeAction.Default) {
+                keyboardOptions.copy(imeAction = ImeAction.Next)
+            } else {
+                keyboardOptions
+            },
+            keyboardActions = KeyboardActions(
+                onNext = { focusManager.moveFocus(FocusDirection.Next) }
+            ),
             visualTransformation = visualTransformation,
             colors = OutlinedTextFieldDefaults.colors(
                 unfocusedBorderColor = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline,

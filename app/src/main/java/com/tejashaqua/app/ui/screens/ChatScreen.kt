@@ -116,27 +116,40 @@ fun ChatScreen(
     val priceValue = rawPrice
     
     val categoryStr = listingDetails["category"]?.toString() ?: ""
+    val naText = stringResource(R.string.not_available_short)
     val price = when {
         categoryStr.uppercase() == "PRAWNS" -> {
-            if (priceValue == stringResource(R.string.not_available_short)) priceValue else {
+            val rateVal = listingDetails["rateValue"]?.toString()?.takeIf { it.isNotBlank() } ?: naText
+            if (rateVal == naText) naText else {
                 val type = listingDetails["rateType"]?.toString() ?: "Paise"
-                val formattedRate = CurrencyUtils.formatPrice(priceValue)
+                val formattedRate = CurrencyUtils.formatPrice(rateVal)
                 if (type.contains("Paise", ignoreCase = true)) "$formattedRate Paise/Seed" else "₹$formattedRate/Seed"
             }
         }
         categoryStr.uppercase() == "FEED" || (listingDetails["businessSubCategory"] == "Feed") -> {
-            if (priceValue == stringResource(R.string.not_available_short)) priceValue else "₹${CurrencyUtils.formatPrice(priceValue)}/ton"
+            val rateVal = listingDetails["ratePerTon"]?.toString()?.takeIf { it.isNotBlank() } ?: naText
+            if (rateVal == naText) naText else "₹${CurrencyUtils.formatPrice(rateVal)}/${stringResource(R.string.unit_ton)}"
+        }
+        categoryStr.uppercase() == "BUSINESS" -> {
+            val displayVal = listingDetails["price"]?.toString()?.takeIf { it.isNotBlank() }
+                ?: listingDetails["rateValue"]?.toString()?.takeIf { it.isNotBlank() }
+                ?: listingDetails["ratePerTon"]?.toString()?.takeIf { it.isNotBlank() }
+                ?: naText
+            "₹${CurrencyUtils.formatPrice(displayVal)}"
         }
         categoryStr.uppercase() == "JOBS" -> {
-            val salaryValue = listingDetails["salary"]?.toString()?.takeIf { it.isNotBlank() } ?: priceValue
-            if (salaryValue == stringResource(R.string.not_available_short)) salaryValue else "₹${CurrencyUtils.formatPrice(salaryValue)}"
+            val salaryValue = listingDetails["salary"]?.toString()?.takeIf { it.isNotBlank() } ?: naText
+            if (salaryValue == naText) naText else "₹${CurrencyUtils.formatPrice(salaryValue)}"
         }
         categoryStr.uppercase() == "TANKS" -> {
-            val tankPrice = listingDetails["estPricePerAcre"]?.toString()?.takeIf { it.isNotBlank() } ?: priceValue
-            if (tankPrice == stringResource(R.string.not_available_short)) tankPrice else "₹${CurrencyUtils.formatPrice(tankPrice)}/acre"
+            val tankPrice = listingDetails["estPricePerAcre"]?.toString()?.takeIf { it.isNotBlank() } ?: naText
+            if (tankPrice == naText) naText else "₹${CurrencyUtils.formatPrice(tankPrice)}/${stringResource(R.string.unit_acre)}"
         }
         else -> {
-            if (priceValue == stringResource(R.string.not_available_short)) priceValue else "₹${CurrencyUtils.formatPrice(priceValue)}"
+            val displayVal = listingDetails["price"]?.toString()?.takeIf { it.isNotBlank() }
+                ?: listingDetails["rateValue"]?.toString()?.takeIf { it.isNotBlank() }
+                ?: naText
+            if (displayVal == naText) naText else "₹${CurrencyUtils.formatPrice(displayVal)}"
         }
     }
     val fullLocation = listingDetails["location"]?.toString() ?: listingDetails["listingLocation"]?.toString() ?: "Unknown"

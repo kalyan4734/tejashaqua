@@ -269,8 +269,17 @@ fun DashboardScreen(
                         val serviceType = data["serviceType"]?.toString() ?: ""
                         val fishVehiclesEn = "Live Fish Vehicles"
                         val fishVehiclesTe = context.getString(R.string.service_live_fish_vehicles)
+                        val boreWellEn = "Bore Well"
+                        val boreWellTe = context.getString(R.string.service_bore_well)
+                        val earthMoversEn = "Earth Movers"
+                        val earthMoversTe = context.getString(R.string.service_earth_movers)
+                        
                         category.uppercase() == "VEHICLES" || 
-                        (category.uppercase() == "SERVICES" && (serviceType == fishVehiclesEn || serviceType == fishVehiclesTe))
+                        (category.uppercase() == "SERVICES" && (
+                            serviceType == fishVehiclesEn || serviceType == fishVehiclesTe ||
+                            serviceType == boreWellEn || serviceType == boreWellTe ||
+                            serviceType == earthMoversEn || serviceType == earthMoversTe
+                        ))
                     }
                     "FEED" -> {
                         val businessSubCategory = data["businessSubCategory"]?.toString() ?: ""
@@ -285,7 +294,16 @@ fun DashboardScreen(
                         val serviceType = data["serviceType"]?.toString() ?: ""
                         val fishVehiclesEn = "Live Fish Vehicles"
                         val fishVehiclesTe = context.getString(R.string.service_live_fish_vehicles)
-                        category.uppercase() == "SERVICES" && (serviceType != fishVehiclesEn && serviceType != fishVehiclesTe)
+                        val boreWellEn = "Bore Well"
+                        val boreWellTe = context.getString(R.string.service_bore_well)
+                        val earthMoversEn = "Earth Movers"
+                        val earthMoversTe = context.getString(R.string.service_earth_movers)
+                        
+                        category.uppercase() == "SERVICES" && (
+                            serviceType != fishVehiclesEn && serviceType != fishVehiclesTe &&
+                            serviceType != boreWellEn && serviceType != boreWellTe &&
+                            serviceType != earthMoversEn && serviceType != earthMoversTe
+                        )
                     }
                     else -> category.uppercase() == selectedCategoryFilter
                 }
@@ -668,7 +686,7 @@ fun DashboardScreen(
                         ) 
                     }
                     
-                    if (selectedItem == 0) {
+                    if (selectedItem == 0 && productSearchText.isBlank()) {
                         item { 
                             AquaRatesSection(
                                 onRateClick = { rate ->
@@ -761,17 +779,23 @@ fun DashboardScreen(
                                     val acreText = stringResource(R.string.unit_acre)
                                     val priceLabel = when (categoryStr.uppercase()) {
                                         "PRAWNS" -> {
-                                            val rate = data["rateValue"]?.toString() ?: naText
-                                            val formattedRate = CurrencyUtils.formatPrice(rate)
-                                            val type = data["rateType"]?.toString() ?: "Paise"
-                                            if (type.contains("Paise", ignoreCase = true)) "$formattedRate Paise/Seed" else "₹$formattedRate/Seed"
+                                            val rateVal = data["rateValue"]?.toString()?.takeIf { it.isNotBlank() } ?: naText
+                                            if (rateVal == naText) naText else {
+                                                val formattedRate = CurrencyUtils.formatPrice(rateVal)
+                                                val type = data["rateType"]?.toString() ?: "Paise"
+                                                if (type.contains("Paise", ignoreCase = true)) "$formattedRate Paise/Seed" else "₹$formattedRate/Seed"
+                                            }
                                         }
                                         "FEED" -> "₹${CurrencyUtils.formatPrice(data["ratePerTon"] ?: naText)}/$tonText"
                                         "BUSINESS" -> {
                                             if (data["businessSubCategory"] == "Feed") {
-                                                "₹${CurrencyUtils.formatPrice(data["ratePerTon"] ?: naText)}/$tonText"
+                                                "₹${CurrencyUtils.formatPrice(data["ratePerTon"]?.toString()?.takeIf { it.isNotBlank() } ?: naText)}/$tonText"
                                             } else {
-                                                "₹${CurrencyUtils.formatPrice(data["price"] ?: data["rateValue"] ?: data["ratePerTon"] ?: naText)}"
+                                                val displayVal = data["price"]?.toString()?.takeIf { it.isNotBlank() }
+                                                    ?: data["rateValue"]?.toString()?.takeIf { it.isNotBlank() }
+                                                    ?: data["ratePerTon"]?.toString()?.takeIf { it.isNotBlank() }
+                                                    ?: naText
+                                                "₹${CurrencyUtils.formatPrice(displayVal)}"
                                             }
                                         }
                                         "JOBS" -> "₹${CurrencyUtils.formatPrice(data["salary"] ?: naText)}"
@@ -1246,7 +1270,7 @@ fun RateCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val isNoData = rate.price == "--" || 
+    val isNoData = rate.price == "--" ||
                   rate.price == "N/A" || 
                   rate.price.lowercase(java.util.Locale.ROOT).contains("no change") ||
                   rate.price.contains("మార్పు లేదు") ||

@@ -111,17 +111,23 @@ fun DetailedPageScreen(
     val priceLabel = remember(listingData) {
         when (categoryStr.uppercase()) {
             "PRAWNS" -> {
-                val rate = listingData["rateValue"]?.toString() ?: naText
-                val formattedRate = CurrencyUtils.formatPrice(rate)
-                val type = listingData["rateType"]?.toString() ?: "Paise"
-                if (type.contains("Paise", ignoreCase = true)) "$formattedRate Paise/Seed" else "₹$formattedRate/Seed"
+                val rateVal = listingData["rateValue"]?.toString()?.takeIf { it.isNotBlank() } ?: naText
+                if (rateVal == naText) naText else {
+                    val formattedRate = CurrencyUtils.formatPrice(rateVal)
+                    val type = listingData["rateType"]?.toString() ?: "Paise"
+                    if (type.contains("Paise", ignoreCase = true)) "$formattedRate Paise/Seed" else "₹$formattedRate/Seed"
+                }
             }
             "FEED" -> "₹${CurrencyUtils.formatPrice(listingData["ratePerTon"] ?: naText)}/$tonText"
             "BUSINESS" -> {
                 if (listingData["businessSubCategory"] == "Feed") {
-                    "₹${CurrencyUtils.formatPrice(listingData["ratePerTon"] ?: naText)}/$tonText"
+                    "₹${CurrencyUtils.formatPrice(listingData["ratePerTon"]?.toString()?.takeIf { it.isNotBlank() } ?: naText)}/$tonText"
                 } else {
-                    "₹${CurrencyUtils.formatPrice(listingData["price"] ?: listingData["rateValue"] ?: listingData["ratePerTon"] ?: naText)}"
+                    val displayVal = listingData["price"]?.toString()?.takeIf { it.isNotBlank() }
+                        ?: listingData["rateValue"]?.toString()?.takeIf { it.isNotBlank() }
+                        ?: listingData["ratePerTon"]?.toString()?.takeIf { it.isNotBlank() }
+                        ?: naText
+                    "₹${CurrencyUtils.formatPrice(displayVal)}"
                 }
             }
             "JOBS" -> "₹${CurrencyUtils.formatPrice(listingData["salary"] ?: naText)}"
@@ -847,10 +853,12 @@ fun DetailedPageScreen(
                                 
                                 val simPriceLabel = when (categoryStrSim.uppercase()) {
                                     "PRAWNS" -> {
-                                        val rate = data["rateValue"]?.toString() ?: naText
-                                        val formattedRate = CurrencyUtils.formatPrice(rate)
-                                        val type = data["rateType"]?.toString() ?: "Paise"
-                                        if (type.contains("Paise", ignoreCase = true)) "$formattedRate Paise/Seed" else "₹$formattedRate/Seed"
+                                        val rateVal = data["rateValue"]?.toString()?.takeIf { it.isNotBlank() } ?: naText
+                                        if (rateVal == naText) naText else {
+                                            val formattedRate = CurrencyUtils.formatPrice(rateVal)
+                                            val type = data["rateType"]?.toString() ?: "Paise"
+                                            if (type.contains("Paise", ignoreCase = true)) "$formattedRate Paise/Seed" else "₹$formattedRate/Seed"
+                                        }
                                     }
                                     "FEED" -> "₹${CurrencyUtils.formatPrice(data["ratePerTon"] ?: naText)}/$tonText"
                                     "BUSINESS" -> {

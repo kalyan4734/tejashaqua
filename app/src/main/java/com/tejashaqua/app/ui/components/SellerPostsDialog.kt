@@ -99,17 +99,23 @@ fun SellerPostsDialog(
                             val acreText = stringResource(R.string.unit_acre)
                             val priceLabel = when (categoryStr.uppercase()) {
                                 "PRAWNS" -> {
-                                    val rate = data["rateValue"]?.toString() ?: naText
-                                    val formattedRate = CurrencyUtils.formatPrice(rate)
-                                    val type = data["rateType"]?.toString() ?: "Paise"
-                                    if (type.contains("Paise", ignoreCase = true)) "$formattedRate Paise/Seed" else "₹$formattedRate/Seed"
+                                    val rateVal = data["rateValue"]?.toString()?.takeIf { it.isNotBlank() } ?: naText
+                                    if (rateVal == naText) naText else {
+                                        val formattedRate = CurrencyUtils.formatPrice(rateVal)
+                                        val type = data["rateType"]?.toString() ?: "Paise"
+                                        if (type.contains("Paise", ignoreCase = true)) "$formattedRate Paise/Seed" else "₹$formattedRate/Seed"
+                                    }
                                 }
                                 "FEED" -> "₹${CurrencyUtils.formatPrice(data["ratePerTon"] ?: naText)}/$tonText"
                                 "BUSINESS" -> {
                                     if (data["businessSubCategory"] == "Feed") {
-                                        "₹${CurrencyUtils.formatPrice(data["ratePerTon"] ?: naText)}/$tonText"
+                                        "₹${CurrencyUtils.formatPrice(data["ratePerTon"]?.toString()?.takeIf { it.isNotBlank() } ?: naText)}/$tonText"
                                     } else {
-                                        "₹${CurrencyUtils.formatPrice(data["price"] ?: data["rateValue"] ?: data["ratePerTon"] ?: naText)}"
+                                        val displayVal = data["price"]?.toString()?.takeIf { it.isNotBlank() }
+                                            ?: data["rateValue"]?.toString()?.takeIf { it.isNotBlank() }
+                                            ?: data["ratePerTon"]?.toString()?.takeIf { it.isNotBlank() }
+                                            ?: naText
+                                        "₹${CurrencyUtils.formatPrice(displayVal)}"
                                     }
                                 }
                                 "JOBS" -> "₹${CurrencyUtils.formatPrice(data["salary"] ?: naText)}"
