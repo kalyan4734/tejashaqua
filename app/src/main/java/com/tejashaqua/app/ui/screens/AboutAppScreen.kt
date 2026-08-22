@@ -81,7 +81,7 @@ fun AboutAppScreen(
             
             Text(
                 text = stringResource(R.string.version_label, versionName),
-                fontSize = 14.sp,
+                fontSize = 12.sp,
                 color = GrayText,
                 modifier = Modifier.padding(top = 4.dp)
             )

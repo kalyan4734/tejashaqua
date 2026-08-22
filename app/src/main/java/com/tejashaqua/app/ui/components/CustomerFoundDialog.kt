@@ -104,7 +104,7 @@ fun CustomerFoundDialog(
                     Text(
                         text = customer.address,
                         color = Color.White,
-                        fontSize = 15.sp,
+                        fontSize = 12.sp,
                         lineHeight = 22.sp,
                         modifier = Modifier.padding(top = 4.dp),
                         textAlign = TextAlign.Center
@@ -123,7 +123,7 @@ fun CustomerFoundDialog(
                     Text(
                         text = customer.about,
                         color = Color.White,
-                        fontSize = 14.sp,
+                        fontSize = 12.sp,
                         lineHeight = 20.sp,
                         modifier = Modifier.padding(top = 4.dp),
                         textAlign = TextAlign.Center

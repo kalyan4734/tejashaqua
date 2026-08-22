@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
@@ -125,7 +126,7 @@ fun SelectLocationScreen(
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 8.dp)
                             .heightIn(min = 54.dp),
-                        placeholder = { Text(stringResource(R.string.search_location_placeholder), fontSize = 15.sp) },
+                        placeholder = { Text(stringResource(R.string.search_location_placeholder), fontSize = 12.sp) },
                         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = GrayText) },
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = Color.White,
@@ -295,10 +296,16 @@ fun SelectLocationScreen(
                             ) {
                                 Icon(Icons.Default.LocationOn, contentDescription = null, tint = AquaBlue)
                                 Spacer(modifier = Modifier.width(12.dp))
-                                Column {
+                                Column(modifier = Modifier.weight(1f)) {
                                     Text(text = selectedLocation!!.first, fontWeight = FontWeight.Bold)
                                     Text(text = selectedLocation!!.second, fontSize = 13.sp, color = GrayText, maxLines = 1)
                                 }
+                                Icon(
+                                    imageVector = Icons.Default.Public,
+                                    contentDescription = null, 
+                                    tint = GrayText.copy(alpha = 0.7f),
+                                    modifier = Modifier.size(20.dp)
+                                )
                             }
                         }
                     }
@@ -339,7 +346,7 @@ fun LocationSearchItem(
                 )
                 Text(
                     text = subLocation, 
-                    fontSize = 14.sp,
+                    fontSize = 12.sp,
                     color = GrayText
                 )
             }

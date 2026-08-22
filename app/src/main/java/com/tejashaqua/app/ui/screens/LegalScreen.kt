@@ -45,7 +45,7 @@ fun LegalScreen(
             item {
                 Text(
                     text = content,
-                    fontSize = 15.sp,
+                    fontSize = 12.sp,
                     color = Color.DarkGray,
                     lineHeight = 24.sp
                 )

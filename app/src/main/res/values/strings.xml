@@ -434,7 +434,10 @@ These terms shall be governed by and construed in accordance with the laws of In
     <string name="market_kakinada">Kakinada</string>
     <string name="market_machilipatnam">Machilipatnam</string>
     <string name="unit_ton">ton</string>
+    <string name="unit_kg">kg</string>
+    <string name="unit_litres">litres</string>
     <string name="unit_acre">acre</string>
+    <string name="capacity_unit_label">Unit</string>
     <string name="no_data_available">N/A</string>
     <string name="show_mobile_number">Show Mobile Number on Listings</string>
     <string name="show_mobile_number_desc">If disabled, buyers can only contact you via chat.</string>

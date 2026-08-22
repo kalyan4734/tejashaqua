@@ -97,6 +97,7 @@ fun EditListingScreen(
     var equipmentType by remember { mutableStateOf("") }
     var vehicleName by remember { mutableStateOf("") }
     var vehicleCapacity by remember { mutableStateOf("") }
+    var vehicleCapacityUnit by remember { mutableStateOf("") }
     var businessType by remember { mutableStateOf("") }
     var businessSubCategory by remember { mutableStateOf("") } // Feed or Medicine
     var feedName by remember { mutableStateOf("") }
@@ -124,6 +125,11 @@ fun EditListingScreen(
     var isFetchingData by remember { mutableStateOf(false) }
     val postState by listingViewModel.postState.collectAsState()
     val context = LocalContext.current
+
+    val isLocationFetched = location.isNotBlank() && 
+                           !location.contains(fetchingLocText) && 
+                           !location.contains(deniedLocText) && 
+                           !location.contains(failedLocText)
 
     var tempCameraUri by remember { mutableStateOf<Uri?>(null) }
     val cameraLauncher = rememberLauncherForActivityResult(
@@ -217,12 +223,16 @@ fun EditListingScreen(
         latLng = initialLatLng
     }
 
+    val boreWellService = stringResource(R.string.service_bore_well)
+    val fishVehiclesService = stringResource(R.string.service_live_fish_vehicles)
+    val netsService = stringResource(R.string.service_nets)
+
     val onActionClickInternal = {
         // Validation logic with detailed error tracking
         val errors = mutableMapOf<String, Boolean>()
         
         // Title is hidden for all categories, so we don't validate it here
-        if (location.isBlank() || location == fetchingLocText || location == deniedLocText || location == failedLocText) errors["location"] = true
+        if (!isLocationFetched) errors["location"] = true
         photoError = selectedPhotos.isEmpty() && category != ListingCategory.JOBS
 
         when (category) {
@@ -247,6 +257,7 @@ fun EditListingScreen(
                 if (selectedServiceType.isBlank()) errors["serviceType"] = true
                 if (vehicleName.isBlank()) errors["vehicleName"] = true
                 if (vehicleCapacity.isBlank()) errors["vehicleCapacity"] = true
+                if (price.isBlank()) errors["price"] = true
             }
             ListingCategory.FEED -> {
                 if (businessType.isBlank()) errors["businessType"] = true
@@ -262,16 +273,18 @@ fun EditListingScreen(
                 } else if (businessSubCategory == "Medicine") {
                     if (businessType.isBlank()) errors["businessType"] = true
                     if (medicineName.isBlank()) errors["medicineName"] = true
+                    if (ratePerTon.isBlank()) errors["ratePerTon"] = true
                 }
             }
             ListingCategory.SERVICES -> {
                 if (selectedServiceType.isBlank()) errors["serviceType"] = true
-                if (selectedServiceType == "Bore Well" && boreWellType.isBlank()) errors["boreWellType"] = true
-                if (selectedServiceType == "Live Fish Vehicles") {
+                if ((selectedServiceType == "Bore Well" || selectedServiceType == boreWellService) && boreWellType.isBlank()) errors["boreWellType"] = true
+                if (selectedServiceType == "Live Fish Vehicles" || selectedServiceType == fishVehiclesService) {
                     if (vehicleName.isBlank()) errors["vehicleName"] = true
                     if (vehicleCapacity.isBlank()) errors["vehicleCapacity"] = true
                 }
-                if (selectedServiceType == "Nets" && netType.isBlank()) errors["netType"] = true
+                if ((selectedServiceType == "Nets" || selectedServiceType == netsService) && netType.isBlank()) errors["netType"] = true
+                if (price.isBlank()) errors["price"] = true
             }
             ListingCategory.TANKS -> {
                 if (tankType.isBlank()) errors["tankType"] = true
@@ -321,7 +334,7 @@ fun EditListingScreen(
                 listingId, category, finalTitle, finalDescription, price, location, latLng, userMobileNumber,
                 userName, selectedServiceType, fishType, sizeType, sizeValue, fishAge, quantity,
                 unitType, prawnType, hatcheryName, rateType, rateValue, equipmentType,
-                vehicleName, vehicleCapacity, businessType, feedName, ratePerTon, 
+                vehicleName, vehicleCapacity, vehicleCapacityUnit, businessType, feedName, ratePerTon,
                 medicineName, businessSubCategory,
                 boreWellType, tankAcres, estPricePerAcre, tankLocation, jobType, salary, netType, 
                 tankType, userId, showMobileNumberPreference, joinedAt
@@ -424,6 +437,7 @@ fun EditListingScreen(
                                 selectedServiceType = doc.getString("serviceType") ?: ""
                                 vehicleName = doc.getString("vehicleName") ?: ""
                                 vehicleCapacity = doc.getString("vehicleCapacity") ?: ""
+                                vehicleCapacityUnit = doc.getString("vehicleCapacityUnit") ?: ""
                             }
                             ListingCategory.FEED -> {
                                 businessType = doc.getString("businessType") ?: ""
@@ -442,6 +456,7 @@ fun EditListingScreen(
                                 boreWellType = doc.getString("boreWellType") ?: ""
                                 vehicleName = doc.getString("vehicleName") ?: ""
                                 vehicleCapacity = doc.getString("vehicleCapacity") ?: ""
+                                vehicleCapacityUnit = doc.getString("vehicleCapacityUnit") ?: ""
                                 netType = doc.getString("netType") ?: ""
                             }
                             ListingCategory.TANKS -> {
@@ -538,7 +553,7 @@ fun EditListingScreen(
                         pViewModel.requestFeaturePermissions(listOf(PermissionType.LOCATION)) {
                             val status = com.tejashaqua.app.utils.PermissionHelper.getStatus(context, PermissionType.LOCATION)
                             if (status == com.tejashaqua.app.utils.PermissionStatus.GRANTED) {
-                                if (location.isBlank() || location == fetchingLocText || location == deniedLocText || location == failedLocText) {
+                                if (!isLocationFetched) {
                                     isWaitingForLocation = true
                                 } else {
                                     onActionClickInternal()
@@ -554,7 +569,7 @@ fun EditListingScreen(
                             modifier = Modifier.fillMaxWidth().padding(16.dp),
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            val isActionEnabled = location != fetchingLocText && !isRefreshingLocation && !isWaitingForLocation && !isFetchingData && postState !is ListingViewModel.PostState.Loading
+                            val isActionEnabled = isLocationFetched && !isRefreshingLocation && !isWaitingForLocation && !isFetchingData && postState !is ListingViewModel.PostState.Loading
                             
                             OutlinedButton(
                                 onClick = { 
@@ -583,7 +598,7 @@ fun EditListingScreen(
                         }
                     } else {
                         Box(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                            val isActionEnabled = location != fetchingLocText && !isRefreshingLocation && !isWaitingForLocation && !isFetchingData && postState !is ListingViewModel.PostState.Loading
+                            val isActionEnabled = isLocationFetched && !isRefreshingLocation && !isWaitingForLocation && !isFetchingData && postState !is ListingViewModel.PostState.Loading
                             
                             Button(
                                 onClick = onActionClick,
@@ -644,6 +659,8 @@ fun EditListingScreen(
                             selectedServiceType, { selectedServiceType = it },
                             vehicleName, { vehicleName = it },
                             vehicleCapacity, { vehicleCapacity = it },
+                            vehicleCapacityUnit, { vehicleCapacityUnit = it },
+                            price, { price = it },
                             errors = fieldErrors,
                             keyboardOptions = keyboardOptionsBase,
                             accentColor = categoryColor
@@ -671,6 +688,7 @@ fun EditListingScreen(
                             boreWellType, { boreWellType = it },
                             vehicleName, { vehicleName = it },
                             vehicleCapacity, { vehicleCapacity = it },
+                            vehicleCapacityUnit, { vehicleCapacityUnit = it },
                             netType, { netType = it },
                             price, { price = it },
                             errors = fieldErrors,
@@ -763,7 +781,7 @@ fun PhotoSection(
         Text(text = androidx.compose.ui.text.buildAnnotatedString {
             append(stringResource(R.string.photos_label))
             append(" *")
-        }, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onBackground)
+        }, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onBackground)
         Spacer(modifier = Modifier.height(12.dp))
         Row(
             modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
@@ -838,6 +856,7 @@ private fun buildListingMap(
     equipmentType: String,
     vehicleName: String,
     vehicleCapacity: String,
+    vehicleCapacityUnit: String,
     businessType: String,
     feedName: String,
     ratePerTon: String,
@@ -898,6 +917,8 @@ private fun buildListingMap(
         ListingCategory.VEHICLES -> {
             data["vehicleName"] = vehicleName
             data["vehicleCapacity"] = vehicleCapacity
+            data["vehicleCapacityUnit"] = vehicleCapacityUnit
+            data["price"] = price
         }
         ListingCategory.FEED -> {
             data["businessType"] = businessType
@@ -916,7 +937,9 @@ private fun buildListingMap(
             data["boreWellType"] = boreWellType
             data["vehicleName"] = vehicleName
             data["vehicleCapacity"] = vehicleCapacity
+            data["vehicleCapacityUnit"] = vehicleCapacityUnit
             data["netType"] = netType
+            data["price"] = price
         }
         ListingCategory.TANKS -> {
             data["tankAcres"] = tankAcres
@@ -1175,10 +1198,20 @@ fun VehicleFields(
     serviceType: String, onServiceTypeChange: (String) -> Unit,
     vehicleName: String, onVehicleNameChange: (String) -> Unit,
     vehicleCapacity: String, onVehicleCapacityChange: (String) -> Unit,
+    vehicleCapacityUnit: String, onVehicleCapacityUnitChange: (String) -> Unit,
+    price: String, onPriceChange: (String) -> Unit,
     errors: Map<String, Boolean> = emptyMap(),
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     accentColor: Color = AquaBlue
 ) {
+    val unitTon = stringResource(R.string.unit_ton)
+    val unitKg = stringResource(R.string.unit_kg)
+    val unitOptions = listOf(unitTon, unitKg)
+
+    LaunchedEffect(Unit) {
+        if (vehicleCapacityUnit.isEmpty()) onVehicleCapacityUnitChange(unitTon)
+    }
+
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         ListingDropdown(
             label = stringResource(R.string.service_type_label), 
@@ -1189,7 +1222,30 @@ fun VehicleFields(
             accentColor = accentColor
         )
         ListingTextField(label = stringResource(R.string.vehicle_name_label), value = vehicleName, onValueChange = onVehicleNameChange, isError = errors["vehicleName"] == true, keyboardOptions = keyboardOptions, accentColor = accentColor)
-        ListingTextField(label = stringResource(R.string.vehicle_capacity_label), value = vehicleCapacity, onValueChange = onVehicleCapacityChange, isError = errors["vehicleCapacity"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number), accentColor = accentColor)
+        
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Box(modifier = Modifier.weight(1.5f)) {
+                ListingTextField(
+                    label = stringResource(R.string.vehicle_capacity_label), 
+                    value = vehicleCapacity, 
+                    onValueChange = onVehicleCapacityChange, 
+                    isError = errors["vehicleCapacity"] == true, 
+                    keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number), 
+                    accentColor = accentColor
+                )
+            }
+            Box(modifier = Modifier.weight(1f)) {
+                ListingDropdown(
+                    label = stringResource(R.string.capacity_unit_label),
+                    value = vehicleCapacityUnit.ifEmpty { unitTon },
+                    options = unitOptions,
+                    onSelectionChange = onVehicleCapacityUnitChange,
+                    accentColor = accentColor
+                )
+            }
+        }
+
+        ListingTextField(label = stringResource(R.string.price_label), value = price, onValueChange = onPriceChange, isError = errors["price"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number), accentColor = accentColor)
     }
 }
 
@@ -1220,6 +1276,9 @@ fun BusinessFields(
                 if (it == othersStr) {
                     onBusinessSubCategoryChange("Others")
                     onBusinessTypeChange(othersStr)
+                    onFeedNameChange("")
+                    onMedicineNameChange("")
+                    onRatePerTonChange("")
                 } else {
                     onBusinessTypeChange(it)
                     if (it == fishFeed || it == prawnFeed) {
@@ -1312,6 +1371,29 @@ fun BusinessFields(
                 keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number),
                 accentColor = accentColor
             )
+        } else if (businessSubCategory == "Others") {
+            var otherBusinessName by remember { mutableStateOf(if (businessType != othersStr) businessType else "") }
+            ListingTextField(
+                label = stringResource(R.string.others_mention),
+                value = otherBusinessName,
+                onValueChange = {
+                    otherBusinessName = it
+                    onBusinessTypeChange(it)
+                },
+                isRequired = true,
+                isError = errors["businessType"] == true,
+                keyboardOptions = keyboardOptions,
+                accentColor = accentColor
+            )
+
+            ListingTextField(
+                label = stringResource(R.string.price_label),
+                value = ratePerTon,
+                onValueChange = onRatePerTonChange,
+                isError = errors["ratePerTon"] == true,
+                keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number),
+                accentColor = accentColor
+            )
         }
     }
 }
@@ -1338,12 +1420,21 @@ fun ServiceFields(
     boreWellType: String, onBoreWellTypeChange: (String) -> Unit,
     vehicleName: String, onVehicleNameChange: (String) -> Unit,
     vehicleCapacity: String, onVehicleCapacityChange: (String) -> Unit,
+    vehicleCapacityUnit: String, onVehicleCapacityUnitChange: (String) -> Unit,
     netType: String, onNetTypeChange: (String) -> Unit,
     price: String, onPriceChange: (String) -> Unit,
     errors: Map<String, Boolean> = emptyMap(),
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     accentColor: Color = AquaBlue
 ) {
+    val unitTon = stringResource(R.string.unit_ton)
+    val unitKg = stringResource(R.string.unit_kg)
+    val unitOptions = listOf(unitTon, unitKg)
+
+    LaunchedEffect(Unit) {
+        if (vehicleCapacityUnit.isEmpty()) onVehicleCapacityUnitChange(unitTon)
+    }
+
     val othersStr = stringResource(R.string.fish_others)
     val serviceOptions = listOf(stringResource(R.string.service_bore_well), stringResource(R.string.service_live_fish_vehicles), stringResource(R.string.service_nets), stringResource(R.string.service_chart_writing), stringResource(R.string.service_earth_movers), othersStr)
     
@@ -1400,7 +1491,28 @@ fun ServiceFields(
             }
             fishVehicles -> {
                 ListingTextField(label = stringResource(R.string.vehicle_name_label), value = vehicleName, onValueChange = onVehicleNameChange, isError = errors["vehicleName"] == true, keyboardOptions = keyboardOptions, accentColor = accentColor)
-                ListingTextField(label = stringResource(R.string.vehicle_capacity_label), value = vehicleCapacity, onValueChange = onVehicleCapacityChange, isError = errors["vehicleCapacity"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number), accentColor = accentColor)
+                
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Box(modifier = Modifier.weight(1.5f)) {
+                        ListingTextField(
+                            label = stringResource(R.string.vehicle_capacity_label), 
+                            value = vehicleCapacity, 
+                            onValueChange = onVehicleCapacityChange, 
+                            isError = errors["vehicleCapacity"] == true, 
+                            keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number), 
+                            accentColor = accentColor
+                        )
+                    }
+                    Box(modifier = Modifier.weight(1f)) {
+                        ListingDropdown(
+                            label = stringResource(R.string.capacity_unit_label),
+                            value = vehicleCapacityUnit.ifEmpty { unitTon },
+                            options = unitOptions,
+                            onSelectionChange = onVehicleCapacityUnitChange,
+                            accentColor = accentColor
+                        )
+                    }
+                }
             }
             nets -> {
                 SearchableListingDropdown(
@@ -1412,11 +1524,9 @@ fun ServiceFields(
                     accentColor = accentColor
                 )
             }
-            else -> {
-                // For other services (like Technician, etc.), show price field
-                ListingTextField(label = stringResource(R.string.price_label), value = price, onValueChange = onPriceChange, isError = errors["price"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number), accentColor = accentColor)
-            }
         }
+
+        ListingTextField(label = stringResource(R.string.price_label), value = price, onValueChange = onPriceChange, isError = errors["price"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number), accentColor = accentColor)
     }
 }
 
@@ -1535,7 +1645,7 @@ fun ListingTextField(
             if (isRequired) {
                 append(" *")
             }
-        }, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
+        }, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
         Spacer(modifier = Modifier.height(8.dp))
         OutlinedTextField(
             value = value,
@@ -1572,7 +1682,7 @@ fun SearchableListingDropdown(
     Column {
         Text(
             text = "$label *",
-            fontSize = 14.sp,
+            fontSize = 12.sp,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground
         )
@@ -1703,7 +1813,7 @@ fun ListingDropdown(label: String, value: String, options: List<String>, onSelec
     val keyboardController = LocalSoftwareKeyboardController.current
     
     Column {
-        Text(text = "$label *", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
+        Text(text = "$label *", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
         Spacer(modifier = Modifier.height(8.dp))
         ExposedDropdownMenuBox(
             expanded = expanded,
@@ -1749,7 +1859,7 @@ fun ListingDropdown(label: String, value: String, options: List<String>, onSelec
 @Composable
 fun LocationSection(location: String, onClick: () -> Unit, isError: Boolean = false, accentColor: Color = AquaBlue) {
     Column {
-        Text(text = stringResource(R.string.location_label), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
+        Text(text = stringResource(R.string.location_label), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
         Spacer(modifier = Modifier.height(8.dp))
         Surface(
             modifier = Modifier.fillMaxWidth().height(56.dp).clickable { onClick() },
@@ -1765,7 +1875,7 @@ fun LocationSection(location: String, onClick: () -> Unit, isError: Boolean = fa
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
                     text = location,
-                    fontSize = 14.sp,
+                    fontSize = 12.sp,
                     color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,

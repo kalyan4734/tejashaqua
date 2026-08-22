@@ -121,6 +121,57 @@ fun ChatListScreen(
         }
     }
 
+    val listingStatusMap = remember { mutableStateMapOf<String, Boolean>() }
+
+    LaunchedEffect(chats) {
+        val uniqueListingIds = chats.map { it.listingId }
+            .filter { it.isNotEmpty() && !listingStatusMap.containsKey(it) }
+            .distinct()
+            
+        if (uniqueListingIds.isNotEmpty()) {
+            uniqueListingIds.chunked(10).forEach { chunk ->
+                db.collection("listings")
+                    .whereIn(com.google.firebase.firestore.FieldPath.documentId(), chunk)
+                    .get()
+                    .addOnSuccessListener { snapshot ->
+                        val foundIds = snapshot.documents.map { it.id }.toSet()
+                        chunk.forEach { id ->
+                            val exists = foundIds.contains(id)
+                            listingStatusMap[id] = exists
+                            
+                            // Cleanup logic for inactive chats
+                            if (!exists) {
+                                val associatedChats = chats.filter { it.listingId == id }
+                                associatedChats.forEach { chatItem ->
+                                    val inactiveSince = chatItem.fullData["inactiveSince"]
+                                    if (inactiveSince == null) {
+                                        // Tag as inactive
+                                        db.collection("chats").document(chatItem.chatId)
+                                            .update("inactiveSince", com.google.firebase.firestore.FieldValue.serverTimestamp())
+                                    } else {
+                                        // Check if 7 days passed
+                                        val inactiveTime = when (inactiveSince) {
+                                            is com.google.firebase.Timestamp -> inactiveSince.toDate().time
+                                            is Number -> inactiveSince.toLong()
+                                            else -> 0L
+                                        }
+                                        
+                                        if (inactiveTime > 0) {
+                                            val sevenDaysInMillis = 7 * 24 * 60 * 60 * 1000L
+                                            if (System.currentTimeMillis() - inactiveTime > sevenDaysInMillis) {
+                                                // Delete chat
+                                                db.collection("chats").document(chatItem.chatId).delete()
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+            }
+        }
+    }
+
     val filteredChats = chats.filter {
         val otherUserId = it.fullData["userId"]?.toString() ?: ""
         if (blockedUsers.contains(otherUserId)) return@filter false
@@ -131,6 +182,13 @@ fun ChatListScreen(
             2 -> it.type == "Selling"
             else -> true
         }
+    }
+
+    val sortedChats = remember(filteredChats, listingStatusMap.toMap()) {
+        filteredChats.sortedWith(
+            compareByDescending<ChatListItemData> { listingStatusMap[it.listingId] ?: true }
+                .thenByDescending { it.time }
+        )
     }
 
     Scaffold(
@@ -156,7 +214,7 @@ fun ChatListScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp)
                         .heightIn(min = 50.dp),
-                    placeholder = { Text(stringResource(R.string.search_conversations), fontSize = 14.sp) },
+                    placeholder = { Text(stringResource(R.string.search_conversations), fontSize = 12.sp) },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = GrayText) },
                     colors = TextFieldDefaults.colors(
                         focusedContainerColor = Color.White,
@@ -205,17 +263,21 @@ fun ChatListScreen(
                     }
                 }
 
-                if (filteredChats.isEmpty() && !isLoading) {
+                if (sortedChats.isEmpty() && !isLoading) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text(stringResource(R.string.no_chats), color = GrayText)
                     }
                 } else {
                     LazyColumn(modifier = Modifier.fillMaxSize()) {
-                        items(filteredChats) { chat ->
-                            ChatListItem(chat, onClick = { 
-                                keyboardController?.hide()
-                                onChatClick(chat.fullData) 
-                            })
+                        items(sortedChats) { chat ->
+                            ChatListItem(
+                                chat = chat, 
+                                onClick = { 
+                                    keyboardController?.hide()
+                                    onChatClick(chat.fullData) 
+                                },
+                                initialListingExists = listingStatusMap[chat.listingId]
+                            )
                             HorizontalDivider(color = Color(0xFFF5F5F5), modifier = Modifier.padding(horizontal = 16.dp))
                         }
                     }
@@ -230,9 +292,9 @@ fun ChatListScreen(
 }
 
 @Composable
-fun ChatListItem(chat: ChatListItemData, onClick: () -> Unit) {
+fun ChatListItem(chat: ChatListItemData, onClick: () -> Unit, initialListingExists: Boolean? = null) {
     val db = FirebaseFirestore.getInstance()
-    var listingExists by remember(chat.listingId) { mutableStateOf(true) }
+    var listingExists by remember(chat.listingId) { mutableStateOf(initialListingExists ?: true) }
 
     LaunchedEffect(chat.listingId) {
         if (chat.listingId.isNotEmpty()) {
@@ -317,7 +379,7 @@ fun ChatListItem(chat: ChatListItemData, onClick: () -> Unit) {
                     Text(
                         text = chat.name, 
                         fontWeight = FontWeight.Bold, 
-                        fontSize = 15.sp, 
+                        fontSize = 12.sp, 
                         color = if (listingExists) Color.Black else Color.Gray
                     )
                     Spacer(modifier = Modifier.width(8.dp))
@@ -380,5 +442,6 @@ data class ChatListItemData(
     val time: Long,
     val unreadCount: Int,
     val listingImage: String? = null,
-    val fullData: Map<String, Any>
+    val fullData: Map<String, Any>,
+    val isListingActive: Boolean = true
 )

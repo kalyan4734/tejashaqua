@@ -133,7 +133,7 @@ fun MyListingsScreen(
                                     if (doc.getString("businessSubCategory") == "Feed") {
                                         "₹${CurrencyUtils.formatPrice(doc.get("ratePerTon")?.toString() ?: naText)}/$tonText"
                                     } else {
-                                        "₹${CurrencyUtils.formatPrice(doc.get("price")?.toString() ?: doc.get("rateValue")?.toString() ?: naText)}"
+                                        "₹${CurrencyUtils.formatPrice(doc.get("price")?.toString() ?: doc.get("rateValue")?.toString() ?: doc.get("ratePerTon")?.toString() ?: naText)}"
                                     }
                                 }
                                 "JOBS" -> "₹${CurrencyUtils.formatPrice(doc.get("salary")?.toString() ?: naText)}"
@@ -254,7 +254,7 @@ fun ListingCard(
                     Surface(color = Color(0xFFE8EAF6), shape = RoundedCornerShape(4.dp)) {
                         Text(text = listing.category, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp), color = Color(0xFF3F51B5), fontSize = 10.sp, fontWeight = FontWeight.Medium)
                     }
-                    Text(text = listing.title, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1, color = Color.Black)
+                    Text(text = listing.title, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1, color = Color.Black)
                     Text(text = listing.price, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, color = Color.Black)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Outlined.LocationOn, contentDescription = null, tint = GrayText, modifier = Modifier.size(14.dp))
@@ -262,7 +262,7 @@ fun ListingCard(
                         Text(
                             text = " ${listing.location} • ${getRelativeTime(context, listing.timestamp)}",
                             color = GrayText,
-                            fontSize = 12.sp,
+                            fontSize = 13.sp,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -303,7 +303,7 @@ fun ListingCard(
                     Text(
                         text = stringResource(R.string.edit_post),
                         fontWeight = FontWeight.Bold,
-                        fontSize = 12.sp,
+                        fontSize = 13.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )

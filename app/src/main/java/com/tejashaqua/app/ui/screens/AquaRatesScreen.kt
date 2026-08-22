@@ -237,7 +237,7 @@ fun RateItemCard(rate: AquaRate, onClick: () -> Unit) {
                         }
                         Text(
                             text = rate.change,
-                            fontSize = 14.sp,
+                            fontSize = 12.sp,
                             fontWeight = FontWeight.Medium,
                             color = when(rate.trend) {
                                 RateTrend.UP -> Color(0xFF4CAF50)

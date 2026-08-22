@@ -263,18 +263,44 @@ fun ChatScreen(
                         ChatMessage(text, senderId == currentUserId, time)
                     }
 
-                    // Logic to send initial message only if requested and chat is empty
-                    if (sendInitialMessage && !initialMessageSent && messages.isEmpty() && currentUserId.isNotEmpty() && currentUserId != sellerUserId) {
-                        initialMessageSent = true
-                        val city = currentUserLocation.split(",").firstOrNull()?.trim() ?: currentUserLocation
-                        val defaultMsg = context.getString(R.string.initial_chat_message, sellerName, title, currentUserName, city, currentUserPhone)
-                        sendMessage(defaultMsg)
-                    }
-
                     chatMessages.clear()
                     chatMessages.addAll(messages)
                 }
             }
+    }
+
+    // Dedicated effect to send the initial auto-message when location becomes available
+    LaunchedEffect(currentUserLocation, chatMessages.size, initialMessageSent, chatRoomId) {
+        val fetchingText = context.getString(R.string.fetching_location)
+        val deniedText = context.getString(R.string.location_permission_denied)
+        val failedText = context.getString(R.string.failed_get_location)
+        val notFoundText = context.getString(R.string.location_not_found)
+
+        val isValidLocation = currentUserLocation.isNotEmpty() &&
+                currentUserLocation != fetchingText &&
+                currentUserLocation != deniedText &&
+                currentUserLocation != failedText &&
+                currentUserLocation != notFoundText
+
+        // We only send the auto-message if:
+        // 1. Navigation requested it (sendInitialMessage)
+        // 2. We haven't sent it in this session (initialMessageSent)
+        // 3. The chat history is actually empty (verified from Firestore)
+        // 4. We have a real location (or we've waited long enough)
+        if (sendInitialMessage && !initialMessageSent && chatMessages.isEmpty() && currentUserId.isNotEmpty() && currentUserId != sellerUserId) {
+            if (isValidLocation) {
+                initialMessageSent = true
+                val city = currentUserLocation.split(",").firstOrNull()?.trim() ?: currentUserLocation
+                val defaultMsg = context.getString(R.string.initial_chat_message, sellerName, title, currentUserName, city, currentUserPhone)
+                sendMessage(defaultMsg)
+            } else if (currentUserLocation == deniedText || currentUserLocation == failedText || currentUserLocation == notFoundText) {
+                // If location failed or was denied, don't keep waiting, send with "Unknown"
+                initialMessageSent = true
+                val city = context.getString(R.string.unknown_location)
+                val defaultMsg = context.getString(R.string.initial_chat_message, sellerName, title, currentUserName, city, currentUserPhone)
+                sendMessage(defaultMsg)
+            }
+        }
     }
 
     LaunchedEffect(chatMessages.size) {
@@ -458,7 +484,7 @@ fun ChatScreen(
                                 text = stringResource(R.string.listing_deleted_title),
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFFC62828),
-                                fontSize = 14.sp
+                                fontSize = 12.sp
                             )
                             Text(
                                 text = stringResource(R.string.listing_deleted_message),
@@ -521,7 +547,7 @@ fun ChatScreen(
                                     fontWeight = FontWeight.Bold
                                 )
                             }
-                            Text(text = title, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(text = title, fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(text = price, fontWeight = FontWeight.Bold, color = AquaBlue, fontSize = 16.sp)
                             
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -622,7 +648,7 @@ fun ChatBubble(message: ChatMessage, senderName: String, listingExists: Boolean 
                         text = annotatedString,
                         style = TextStyle(
                             color = contentColor,
-                            fontSize = 15.sp,
+                            fontSize = 12.sp,
                             lineHeight = 20.sp
                         ),
                         onClick = { offset ->
@@ -640,7 +666,7 @@ fun ChatBubble(message: ChatMessage, senderName: String, listingExists: Boolean 
                         text = annotatedString.text,
                         style = TextStyle(
                             color = contentColor,
-                            fontSize = 15.sp,
+                            fontSize = 12.sp,
                             lineHeight = 20.sp
                         )
                     )

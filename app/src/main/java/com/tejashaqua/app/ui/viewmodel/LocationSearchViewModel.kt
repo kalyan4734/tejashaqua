@@ -72,8 +72,12 @@ class LocationSearchViewModel(application: Application) : AndroidViewModel(appli
         if (force) isManualSelection = false
 
         Log.d("LocationVM", "fetchCurrentLocation called")
+        
+        // Use current language context for localized strings
+        val context = LocaleHelper.wrapContext(getApplication())
+        
         if (!isManualSelection) {
-            _currentLocationName.value = getApplication<Application>().getString(R.string.fetching_location)
+            _currentLocationName.value = context.getString(R.string.fetching_location)
         }
 
         try {
@@ -105,7 +109,7 @@ class LocationSearchViewModel(application: Application) : AndroidViewModel(appli
                                     updateLocationData(location.latitude, location.longitude)
                                 }
                             } else if (!isManualSelection) {
-                                _currentLocationName.value = getApplication<Application>().getString(R.string.location_not_found)
+                                _currentLocationName.value = context.getString(R.string.location_not_found)
                             }
                         }
                     }
@@ -113,13 +117,13 @@ class LocationSearchViewModel(application: Application) : AndroidViewModel(appli
                 .addOnFailureListener { e ->
                     Log.e("LocationVM", "getCurrentLocation failure", e)
                     if (!isManualSelection) {
-                        _currentLocationName.value = getApplication<Application>().getString(R.string.failed_get_location)
+                        _currentLocationName.value = context.getString(R.string.failed_get_location)
                     }
                 }
         } catch (e: SecurityException) {
             Log.e("LocationVM", "SecurityException: permission denied", e)
             if (!isManualSelection) {
-                _currentLocationName.value = getApplication<Application>().getString(R.string.location_permission_denied)
+                _currentLocationName.value = context.getString(R.string.location_permission_denied)
             }
         }
     }
@@ -128,21 +132,22 @@ class LocationSearchViewModel(application: Application) : AndroidViewModel(appli
         viewModelScope.launch(Dispatchers.IO) {
             val lang = LocaleHelper.getSelectedLanguage(getApplication()) ?: "en"
             val locale = Locale.forLanguageTag(lang)
+            val context = LocaleHelper.wrapContext(getApplication())
             val geocoder = Geocoder(getApplication(), locale)
             try {
                 val addresses = geocoder.getFromLocation(latitude, longitude, 1)
                 if (addresses != null && addresses.isNotEmpty()) {
                     val address = addresses[0]
-                    _currentLocationName.value = address.locality ?: address.subAdminArea ?: getApplication<Application>().getString(R.string.unknown_location)
+                    _currentLocationName.value = address.locality ?: address.subAdminArea ?: context.getString(R.string.unknown_location)
                     _currentSubLocation.value = address.getAddressLine(0) ?: ""
                     _currentLatLng.value = LatLng(latitude, longitude)
                 } else {
-                    _currentLocationName.value = getApplication<Application>().getString(R.string.unknown_location)
+                    _currentLocationName.value = context.getString(R.string.unknown_location)
                     _currentSubLocation.value = "$latitude, $longitude"
                 }
             } catch (e: Exception) {
                 Log.e("LocationVM", "Geocoder error", e)
-                _currentLocationName.value = getApplication<Application>().getString(R.string.unknown_location)
+                _currentLocationName.value = context.getString(R.string.unknown_location)
                 _currentSubLocation.value = "$latitude, $longitude"
             }
         }

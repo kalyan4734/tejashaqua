@@ -385,7 +385,7 @@ fun ProfileHeader(userName: String, mobileNumber: String, profilePicUrl: String?
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(text = if (userName.isNotEmpty()) userName else stringResource(R.string.user_label), color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                Text(text = if (mobileNumber.isNotEmpty()) "+91 $mobileNumber" else stringResource(R.string.phone_not_available), color = Color.White.copy(alpha = 0.8f), fontSize = 14.sp)
+                Text(text = if (mobileNumber.isNotEmpty()) "+91 $mobileNumber" else stringResource(R.string.phone_not_available), color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp)
             }
             IconButton(onClick = onEditClick) {
                 Icon(Icons.Default.Edit, contentDescription = "Edit Profile", tint = Color.White, modifier = Modifier.size(24.dp))

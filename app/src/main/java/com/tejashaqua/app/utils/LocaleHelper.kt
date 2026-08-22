@@ -13,12 +13,14 @@ object LocaleHelper {
 
     fun setLocale(context: Context, languageCode: String) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit { putString(KEY_LANGUAGE, languageCode) }
+        prefs.edit(commit = true) { putString(KEY_LANGUAGE, languageCode) }
         
+        // Apply for Android 13+ (Per-app language)
         val appLocale: LocaleListCompat = LocaleListCompat.forLanguageTags(languageCode)
         AppCompatDelegate.setApplicationLocales(appLocale)
         
-        // Also update application context locale explicitly
+        // Manually update for older versions and to ensure immediate resource access
+        updateContextLocale(context, languageCode)
         updateContextLocale(context.applicationContext, languageCode)
     }
 
@@ -57,9 +59,14 @@ object LocaleHelper {
         val locale = Locale.forLanguageTag(languageCode)
         Locale.setDefault(locale)
         
-        val configuration = context.resources.configuration
+        val resources = context.resources
+        val configuration = resources.configuration
         configuration.setLocale(locale)
         configuration.setLayoutDirection(locale)
+        
+        // Explicitly update configuration for the current resources (helps with older devices)
+        @Suppress("DEPRECATION")
+        resources.updateConfiguration(configuration, resources.displayMetrics)
         
         return context.createConfigurationContext(configuration)
     }

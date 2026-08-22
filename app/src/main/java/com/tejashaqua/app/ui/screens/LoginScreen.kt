@@ -80,6 +80,7 @@ fun LoginScreen(
         Text(
             text = buildAnnotatedString {
                 append(stringResource(R.string.welcome_to))
+                append(" ")
                 withStyle(style = SpanStyle(color = AquaBlue, fontWeight = FontWeight.Bold)) {
                     append(stringResource(R.string.tejash_aqua))
                 }
@@ -168,7 +169,7 @@ fun LoginScreen(
         // Helper Text
         Text(
             text = stringResource(R.string.otp_helper_text),
-            fontSize = 14.sp,
+            fontSize = 12.sp,
             color = GrayText
         )
 
@@ -248,7 +249,7 @@ fun LoginScreen(
 
         Text(
             text = annotatedText,
-            style = TextStyle(fontSize = 14.sp),
+            style = TextStyle(fontSize = 12.sp),
             modifier = Modifier.padding(top = 4.dp)
         )
         

@@ -85,7 +85,7 @@ fun RateGraphBottomSheet(rate: AquaRate, onDismiss: () -> Unit) {
             ) {
                 Column {
                     Text(text = rate.name, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.Black)
-                    Text(text = "7 Days Rate Trend", fontSize = 14.sp, color = GrayText)
+                    Text(text = "7 Days Rate Trend", fontSize = 12.sp, color = GrayText)
                 }
                 IconButton(onClick = onDismiss) {
                     Icon(Icons.Default.Close, contentDescription = "Close")

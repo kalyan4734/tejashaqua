@@ -251,7 +251,7 @@ fun OtpScreen(
         ) {
             Text(
                 text = if (timerSeconds > 0) stringResource(R.string.resend_otp_in, timerSeconds) else stringResource(R.string.resend_otp),
-                fontSize = 14.sp,
+                fontSize = 12.sp,
                 color = if (timerSeconds > 0) GrayText else AquaBlue,
                 fontWeight = if (timerSeconds > 0) FontWeight.Normal else FontWeight.Bold
             )

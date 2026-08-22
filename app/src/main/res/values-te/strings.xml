@@ -110,7 +110,7 @@
     <string name="vehicle_capacity_label">వాహన సామర్థ్యం</string>
     <string name="rate_per_ton_label">టన్నుకు ధర</string>
     <string name="tank_acres_label">ట్యాంక్ ఎకరాలు</string>
-    <string name="est_price_per_acre_label">ఎకరానికి అంచనా ధర (₹ లలో)</string>
+    <string name="est_price_per_acre_label">ఎకరానికి ధర (₹)</string>
     <string name="tank_location_label">ట్యాంక్ స్థానం (గ్రామం/పట్టణం)</string>
     <string name="salary_label">జీతం (₹ లలో)</string>
     <!-- Detailed Page -->
@@ -433,7 +433,10 @@
     <string name="market_kakinada">కాకినాడ</string>
     <string name="market_machilipatnam">మచిలీపట్నం</string>
     <string name="unit_ton">టన్ను</string>
+    <string name="unit_kg">కిలో</string>
+    <string name="unit_litres">లీటర్లు</string>
     <string name="unit_acre">ఎకరం</string>
+    <string name="capacity_unit_label">యూనిట్</string>
     <string name="no_data_available">N/A</string>
     <string name="show_mobile_number">లిస్టింగ్స్‌లో మొబైల్ నంబర్‌ను చూపించు</string>
     <string name="show_mobile_number_desc">దీన్ని నిలిపివేస్తే, కొనుగోలుదారులు మిమ్మల్ని చాట్ ద్వారా మాత్రమే సంప్రదించగలరు.</string>

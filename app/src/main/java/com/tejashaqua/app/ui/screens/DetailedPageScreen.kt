@@ -46,6 +46,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import com.tejashaqua.app.data.model.ListingCategory
 import com.tejashaqua.app.R
 import com.tejashaqua.app.utils.CurrencyUtils
+import com.tejashaqua.app.utils.LocaleHelper
 import com.tejashaqua.app.ui.components.MarketItem
 import com.tejashaqua.app.ui.components.SellerPostsDialog
 import com.tejashaqua.app.ui.theme.AquaBlue
@@ -117,7 +118,7 @@ fun DetailedPageScreen(
             if (listingData["businessSubCategory"] == "Feed") {
                 "₹${CurrencyUtils.formatPrice(listingData["ratePerTon"] ?: naText)}/$tonText"
             } else {
-                "₹${CurrencyUtils.formatPrice(listingData["price"] ?: listingData["rateValue"] ?: naText)}"
+                "₹${CurrencyUtils.formatPrice(listingData["price"] ?: listingData["rateValue"] ?: listingData["ratePerTon"] ?: naText)}"
             }
         }
         "JOBS" -> "₹${CurrencyUtils.formatPrice(listingData["salary"] ?: naText)}"
@@ -128,6 +129,30 @@ fun DetailedPageScreen(
     val fullLocation = listingData["location"]?.toString() ?: stringResource(R.string.unknown_location)
     // Use the first part of the address (Locality) as the main location
     val location = fullLocation.split(",").firstOrNull()?.trim() ?: fullLocation
+    
+    val currentLang = LocaleHelper.getSelectedLanguage(context) ?: "en"
+    var localizedLocation by remember(fullLocation, currentLang) { mutableStateOf(location) }
+
+    LaunchedEffect(listingData["lat"], listingData["lng"], currentLang) {
+        val latVal = (listingData["lat"] as? Number)?.toDouble()
+        val lngVal = (listingData["lng"] as? Number)?.toDouble()
+        if (latVal != null && lngVal != null) {
+            withContext(kotlinx.coroutines.Dispatchers.IO) {
+                try {
+                    val locale = java.util.Locale.forLanguageTag(currentLang)
+                    val geocoder = android.location.Geocoder(context, locale)
+                    val addresses = geocoder.getFromLocation(latVal, lngVal, 1)
+                    if (!addresses.isNullOrEmpty()) {
+                        val address = addresses[0]
+                        val newLoc = address.locality ?: address.subAdminArea ?: location
+                        localizedLocation = newLoc
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
+    }
     val description = listingData["description"]?.toString() ?: stringResource(R.string.no_description)
     val posterName = listingData["posterName"]?.toString() ?: stringResource(R.string.user_label)
     val images = (listingData["images"] as? List<*>) ?: emptyList<String>()
@@ -352,7 +377,7 @@ fun DetailedPageScreen(
                                     Text(
                                         text = stringResource(R.string.contact_us), 
                                         fontWeight = FontWeight.Bold, 
-                                        fontSize = 15.sp,
+                                        fontSize = 13.sp,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
@@ -374,7 +399,7 @@ fun DetailedPageScreen(
                                 Text(
                                     text = stringResource(R.string.chat_with_seller), 
                                     fontWeight = FontWeight.Bold, 
-                                    fontSize = 15.sp,
+                                    fontSize = 13.sp,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -508,7 +533,7 @@ fun DetailedPageScreen(
                         Text(
                             text = displayCategory,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            fontSize = 13.sp,
+                            fontSize = 12.sp,
                             color = AquaBlue,
                             fontWeight = FontWeight.Bold
                         )
@@ -529,7 +554,7 @@ fun DetailedPageScreen(
                         Spacer(modifier = Modifier.width(16.dp))
                         Icon(Icons.Default.LocationOn, contentDescription = null, tint = GrayText, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = location, fontSize = 14.sp, color = GrayText)
+                        Text(text = localizedLocation, fontSize = 14.sp, color = GrayText)
                     }
                 }
             }
@@ -554,7 +579,7 @@ fun DetailedPageScreen(
                             DetailRowItem(stringResource(R.string.fish_type_label), listingData["fishType"]?.toString() ?: stringResource(R.string.not_available_short))
                             DetailRowItem(stringResource(R.string.size_label), "${listingData["sizeValue"]?.toString() ?: ""} ${listingData["sizeType"]?.toString() ?: ""}")
                             DetailRowItem(stringResource(R.string.fish_age_label), stringResource(R.string.months_suffix, listingData["fishAge"]?.toString() ?: ""))
-                            DetailRowItem(stringResource(R.string.quantity_label), CurrencyUtils.formatPrice(listingData["quantity"]))
+                            DetailRowItem(stringResource(R.string.quantity_label), "${CurrencyUtils.formatPrice(listingData["quantity"])} ${listingData["unitType"]?.toString() ?: ""}")
                             DetailRowItem(stringResource(R.string.price_label), priceLabel)
                         }
                         ListingCategory.PRAWNS -> {
@@ -568,8 +593,10 @@ fun DetailedPageScreen(
                             DetailRowItem(stringResource(R.string.price_label), priceLabel)
                         }
                         ListingCategory.VEHICLES -> {
+                            val capacity = listingData["vehicleCapacity"]?.toString() ?: stringResource(R.string.not_available_short)
+                            val unit = listingData["vehicleCapacityUnit"]?.toString() ?: ""
                             DetailRowItem(stringResource(R.string.vehicle_name_label), listingData["vehicleName"]?.toString() ?: stringResource(R.string.not_available_short))
-                            DetailRowItem(stringResource(R.string.capacity_label), listingData["vehicleCapacity"]?.toString() ?: stringResource(R.string.not_available_short))
+                            DetailRowItem(stringResource(R.string.capacity_label), if (unit.isNotEmpty()) "$capacity $unit" else capacity)
                             DetailRowItem(stringResource(R.string.service_type_label), listingData["serviceType"]?.toString() ?: stringResource(R.string.not_available_short))
                         }
                         ListingCategory.FEED -> {
@@ -585,19 +612,34 @@ fun DetailedPageScreen(
                                 DetailRowItem(stringResource(R.string.rate_per_ton_label), priceLabel)
                             } else if (listingData["businessSubCategory"] == "Medicine") {
                                 DetailRowItem(stringResource(R.string.medicine_name_label), listingData["medicineName"]?.toString() ?: stringResource(R.string.not_available_short))
+                                DetailRowItem(stringResource(R.string.medicine_rate_label), priceLabel)
+                            } else if (listingData["businessSubCategory"] == "Others") {
                                 DetailRowItem(stringResource(R.string.price_label), priceLabel)
                             }
                         }
                         ListingCategory.SERVICES -> {
-                            DetailRowItem(stringResource(R.string.service_type_label), listingData["serviceType"]?.toString() ?: stringResource(R.string.not_available_short))
-                            when(listingData["serviceType"]?.toString()) {
-                                "Bore Well" -> DetailRowItem(stringResource(R.string.bore_type_label), listingData["boreWellType"]?.toString() ?: stringResource(R.string.not_available_short))
-                                "Live Fish Vehicles" -> {
-                                    DetailRowItem(stringResource(R.string.vehicle_name_label), listingData["vehicleName"]?.toString() ?: stringResource(R.string.not_available_short))
-                                    DetailRowItem(stringResource(R.string.capacity_label), listingData["vehicleCapacity"]?.toString() ?: stringResource(R.string.not_available_short))
+                            val serviceTypeStr = listingData["serviceType"]?.toString() ?: ""
+                            val boreWell = stringResource(R.string.service_bore_well)
+                            val fishVehicles = stringResource(R.string.service_live_fish_vehicles)
+                            val nets = stringResource(R.string.service_nets)
+
+                            DetailRowItem(stringResource(R.string.service_type_label), serviceTypeStr.ifEmpty { stringResource(R.string.not_available_short) })
+                            
+                            when {
+                                serviceTypeStr == "Bore Well" || serviceTypeStr == boreWell -> {
+                                    DetailRowItem(stringResource(R.string.bore_type_label), listingData["boreWellType"]?.toString() ?: stringResource(R.string.not_available_short))
                                 }
-                                "Nets" -> DetailRowItem(stringResource(R.string.net_type_label), listingData["netType"]?.toString() ?: stringResource(R.string.not_available_short))
+                                serviceTypeStr == "Live Fish Vehicles" || serviceTypeStr == fishVehicles -> {
+                                    val capacity = listingData["vehicleCapacity"]?.toString() ?: stringResource(R.string.not_available_short)
+                                    val unit = listingData["vehicleCapacityUnit"]?.toString() ?: ""
+                                    DetailRowItem(stringResource(R.string.vehicle_name_label), listingData["vehicleName"]?.toString() ?: stringResource(R.string.not_available_short))
+                                    DetailRowItem(stringResource(R.string.capacity_label), if (unit.isNotEmpty()) "$capacity $unit" else capacity)
+                                }
+                                serviceTypeStr == "Nets" || serviceTypeStr == nets -> {
+                                    DetailRowItem(stringResource(R.string.net_type_label), listingData["netType"]?.toString() ?: stringResource(R.string.not_available_short))
+                                }
                             }
+                            DetailRowItem(stringResource(R.string.price_label), priceLabel)
                         }
                         ListingCategory.TANKS -> {
                             DetailRowItem(stringResource(R.string.tank_acres_label), stringResource(R.string.acres_suffix, listingData["tankAcres"]?.toString() ?: stringResource(R.string.not_available_short)))
@@ -615,7 +657,7 @@ fun DetailedPageScreen(
                             DetailRowItem(stringResource(R.string.price_label), priceLabel)
                         }
                     }
-                    DetailRowItem(stringResource(R.string.posted_location), location)
+                    DetailRowItem(stringResource(R.string.posted_location), localizedLocation)
                 }
             }
 
@@ -730,7 +772,7 @@ fun DetailedPageScreen(
                             val markerPos = LatLng(lat ?: finalLat, lng ?: finalLng)
                             Marker(
                                 state = MarkerState(position = markerPos),
-                                title = location,
+                                title = localizedLocation,
                                 icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)
                             )
                         }
@@ -747,8 +789,8 @@ fun DetailedPageScreen(
                             Icon(Icons.Default.LocationOn, contentDescription = null, tint = AquaBlue, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = location, 
-                                fontSize = 15.sp, 
+                                text = localizedLocation,
+                                fontSize = 12.sp, 
                                 color = Color.Black, 
                                 maxLines = 1, 
                                 overflow = TextOverflow.Ellipsis

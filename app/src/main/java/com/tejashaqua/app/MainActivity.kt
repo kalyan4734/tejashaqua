@@ -129,8 +129,6 @@ class MainActivity : AppCompatActivity() {
         intentFlow.value = intent
         firebaseAnalytics = FirebaseAnalytics.getInstance(this)
         LocaleHelper.applySavedLocale(this)
-        val lang = LocaleHelper.getSelectedLanguage(this) ?: "en"
-        LocaleHelper.updateContextLocale(this, lang)
         enableEdgeToEdge()
         setContent {
             TejashAquaTheme {
@@ -865,32 +863,44 @@ class MainActivity : AppCompatActivity() {
                                     currentScreen = "edit_listing"
                                 })
 
-                            "edit_listing" -> EditListingScreen(
-                                category = selectedCategory,
-                                isEditMode = isEditMode,
-                                listingId = selectedListingId,
-                                userName = userName,
-                                userMobileNumber = mobileNumber,
-                                initialLocation = pickedListingLocation?.first
-                                    ?: if (currentSubLocation.isNotEmpty()) "$currentLocationName, $currentSubLocation" else currentLocationName,
-                                initialLatLng = pickedListingLocation?.second ?: if (!isEditMode) deviceLatLng else null,
-                                onBackClick = {
-                                    currentScreen =
-                                        if (isEditMode) "my_listings" else "select_category"
-                                },
-                                onPostClick = { data ->
-                                    navigateToDetailedPage(data, "dashboard")
-                                },
-                                onDeleteClick = { currentScreen = "dashboard" },
-                                onLocationChangeClick = {
-                                    pViewModel.requestFeaturePermissions(listOf(PermissionType.LOCATION)) {
-                                        locationViewModel.fetchCurrentLocation(force = true)
-                                    }
-                                },
-                                joinedAt = joinedAt,
-                                userId = userId,
-                                showMobileNumberPreference = showMobileNumber
-                            )
+                            "edit_listing" -> {
+                                val fetchingText = stringResource(R.string.fetching_location)
+                                val deniedText = stringResource(R.string.location_permission_denied)
+                                val failedText = stringResource(R.string.failed_get_location)
+
+                                val isActualLocation = currentLocationName != fetchingText &&
+                                        currentLocationName != deniedText &&
+                                        currentLocationName != failedText
+
+                                val initialLoc = pickedListingLocation?.first
+                                    ?: if (isActualLocation && currentSubLocation.isNotEmpty()) "$currentLocationName, $currentSubLocation" else currentLocationName
+
+                                EditListingScreen(
+                                    category = selectedCategory,
+                                    isEditMode = isEditMode,
+                                    listingId = selectedListingId,
+                                    userName = userName,
+                                    userMobileNumber = mobileNumber,
+                                    initialLocation = initialLoc,
+                                    initialLatLng = pickedListingLocation?.second ?: if (!isEditMode) deviceLatLng else null,
+                                    onBackClick = {
+                                        currentScreen =
+                                            if (isEditMode) "my_listings" else "select_category"
+                                    },
+                                    onPostClick = { data ->
+                                        navigateToDetailedPage(data, "dashboard")
+                                    },
+                                    onDeleteClick = { currentScreen = "dashboard" },
+                                    onLocationChangeClick = {
+                                        pViewModel.requestFeaturePermissions(listOf(PermissionType.LOCATION)) {
+                                            locationViewModel.fetchCurrentLocation(force = true)
+                                        }
+                                    },
+                                    joinedAt = joinedAt,
+                                    userId = userId,
+                                    showMobileNumberPreference = showMobileNumber
+                                )
+                            }
 
                             "privacy_policy" -> LegalScreen(
                                 title = stringResource(R.string.privacy_policy),

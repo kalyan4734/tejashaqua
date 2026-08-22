@@ -261,7 +261,22 @@ fun DashboardScreen(
                     location.contains(productSearchText.lowercase()) ||
                     category.lowercase().contains(productSearchText.lowercase())
                 
-                val matchesCategory = selectedCategoryFilter == "All" || category.uppercase() == selectedCategoryFilter
+                val matchesCategory = if (selectedCategoryFilter == "All") {
+                    true
+                } else if (selectedCategoryFilter == "VEHICLES") {
+                    val serviceType = data["serviceType"]?.toString() ?: ""
+                    val fishVehiclesEn = "Live Fish Vehicles"
+                    val fishVehiclesTe = context.getString(R.string.service_live_fish_vehicles)
+                    
+                    category.uppercase() == "VEHICLES" || 
+                    (category.uppercase() == "SERVICES" && (serviceType == fishVehiclesEn || serviceType == fishVehiclesTe))
+                } else if (selectedCategoryFilter == "FEED") {
+                    val businessSubCategory = data["businessSubCategory"]?.toString() ?: ""
+                    category.uppercase() == "FEED" || 
+                    (category.uppercase() == "BUSINESS" && businessSubCategory == "Feed")
+                } else {
+                    category.uppercase() == selectedCategoryFilter
+                }
                 
                 matchesSearch && matchesCategory
             }
@@ -345,6 +360,57 @@ fun DashboardScreen(
             }
     }
 
+    val listingStatusMap = remember { mutableStateMapOf<String, Boolean>() }
+
+    LaunchedEffect(chats) {
+        val uniqueListingIds = chats.map { it.listingId }
+            .filter { it.isNotEmpty() && !listingStatusMap.containsKey(it) }
+            .distinct()
+            
+        if (uniqueListingIds.isNotEmpty()) {
+            uniqueListingIds.chunked(10).forEach { chunk ->
+                db.collection("listings")
+                    .whereIn(com.google.firebase.firestore.FieldPath.documentId(), chunk)
+                    .get()
+                    .addOnSuccessListener { snapshot ->
+                        val foundIds = snapshot.documents.map { it.id }.toSet()
+                        chunk.forEach { id ->
+                            val exists = foundIds.contains(id)
+                            listingStatusMap[id] = exists
+                            
+                            // Cleanup logic for inactive chats
+                            if (!exists) {
+                                val associatedChats = chats.filter { it.listingId == id }
+                                associatedChats.forEach { chatItem ->
+                                    val inactiveSince = chatItem.fullData["inactiveSince"]
+                                    if (inactiveSince == null) {
+                                        // Tag as inactive
+                                        db.collection("chats").document(chatItem.chatId)
+                                            .update("inactiveSince", com.google.firebase.firestore.FieldValue.serverTimestamp())
+                                    } else {
+                                        // Check if 7 days passed
+                                        val inactiveTime = when (inactiveSince) {
+                                            is com.google.firebase.Timestamp -> inactiveSince.toDate().time
+                                            is Number -> inactiveSince.toLong()
+                                            else -> 0L
+                                        }
+                                        
+                                        if (inactiveTime > 0) {
+                                            val sevenDaysInMillis = 7 * 24 * 60 * 60 * 1000L
+                                            if (System.currentTimeMillis() - inactiveTime > sevenDaysInMillis) {
+                                                // Delete chat
+                                                db.collection("chats").document(chatItem.chatId).delete()
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+            }
+        }
+    }
+
     val filteredChats = remember(chats, chatSearchText, chatSelectedTabIndex) {
         chats.filter {
             (it.name.contains(chatSearchText, ignoreCase = true) || it.listingInfo.contains(chatSearchText, ignoreCase = true)) &&
@@ -354,6 +420,13 @@ fun DashboardScreen(
                 else -> true
             }
         }
+    }
+
+    val sortedChats = remember(filteredChats, listingStatusMap.toMap()) {
+        filteredChats.sortedWith(
+            compareByDescending<ChatListItemData> { listingStatusMap[it.listingId] ?: true }
+                .thenByDescending { it.time }
+        )
     }
 
     Scaffold(
@@ -393,7 +466,7 @@ fun DashboardScreen(
                                 Text(
                                     text = fetchedSub,
                                     color = Color.White.copy(alpha = 0.8f),
-                                    fontSize = 12.sp,
+                                    fontSize = 14.sp,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -668,6 +741,7 @@ fun DashboardScreen(
                                         "SERVICES" -> stringResource(R.string.cat_services)
                                         "TANKS" -> stringResource(R.string.cat_tanks)
                                         "BUSINESS" -> stringResource(R.string.cat_business)
+                                        "JOBS" -> stringResource(R.string.cat_jobs)
                                         else -> categoryStr
                                     }
                                     val naText = stringResource(R.string.not_available_short)
@@ -685,7 +759,7 @@ fun DashboardScreen(
                                             if (data["businessSubCategory"] == "Feed") {
                                                 "₹${CurrencyUtils.formatPrice(data["ratePerTon"] ?: naText)}/$tonText"
                                             } else {
-                                                "₹${CurrencyUtils.formatPrice(data["price"] ?: data["rateValue"] ?: naText)}"
+                                                "₹${CurrencyUtils.formatPrice(data["price"] ?: data["rateValue"] ?: data["ratePerTon"] ?: naText)}"
                                             }
                                         }
                                         "JOBS" -> "₹${CurrencyUtils.formatPrice(data["salary"] ?: naText)}"
@@ -694,7 +768,7 @@ fun DashboardScreen(
                                     }
 
                                     MarketItem(
-                                        title = data["title"]?.toString()?.takeIf { it.isNotBlank() } ?: "No Title",
+                                        title = data["title"]?.toString()?.takeIf { it.isNotBlank() } ?: stringResource(R.string.no_title),
                                         price = priceLabel,
                                         category = displayCategory,
                                         location = data["location"]?.toString() ?: "Unknown",
@@ -756,15 +830,19 @@ fun DashboardScreen(
                                 CircularProgressIndicator(color = AquaBlue)
                             }
                         }
-                    } else if (filteredChats.isEmpty()) {
+                    } else if (sortedChats.isEmpty()) {
                         item {
                             Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
                                 Text(stringResource(R.string.no_chats), color = GrayText)
                             }
                         }
                     } else {
-                        items(filteredChats) { chat ->
-                            ChatListItem(chat, onClick = { onChatListClick(chat.fullData) })
+                        items(sortedChats) { chat ->
+                            ChatListItem(
+                                chat = chat, 
+                                onClick = { onChatListClick(chat.fullData) },
+                                initialListingExists = listingStatusMap[chat.listingId]
+                            )
                             HorizontalDivider(color = Color(0xFFF5F5F5), modifier = Modifier.padding(horizontal = 16.dp))
                         }
                     }
@@ -802,7 +880,7 @@ fun DashboardScreen(
                             }) { Icon(Icons.Default.Close, contentDescription = "Close") }
                         }
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text(stringResource(R.string.welcome_desc), fontSize = 15.sp, color = GrayText, lineHeight = 21.sp)
+                        Text(stringResource(R.string.welcome_desc), fontSize = 12.sp, color = GrayText, lineHeight = 21.sp)
                         Spacer(modifier = Modifier.height(24.dp))
                         OutlinedTextField(value = tempName, onValueChange = { tempName = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text(stringResource(R.string.enter_name), color = Color.Gray) }, leadingIcon = { Icon(Icons.Default.PersonOutline, contentDescription = null, tint = Color.Black) }, shape = RoundedCornerShape(12.dp), singleLine = true)
                         Spacer(modifier = Modifier.height(24.dp))
@@ -875,6 +953,8 @@ fun DashboardScreen(
                                     val title = data["title"]?.toString() ?: "New Post"
                                     val category = data["category"]?.toString() ?: "Post"
                                     val posterName = data["posterName"]?.toString() ?: "User"
+                                    val fullLocation = data["location"]?.toString() ?: ""
+                                    val location = fullLocation.split(",").firstOrNull()?.trim() ?: "Local"
 
                                     Card(
                                         onClick = {
@@ -895,7 +975,7 @@ fun DashboardScreen(
                                             Spacer(modifier = Modifier.width(12.dp))
                                             Column(modifier = Modifier.weight(1f)) {
                                                 Text(text = if (isNew) "NEW: $title" else title, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color.Black)
-                                                Text(text = "$category posted by $posterName", fontSize = 13.sp, color = Color.Gray)
+                                                Text(text = "$category posted by $posterName from $location", fontSize = 13.sp, color = Color.Gray)
                                                 Text(text = SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault()).format(Date(timestamp)), fontSize = 11.sp, color = GrayText)
                                             }
                                             if (isNew) {
@@ -939,7 +1019,7 @@ fun DashboardScreen(
 
 @Composable
 fun CategoryFilterRow(selected: String, onSelect: (String) -> Unit) {
-    val categories = listOf("All", "FISH", "PRAWNS", "EQUIPMENTS", "VEHICLES", "FEED", "SERVICES", "TANKS", "BUSINESS")
+    val categories = listOf("All", "FISH", "PRAWNS", "EQUIPMENTS", "VEHICLES", "FEED", "SERVICES", "TANKS", "BUSINESS", "JOBS")
     
     LazyRow(
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
@@ -956,6 +1036,7 @@ fun CategoryFilterRow(selected: String, onSelect: (String) -> Unit) {
                 "SERVICES" -> stringResource(R.string.cat_services)
                 "TANKS" -> stringResource(R.string.cat_tanks)
                 "BUSINESS" -> stringResource(R.string.cat_business)
+                "JOBS" -> stringResource(R.string.cat_jobs)
                 else -> category
             }
             

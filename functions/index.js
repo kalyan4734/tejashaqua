@@ -14,7 +14,7 @@ setGlobalOptions({ region: "asia-south1" });
 const MSG91_AUTH_KEY = defineSecret("MSG91_AUTH_KEY");
 const MSG91_TEMPLATE_ID = defineSecret("MSG91_TEMPLATE_ID");
 
-const TEST_PHONE = "919999999999";
+const TEST_PHONE = "919848182726";
 const TEST_OTP = "123456";
 
 const normalizePhoneNumber = (phoneNumber) => {
@@ -152,15 +152,16 @@ exports.onListingCreated = onDocumentCreated("listings/{listingId}", async (even
 
     const title = listing.title || "New Ad";
     const category = listing.category || "Listing";
-    const posterName = listing.posterName || (userId ? `User_${userId.slice(-4)}` : "User");
     const userId = listing.userId || "";
+    const posterName = listing.posterName || (userId ? `User_${userId.slice(-4)}` : "User");
+    const location = (listing.location || "").split(",")[0].trim() || "Local";
 
-    logger.info(`Processing new listing: ${title} by ${posterName} (UserID: ${userId})`);
+    logger.info(`Processing new listing: ${title} by ${posterName} from ${location} (UserID: ${userId})`);
 
     const notificationPayload = {
         notification: {
             title: `New Ad in ${category}`,
-            body: `${title} posted by ${posterName}`
+            body: `${title} posted by ${posterName} from ${location}`
         },
         data: {
             type: "listing",
@@ -168,7 +169,7 @@ exports.onListingCreated = onDocumentCreated("listings/{listingId}", async (even
             category: category,
             posterId: userId,
             title: `New Ad in ${category}`,
-            body: `${title} posted by ${posterName}`,
+            body: `${title} posted by ${posterName} from ${location}`,
             click_action: "OPEN_LISTING"
         },
         android: {

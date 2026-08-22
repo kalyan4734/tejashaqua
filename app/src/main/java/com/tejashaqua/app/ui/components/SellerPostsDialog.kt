@@ -109,7 +109,7 @@ fun SellerPostsDialog(
                                     if (data["businessSubCategory"] == "Feed") {
                                         "₹${CurrencyUtils.formatPrice(data["ratePerTon"] ?: naText)}/$tonText"
                                     } else {
-                                        "₹${CurrencyUtils.formatPrice(data["price"] ?: data["rateValue"] ?: naText)}"
+                                        "₹${CurrencyUtils.formatPrice(data["price"] ?: data["rateValue"] ?: data["ratePerTon"] ?: naText)}"
                                     }
                                 }
                                 "JOBS" -> "₹${CurrencyUtils.formatPrice(data["salary"] ?: naText)}"

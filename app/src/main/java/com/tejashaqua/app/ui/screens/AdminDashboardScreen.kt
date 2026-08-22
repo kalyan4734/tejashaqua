@@ -169,7 +169,7 @@ fun AdminDashboardScreen(onBackClick: () -> Unit) {
                                 Text(
                                     title, 
                                     fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal,
-                                    fontSize = 15.sp
+                                    fontSize = 12.sp
                                 ) 
                             }
                         )
@@ -264,7 +264,7 @@ fun FishRatesAdmin(selectedDate: Long, onBackClick: () -> Unit) {
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column {
-                        Text("Rate Status", fontSize = 14.sp, color = GrayText)
+                        Text("Rate Status", fontSize = 12.sp, color = GrayText)
                         Text(
                             if (noDataAvailable) "Marked as No Data" else "Updating Rates",
                             fontWeight = FontWeight.Bold,
@@ -305,7 +305,7 @@ fun FishRatesAdmin(selectedDate: Long, onBackClick: () -> Unit) {
                     ) {
                         Icon(Icons.Default.History, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Auto-fill from Yesterday", fontSize = 13.sp)
+                        Text("Auto-fill from Yesterday", fontSize = 12.sp)
                     }
                 }
             }
@@ -593,7 +593,7 @@ fun PrawnRatesAdmin(selectedDate: Long, onBackClick: () -> Unit) {
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Market & Status", fontSize = 14.sp, color = GrayText)
+                        Text("Market & Status", fontSize = 12.sp, color = GrayText)
                         ExposedDropdownMenuBox(
                             expanded = expanded,
                             onExpandedChange = { 
@@ -681,7 +681,7 @@ fun PrawnRatesAdmin(selectedDate: Long, onBackClick: () -> Unit) {
                                         Text(count, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF3F51B5))
                                     }
                                 }
-                                Text("Count", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                                Text("Count", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                             }
                             
                             OutlinedTextField(
@@ -692,13 +692,13 @@ fun PrawnRatesAdmin(selectedDate: Long, onBackClick: () -> Unit) {
                                         noDataAvailable = false
                                     }
                                 },
-                                placeholder = { Text("Rate", fontSize = 13.sp) },
-                                prefix = { Text("₹", color = GrayText, fontSize = 13.sp) },
+                                placeholder = { Text("Rate", fontSize = 12.sp) },
+                                prefix = { Text("₹", color = GrayText, fontSize = 12.sp) },
                                 modifier = Modifier.fillMaxWidth(),
                                 keyboardOptions = keyboardOptions,
                                 enabled = !noDataAvailable,
                                 singleLine = true,
-                                textStyle = androidx.compose.ui.text.TextStyle(fontSize = 14.sp),
+                                textStyle = androidx.compose.ui.text.TextStyle(fontSize = 12.sp),
                                 shape = RoundedCornerShape(8.dp),
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedBorderColor = AquaBlue,
@@ -863,13 +863,13 @@ fun ReportsAdmin() {
             divider = {}
         ) {
             Tab(selected = reportTab == 0, onClick = { reportTab = 0 }) {
-                Text("Listings (${listingReports.size})", modifier = Modifier.padding(12.dp), fontSize = 13.sp)
+                Text("Listings (${listingReports.size})", modifier = Modifier.padding(12.dp), fontSize = 12.sp)
             }
             Tab(selected = reportTab == 1, onClick = { reportTab = 1 }) {
-                Text("Users (${userReports.size})", modifier = Modifier.padding(12.dp), fontSize = 13.sp)
+                Text("Users (${userReports.size})", modifier = Modifier.padding(12.dp), fontSize = 12.sp)
             }
             Tab(selected = reportTab == 2, onClick = { reportTab = 2 }) {
-                Text("Blocked (${mostBlockedUsers.size})", modifier = Modifier.padding(12.dp), fontSize = 13.sp)
+                Text("Blocked (${mostBlockedUsers.size})", modifier = Modifier.padding(12.dp), fontSize = 12.sp)
             }
         }
 
@@ -953,7 +953,7 @@ fun BlockedUserCard(userId: String, blockCount: Int) {
             }
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text("User ID: $userId", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Text("User ID: $userId", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                 Text("Blocked by $blockCount other users", fontSize = 12.sp, color = GrayText)
             }
         }
@@ -991,10 +991,10 @@ fun ReportCard(report: Map<String, Any>, isUserReport: Boolean, onDelete: (Strin
                     Text(
                         text = if (isUserReport) "User Report" else "Listing Report",
                         fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp,
+                        fontSize = 12.sp,
                         color = Color(0xFFD32F2F)
                     )
-                    Text(text = "Reason: $reason", fontSize = 14.sp, color = Color.Black)
+                    Text(text = "Reason: $reason", fontSize = 12.sp, color = Color.Black)
                 }
                 IconButton(onClick = { onDelete(id) }, modifier = Modifier.size(24.dp)) {
                     Icon(Icons.Default.DeleteOutline, contentDescription = "Dismiss", tint = GrayText, modifier = Modifier.size(20.dp))

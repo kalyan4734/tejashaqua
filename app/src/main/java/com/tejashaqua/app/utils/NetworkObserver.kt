@@ -49,23 +49,30 @@ class NetworkObserver(context: Context) {
                 val activeNetwork = connectivityManager.activeNetwork
                 val capabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
                 
-                // We check for INTERNET capability.
-                val hasInternet = capabilities != null &&
-                        capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                // We check for any active transport (WiFi or Cellular) 
+                // to avoid flickering when internet is poor but connection exists.
+                val hasConnection = capabilities != null && (
+                        capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
+                        capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ||
+                        capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
+                )
 
                 launch {
-                    if (!hasInternet && isLosing) {
-                        // Small delay before confirming loss to handle network handovers (WiFi -> Data)
+                    if (!hasConnection && isLosing) {
+                        // Small delay before confirming loss to handle network handovers
                         delay(2000)
                         val retryCapabilities = connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)
-                        val stillNoInternet = retryCapabilities == null ||
-                                !retryCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                        val stillNoConnection = retryCapabilities == null || !(
+                                retryCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
+                                retryCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ||
+                                retryCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
+                        )
                         
-                        if (stillNoInternet) {
+                        if (stillNoConnection) {
                             send(Status.Lost)
                         }
                     } else {
-                        send(if (hasInternet) Status.Available else Status.Lost)
+                        send(if (hasConnection) Status.Available else Status.Lost)
                     }
                 }
             }
@@ -78,11 +85,14 @@ class NetworkObserver(context: Context) {
             // Fallback for older versions or issues
         }
         
-        // Initial state check - check multiple times to ensure it's not transient
+        // Initial state check
         val activeNetwork = connectivityManager.activeNetwork
         val capabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
-        val isInitiallyConnected = capabilities != null &&
-                capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+        val isInitiallyConnected = capabilities != null && (
+                capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
+                capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ||
+                capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
+        )
         
         launch { 
             send(if (isInitiallyConnected) Status.Available else Status.Lost)

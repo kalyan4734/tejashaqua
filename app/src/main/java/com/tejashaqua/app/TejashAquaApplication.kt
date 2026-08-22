@@ -3,6 +3,7 @@ package com.tejashaqua.app
 import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.content.Context
 import android.os.Build
 import com.google.android.libraries.places.api.Places
 import com.google.firebase.FirebaseApp
@@ -14,6 +15,10 @@ import com.tejashaqua.app.utils.LocaleHelper
 import java.util.Locale
 
 class TejashAquaApplication : Application() {
+    override fun attachBaseContext(base: Context) {
+        super.attachBaseContext(LocaleHelper.wrapContext(base))
+    }
+
     override fun onCreate() {
         super.onCreate()
         LocaleHelper.applySavedLocale(this)

@@ -93,7 +93,7 @@ fun PrawnRatesScreen(onBackClick: () -> Unit) {
             // Market Selection
             item {
                 Column {
-                    Text(stringResource(R.string.select_market), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                    Text(stringResource(R.string.select_market), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                     Spacer(modifier = Modifier.height(8.dp))
                     ExposedDropdownMenuBox(
                         expanded = expanded,
