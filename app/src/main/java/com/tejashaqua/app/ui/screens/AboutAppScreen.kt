@@ -35,7 +35,7 @@ fun AboutAppScreen(
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text(stringResource(R.string.about_app), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp) },
+                title = { Text(stringResource(R.string.about_app), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
@@ -81,7 +81,7 @@ fun AboutAppScreen(
             
             Text(
                 text = stringResource(R.string.version_label, versionName),
-                fontSize = 12.sp,
+                fontSize = 14.sp,
                 color = GrayText,
                 modifier = Modifier.padding(top = 4.dp)
             )

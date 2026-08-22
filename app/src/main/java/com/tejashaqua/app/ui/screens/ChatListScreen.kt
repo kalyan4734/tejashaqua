@@ -195,7 +195,7 @@ fun ChatListScreen(
         topBar = {
             Column(modifier = Modifier.background(AquaBlue)) {
                 CenterAlignedTopAppBar(
-                    title = { Text(stringResource(R.string.chat_title), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp) },
+                    title = { Text(stringResource(R.string.chat_title), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp) },
                     navigationIcon = {
                         IconButton(onClick = {
                             keyboardController?.hide()
@@ -214,7 +214,7 @@ fun ChatListScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp)
                         .heightIn(min = 50.dp),
-                    placeholder = { Text(stringResource(R.string.search_conversations), fontSize = 12.sp) },
+                    placeholder = { Text(stringResource(R.string.search_conversations), fontSize = 16.sp) },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = GrayText) },
                     colors = TextFieldDefaults.colors(
                         focusedContainerColor = Color.White,
@@ -321,7 +321,7 @@ fun ChatListItem(chat: ChatListItemData, onClick: () -> Unit, initialListingExis
                 Text(
                     text = chat.listingInfo,
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                    fontSize = 11.sp,
+                    fontSize = 12.sp,
                     color = if (listingExists) Color.Black else Color.Gray,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -338,7 +338,7 @@ fun ChatListItem(chat: ChatListItemData, onClick: () -> Unit, initialListingExis
                     Text(
                         text = stringResource(R.string.inactive),
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                        fontSize = 10.sp,
+                        fontSize = 12.sp,
                         color = Color(0xFFC62828),
                         fontWeight = FontWeight.Bold
                     )
@@ -379,7 +379,7 @@ fun ChatListItem(chat: ChatListItemData, onClick: () -> Unit, initialListingExis
                     Text(
                         text = chat.name, 
                         fontWeight = FontWeight.Bold, 
-                        fontSize = 12.sp, 
+                        fontSize = 16.sp, 
                         color = if (listingExists) Color.Black else Color.Gray
                     )
                     Spacer(modifier = Modifier.width(8.dp))
@@ -390,7 +390,7 @@ fun ChatListItem(chat: ChatListItemData, onClick: () -> Unit, initialListingExis
                         Text(
                             text = if (chat.type == "Buying") stringResource(R.string.buying) else stringResource(R.string.selling),
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                            fontSize = 10.sp,
+                            fontSize = 12.sp,
                             color = if (!listingExists) Color.Gray else if (chat.type == "Buying") Color(0xFF2E7D32) else AquaBlue,
                             fontWeight = FontWeight.Bold
                         )
@@ -398,7 +398,7 @@ fun ChatListItem(chat: ChatListItemData, onClick: () -> Unit, initialListingExis
                 }
                 Text(
                     text = chat.lastMessage,
-                    fontSize = 13.sp,
+                    fontSize = 14.sp,
                     color = if (!listingExists) Color.LightGray else if (chat.unreadCount > 0) Color.Black else Color.Gray,
                     fontWeight = if (listingExists && chat.unreadCount > 0) FontWeight.Bold else FontWeight.Normal,
                     maxLines = 1,
@@ -407,7 +407,7 @@ fun ChatListItem(chat: ChatListItemData, onClick: () -> Unit, initialListingExis
             }
             
             Column(horizontalAlignment = Alignment.End) {
-                Text(text = formatTime(chat.time), fontSize = 11.sp, color = GrayText)
+                Text(text = formatTime(chat.time), fontSize = 12.sp, color = GrayText)
                 if (chat.unreadCount > 0 && listingExists) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Badge(containerColor = AquaBlue, contentColor = Color.White) {

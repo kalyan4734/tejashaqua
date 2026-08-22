@@ -93,37 +93,41 @@ fun DetailedPageScreen(
 
     val title = listingData["title"]?.toString() ?: stringResource(R.string.no_title)
     val categoryStr = listingData["category"]?.toString() ?: "Other"
-    val displayCategory = when(categoryStr.uppercase()) {
-        "FISH" -> stringResource(R.string.cat_fish_seed)
-        "PRAWNS" -> stringResource(R.string.cat_prawns)
-        "EQUIPMENTS" -> stringResource(R.string.cat_equipments)
-        "VEHICLES" -> stringResource(R.string.cat_vehicles)
-        "FEED" -> stringResource(R.string.cat_feed)
-        "SERVICES" -> stringResource(R.string.cat_services)
-        "TANKS" -> stringResource(R.string.cat_tanks)
-        "BUSINESS" -> stringResource(R.string.cat_business)
-        "JOBS" -> stringResource(R.string.cat_jobs)
-        else -> categoryStr
+    val displayCategory = remember(categoryStr) {
+        when(categoryStr.uppercase()) {
+            "FISH" -> context.getString(R.string.cat_fish_seed)
+            "PRAWNS" -> context.getString(R.string.cat_prawns)
+            "EQUIPMENTS" -> context.getString(R.string.cat_equipments)
+            "VEHICLES" -> context.getString(R.string.cat_vehicles)
+            "FEED" -> context.getString(R.string.cat_feed)
+            "SERVICES" -> context.getString(R.string.cat_services)
+            "TANKS" -> context.getString(R.string.cat_tanks)
+            "BUSINESS" -> context.getString(R.string.cat_business)
+            "JOBS" -> context.getString(R.string.cat_jobs)
+            else -> categoryStr
+        }
     }
     
-    val priceLabel = when (categoryStr.uppercase()) {
-        "PRAWNS" -> {
-            val rate = listingData["rateValue"]?.toString() ?: naText
-            val formattedRate = CurrencyUtils.formatPrice(rate)
-            val type = listingData["rateType"]?.toString() ?: "Paise"
-            if (type.contains("Paise", ignoreCase = true)) "$formattedRate Paise/Seed" else "₹$formattedRate/Seed"
-        }
-        "FEED" -> "₹${CurrencyUtils.formatPrice(listingData["ratePerTon"] ?: naText)}/$tonText"
-        "BUSINESS" -> {
-            if (listingData["businessSubCategory"] == "Feed") {
-                "₹${CurrencyUtils.formatPrice(listingData["ratePerTon"] ?: naText)}/$tonText"
-            } else {
-                "₹${CurrencyUtils.formatPrice(listingData["price"] ?: listingData["rateValue"] ?: listingData["ratePerTon"] ?: naText)}"
+    val priceLabel = remember(listingData) {
+        when (categoryStr.uppercase()) {
+            "PRAWNS" -> {
+                val rate = listingData["rateValue"]?.toString() ?: naText
+                val formattedRate = CurrencyUtils.formatPrice(rate)
+                val type = listingData["rateType"]?.toString() ?: "Paise"
+                if (type.contains("Paise", ignoreCase = true)) "$formattedRate Paise/Seed" else "₹$formattedRate/Seed"
             }
+            "FEED" -> "₹${CurrencyUtils.formatPrice(listingData["ratePerTon"] ?: naText)}/$tonText"
+            "BUSINESS" -> {
+                if (listingData["businessSubCategory"] == "Feed") {
+                    "₹${CurrencyUtils.formatPrice(listingData["ratePerTon"] ?: naText)}/$tonText"
+                } else {
+                    "₹${CurrencyUtils.formatPrice(listingData["price"] ?: listingData["rateValue"] ?: listingData["ratePerTon"] ?: naText)}"
+                }
+            }
+            "JOBS" -> "₹${CurrencyUtils.formatPrice(listingData["salary"] ?: naText)}"
+            "TANKS" -> "₹${CurrencyUtils.formatPrice(listingData["estPricePerAcre"] ?: naText)}/$acreText"
+            else -> "₹${CurrencyUtils.formatPrice(listingData["price"] ?: listingData["rateValue"] ?: naText)}"
         }
-        "JOBS" -> "₹${CurrencyUtils.formatPrice(listingData["salary"] ?: naText)}"
-        "TANKS" -> "₹${CurrencyUtils.formatPrice(listingData["estPricePerAcre"] ?: naText)}/$acreText"
-        else -> "₹${CurrencyUtils.formatPrice(listingData["price"] ?: listingData["rateValue"] ?: naText)}"
     }
     val category = try { ListingCategory.valueOf(categoryStr.uppercase()) } catch (e: Exception) { null }
     val fullLocation = listingData["location"]?.toString() ?: stringResource(R.string.unknown_location)
@@ -160,6 +164,55 @@ fun DetailedPageScreen(
     val listingUserId = listingData["userId"]?.toString() ?: listingData["posterId"]?.toString() ?: ""
     val isOwnListing = currentUserId.isNotEmpty() && listingUserId.isNotEmpty() && currentUserId == listingUserId
     val listingId = listingData["id"]?.toString() ?: ""
+
+    // --- MAP STATE OPTIMIZATION (Hoisted for scroll performance) ---
+    var lat by remember(listingId) { mutableStateOf((listingData["lat"] as? Number)?.toDouble()) }
+    var lng by remember(listingId) { mutableStateOf((listingData["lng"] as? Number)?.toDouble()) }
+    
+    val finalLat = lat ?: 17.0005
+    val finalLng = lng ?: 81.7729
+    val mapPosition = remember(finalLat, finalLng) { LatLng(finalLat, finalLng) }
+    
+    val cameraPositionState = rememberCameraPositionState {
+        position = CameraPosition.fromLatLngZoom(mapPosition, 13f)
+    }
+
+    // Sync camera if lat/lng changes (e.g. from Geocoder)
+    LaunchedEffect(lat, lng) {
+        if (lat != null && lng != null) {
+            cameraPositionState.position = CameraPosition.fromLatLngZoom(LatLng(lat!!, lng!!), 13f)
+        }
+    }
+
+    LaunchedEffect(fullLocation) {
+        if (lat == null || lng == null) {
+            withContext(kotlinx.coroutines.Dispatchers.IO) {
+                try {
+                    val geocoder = Geocoder(context, Locale.getDefault())
+                    val addresses = geocoder.getFromLocationName(fullLocation, 1)
+                    if (!addresses.isNullOrEmpty()) {
+                        val address = addresses[0]
+                        lat = address.latitude
+                        lng = address.longitude
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
+    }
+
+    val hasLocationPermission = remember {
+        androidx.core.content.ContextCompat.checkSelfPermission(
+            context,
+            android.Manifest.permission.ACCESS_FINE_LOCATION
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED ||
+        androidx.core.content.ContextCompat.checkSelfPermission(
+            context,
+            android.Manifest.permission.ACCESS_COARSE_LOCATION
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+    }
+    // -------------------------------------------------------------
     
     // Pass from Home Page to avoid flicker for Joined Date and Privacy Toggle
     var sellerJoinedAt by remember(listingId) { 
@@ -287,7 +340,7 @@ fun DetailedPageScreen(
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text(stringResource(R.string.detailed_page_title), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 19.sp) },
+                title = { Text(stringResource(R.string.detailed_page_title), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp) },
                 navigationIcon = {
                     IconButton(onClick = {
                         keyboardController?.hide()
@@ -541,9 +594,9 @@ fun DetailedPageScreen(
                     
                     Spacer(modifier = Modifier.height(12.dp))
                     
-                    Text(text = title, fontSize = 21.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                    Text(text = title, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                     
-                    Text(text = priceLabel, fontSize = 25.sp, fontWeight = FontWeight.ExtraBold, color = AquaBlue)
+                    Text(text = priceLabel, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = AquaBlue)
                     
                     Spacer(modifier = Modifier.height(12.dp))
                     
@@ -681,7 +734,7 @@ fun DetailedPageScreen(
                             modifier = Modifier.size(44.dp).background(Color(0xFFE0F7FA), CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(text = posterName.take(1).uppercase(), fontWeight = FontWeight.Bold, color = Color(0xFF0097A7), fontSize = 19.sp)
+                            Text(text = posterName.take(1).uppercase(), fontWeight = FontWeight.Bold, color = Color(0xFF0097A7), fontSize = 20.sp)
                         }
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
@@ -695,45 +748,9 @@ fun DetailedPageScreen(
                         }
                     }
 
-                    Text(text = stringResource(R.string.posted_location), fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                    Text(text = stringResource(R.string.posted_location), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                     Spacer(modifier = Modifier.height(12.dp))
                     
-                    val context = LocalContext.current
-                    var lat by remember { mutableStateOf((listingData["lat"] as? Number)?.toDouble()) }
-                    var lng by remember { mutableStateOf((listingData["lng"] as? Number)?.toDouble()) }
-                    
-                    val finalLat = lat ?: 17.0005
-                    val finalLng = lng ?: 81.7729
-                    val position = LatLng(finalLat, finalLng)
-                    
-                    val cameraPositionState = rememberCameraPositionState {
-                        this.position = CameraPosition.fromLatLngZoom(position, 13f)
-                    }
-
-                    LaunchedEffect(fullLocation) {
-                        if (lat == null || lng == null) {
-                            withContext(kotlinx.coroutines.Dispatchers.IO) {
-                                try {
-                                    val geocoder = Geocoder(context, Locale.getDefault())
-                                    val addresses = geocoder.getFromLocationName(fullLocation, 1)
-                                    if (!addresses.isNullOrEmpty()) {
-                                        val address = addresses[0]
-                                        lat = address.latitude
-                                        lng = address.longitude
-                                    }
-                                } catch (e: Exception) {
-                                    e.printStackTrace()
-                                }
-                            }
-                        }
-                    }
-
-                    LaunchedEffect(lat, lng) {
-                        if (lat != null && lng != null) {
-                            cameraPositionState.animate(CameraUpdateFactory.newLatLngZoom(LatLng(lat!!, lng!!), 13f))
-                        }
-                    }
-
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -742,20 +759,12 @@ fun DetailedPageScreen(
                             .background(Color(0xFFF5F5F5))
                             .border(1.dp, Color(0xFFEEEEEE), RoundedCornerShape(12.dp))
                     ) {
-                        val hasLocationPermission = remember {
-                            androidx.core.content.ContextCompat.checkSelfPermission(
-                                context,
-                                android.Manifest.permission.ACCESS_FINE_LOCATION
-                            ) == android.content.pm.PackageManager.PERMISSION_GRANTED ||
-                            androidx.core.content.ContextCompat.checkSelfPermission(
-                                context,
-                                android.Manifest.permission.ACCESS_COARSE_LOCATION
-                            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-                        }
-
                         GoogleMap(
                             modifier = Modifier.fillMaxSize(),
                             cameraPositionState = cameraPositionState,
+                            googleMapOptionsFactory = {
+                                com.google.android.gms.maps.GoogleMapOptions().liteMode(true)
+                            },
                             properties = MapProperties(
                                 isMyLocationEnabled = hasLocationPermission,
                                 mapType = MapType.NORMAL
@@ -765,8 +774,8 @@ fun DetailedPageScreen(
                                 mapToolbarEnabled = true,
                                 myLocationButtonEnabled = hasLocationPermission,
                                 compassEnabled = false,
-                                scrollGesturesEnabled = false, // Disable scroll inside LazyColumn to avoid conflicts
-                                zoomGesturesEnabled = true
+                                scrollGesturesEnabled = false,
+                                zoomGesturesEnabled = false
                             )
                         ) {
                             val markerPos = LatLng(lat ?: finalLat, lng ?: finalLng)
@@ -790,7 +799,7 @@ fun DetailedPageScreen(
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 text = localizedLocation,
-                                fontSize = 12.sp, 
+                                fontSize = 12.sp,
                                 color = Color.Black, 
                                 maxLines = 1, 
                                 overflow = TextOverflow.Ellipsis
@@ -899,6 +908,9 @@ fun FullScreenImageDialog(
     onDismiss: () -> Unit
 ) {
     val fullScreenPagerState = rememberPagerState(initialPage = initialPage) { images.size }
+    val scaleStates = remember { mutableStateMapOf<Int, Float>() }
+    val isZoomed = (scaleStates[fullScreenPagerState.currentPage] ?: 1f) > 1f
+
     Dialog(
         onDismissRequest = onDismiss,
         properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
@@ -907,42 +919,68 @@ fun FullScreenImageDialog(
             HorizontalPager(
                 state = fullScreenPagerState,
                 modifier = Modifier.fillMaxSize(),
-                userScrollEnabled = true // Pager scrolling
+                userScrollEnabled = !isZoomed
             ) { page ->
                 var scale by remember { mutableFloatStateOf(1f) }
                 var offset by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
-                val state = androidx.compose.foundation.gestures.rememberTransformableState { zoomChange, offsetChange, _ ->
-                    scale *= zoomChange
-                    scale = scale.coerceIn(1f, 5f)
-                    offset += offsetChange
+
+                LaunchedEffect(scale) {
+                    scaleStates[page] = scale
                 }
 
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .transformable(state = state)
-                        .pointerInput(Unit) {
-                            detectTapGestures(
-                                onDoubleTap = {
-                                    scale = if (scale > 1f) 1f else 2f
-                                    offset = androidx.compose.ui.geometry.Offset.Zero
-                                }
+                BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                    val state = androidx.compose.foundation.gestures.rememberTransformableState { zoomChange, offsetChange, _ ->
+                        val newScale = (scale * zoomChange).coerceIn(1f, 5f)
+                        
+                        if (newScale > 1f) {
+                            val extraWidth = (newScale - 1) * constraints.maxWidth
+                            val extraHeight = (newScale - 1) * constraints.maxHeight
+                            val maxX = extraWidth / 2
+                            val maxY = extraHeight / 2
+                            
+                            val newOffset = offset + offsetChange
+                            offset = androidx.compose.ui.geometry.Offset(
+                                x = newOffset.x.coerceIn(-maxX, maxX),
+                                y = newOffset.y.coerceIn(-maxY, maxY)
                             )
+                        } else {
+                            offset = androidx.compose.ui.geometry.Offset.Zero
                         }
-                ) {
-                    AsyncImage(
-                        model = images[page]?.toString() ?: "",
-                        contentDescription = null,
+                        scale = newScale
+                    }
+
+                    Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .graphicsLayer(
-                                scaleX = scale,
-                                scaleY = scale,
-                                translationX = offset.x,
-                                translationY = offset.y
-                            ),
-                        contentScale = ContentScale.Fit
-                    )
+                            .transformable(state = state)
+                            .pointerInput(Unit) {
+                                detectTapGestures(
+                                    onDoubleTap = {
+                                        if (scale > 1f) {
+                                            scale = 1f
+                                            offset = androidx.compose.ui.geometry.Offset.Zero
+                                        } else {
+                                            scale = 2f
+                                        }
+                                    }
+                                )
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        AsyncImage(
+                            model = images[page]?.toString() ?: "",
+                            contentDescription = null,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .graphicsLayer(
+                                    scaleX = scale,
+                                    scaleY = scale,
+                                    translationX = offset.x,
+                                    translationY = offset.y
+                                ),
+                            contentScale = ContentScale.Fit
+                        )
+                    }
                 }
             }
             

@@ -24,7 +24,7 @@ fun LegalScreen(
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text(title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp) },
+                title = { Text(title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
@@ -45,7 +45,7 @@ fun LegalScreen(
             item {
                 Text(
                     text = content,
-                    fontSize = 12.sp,
+                    fontSize = 16.sp,
                     color = Color.DarkGray,
                     lineHeight = 24.sp
                 )

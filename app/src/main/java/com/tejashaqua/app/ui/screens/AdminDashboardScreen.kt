@@ -136,7 +136,7 @@ fun AdminDashboardScreen(onBackClick: () -> Unit) {
                             Text(
                                 text = sdf.format(Date(selectedDate)),
                                 color = Color.White,
-                                fontSize = 12.sp,
+                                fontSize = 14.sp,
                                 fontWeight = FontWeight.Medium
                             )
                         }
@@ -169,7 +169,7 @@ fun AdminDashboardScreen(onBackClick: () -> Unit) {
                                 Text(
                                     title, 
                                     fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal,
-                                    fontSize = 12.sp
+                                    fontSize = 14.sp
                                 ) 
                             }
                         )
@@ -264,17 +264,17 @@ fun FishRatesAdmin(selectedDate: Long, onBackClick: () -> Unit) {
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column {
-                        Text("Rate Status", fontSize = 12.sp, color = GrayText)
+                        Text("Rate Status", fontSize = 14.sp, color = GrayText)
                         Text(
                             if (noDataAvailable) "Marked as No Data" else "Updating Rates",
                             fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp,
+                            fontSize = 14.sp,
                             color = if (noDataAvailable) Color(0xFFD32F2F) else AquaBlue
                         )
                     }
                     
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(stringResource(R.string.no_data_available), fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                        Text(stringResource(R.string.no_data_available), fontSize = 14.sp, fontWeight = FontWeight.Medium)
                         Spacer(modifier = Modifier.width(8.dp))
                         Switch(
                             checked = noDataAvailable,
@@ -305,7 +305,7 @@ fun FishRatesAdmin(selectedDate: Long, onBackClick: () -> Unit) {
                     ) {
                         Icon(Icons.Default.History, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Auto-fill from Yesterday", fontSize = 12.sp)
+                        Text("Auto-fill from Yesterday", fontSize = 14.sp)
                     }
                 }
             }
@@ -473,7 +473,7 @@ fun AdminRateItem(
                 
                 if (prevPrice > 0) {
                     Column(horizontalAlignment = Alignment.End) {
-                        Text("Prev: ₹$prevPrice", fontSize = 11.sp, color = GrayText)
+                        Text("Prev: ₹$prevPrice", fontSize = 14.sp, color = GrayText)
                         if (rate.change.isNotEmpty()) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
@@ -493,7 +493,7 @@ fun AdminRateItem(
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
                                     rate.change,
-                                    fontSize = 12.sp,
+                                    fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = when(rate.trend) {
                                         RateTrend.UP -> Color(0xFF4CAF50)
@@ -593,7 +593,7 @@ fun PrawnRatesAdmin(selectedDate: Long, onBackClick: () -> Unit) {
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Market & Status", fontSize = 12.sp, color = GrayText)
+                        Text("Market & Status", fontSize = 14.sp, color = GrayText)
                         ExposedDropdownMenuBox(
                             expanded = expanded,
                             onExpandedChange = { 
@@ -608,7 +608,7 @@ fun PrawnRatesAdmin(selectedDate: Long, onBackClick: () -> Unit) {
                                     .padding(vertical = 4.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(selectedMarket, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = AquaBlue)
+                                Text(selectedMarket, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = AquaBlue)
                                 Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = AquaBlue)
                             }
                             ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
@@ -627,7 +627,7 @@ fun PrawnRatesAdmin(selectedDate: Long, onBackClick: () -> Unit) {
                     }
                     
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(stringResource(R.string.no_data_available), fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                        Text(stringResource(R.string.no_data_available), fontSize = 14.sp, fontWeight = FontWeight.Medium)
                         Spacer(modifier = Modifier.width(8.dp))
                         Switch(
                             checked = noDataAvailable,
@@ -678,10 +678,10 @@ fun PrawnRatesAdmin(selectedDate: Long, onBackClick: () -> Unit) {
                                     modifier = Modifier.size(30.dp)
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
-                                        Text(count, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF3F51B5))
+                                        Text(count, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF3F51B5))
                                     }
                                 }
-                                Text("Count", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                                Text("Count", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                             }
                             
                             OutlinedTextField(
@@ -692,13 +692,13 @@ fun PrawnRatesAdmin(selectedDate: Long, onBackClick: () -> Unit) {
                                         noDataAvailable = false
                                     }
                                 },
-                                placeholder = { Text("Rate", fontSize = 12.sp) },
-                                prefix = { Text("₹", color = GrayText, fontSize = 12.sp) },
+                                placeholder = { Text("Rate", fontSize = 14.sp) },
+                                prefix = { Text("₹", color = GrayText, fontSize = 14.sp) },
                                 modifier = Modifier.fillMaxWidth(),
                                 keyboardOptions = keyboardOptions,
                                 enabled = !noDataAvailable,
                                 singleLine = true,
-                                textStyle = androidx.compose.ui.text.TextStyle(fontSize = 12.sp),
+                                textStyle = androidx.compose.ui.text.TextStyle(fontSize = 14.sp),
                                 shape = RoundedCornerShape(8.dp),
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedBorderColor = AquaBlue,
@@ -863,13 +863,13 @@ fun ReportsAdmin() {
             divider = {}
         ) {
             Tab(selected = reportTab == 0, onClick = { reportTab = 0 }) {
-                Text("Listings (${listingReports.size})", modifier = Modifier.padding(12.dp), fontSize = 12.sp)
+                Text("Listings (${listingReports.size})", modifier = Modifier.padding(12.dp), fontSize = 14.sp)
             }
             Tab(selected = reportTab == 1, onClick = { reportTab = 1 }) {
-                Text("Users (${userReports.size})", modifier = Modifier.padding(12.dp), fontSize = 12.sp)
+                Text("Users (${userReports.size})", modifier = Modifier.padding(12.dp), fontSize = 14.sp)
             }
             Tab(selected = reportTab == 2, onClick = { reportTab = 2 }) {
-                Text("Blocked (${mostBlockedUsers.size})", modifier = Modifier.padding(12.dp), fontSize = 12.sp)
+                Text("Blocked (${mostBlockedUsers.size})", modifier = Modifier.padding(12.dp), fontSize = 14.sp)
             }
         }
 
@@ -953,7 +953,7 @@ fun BlockedUserCard(userId: String, blockCount: Int) {
             }
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text("User ID: $userId", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Text("User ID: $userId", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 Text("Blocked by $blockCount other users", fontSize = 12.sp, color = GrayText)
             }
         }
@@ -991,10 +991,10 @@ fun ReportCard(report: Map<String, Any>, isUserReport: Boolean, onDelete: (Strin
                     Text(
                         text = if (isUserReport) "User Report" else "Listing Report",
                         fontWeight = FontWeight.Bold,
-                        fontSize = 12.sp,
+                        fontSize = 14.sp,
                         color = Color(0xFFD32F2F)
                     )
-                    Text(text = "Reason: $reason", fontSize = 12.sp, color = Color.Black)
+                    Text(text = "Reason: $reason", fontSize = 14.sp, color = Color.Black)
                 }
                 IconButton(onClick = { onDelete(id) }, modifier = Modifier.size(24.dp)) {
                     Icon(Icons.Default.DeleteOutline, contentDescription = "Dismiss", tint = GrayText, modifier = Modifier.size(20.dp))
@@ -1020,7 +1020,7 @@ fun ReportCard(report: Map<String, Any>, isUserReport: Boolean, onDelete: (Strin
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = dateStr,
-                fontSize = 11.sp,
+                fontSize = 12.sp,
                 color = GrayText,
                 modifier = Modifier.align(Alignment.End)
             )

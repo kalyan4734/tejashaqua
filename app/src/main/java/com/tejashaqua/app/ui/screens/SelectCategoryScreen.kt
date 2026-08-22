@@ -106,7 +106,7 @@ fun SelectCategoryScreen(
                         stringResource(R.string.select_category_title),
                         color = Color.White,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp
+                        fontSize = 20.sp
                     )
                 },
                 navigationIcon = {
@@ -131,7 +131,7 @@ fun SelectCategoryScreen(
         ) {
             Text(
                 text = stringResource(R.string.select_category_desc),
-                fontSize = 16.sp,
+                fontSize = 14.sp,
                 color = Color.Black,
                 modifier = Modifier.padding(bottom = 24.dp)
             )
@@ -223,7 +223,7 @@ fun CategoryCard(item: CategoryItem, onClick: () -> Unit) {
                     Text(
                         text = item.title,
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                        fontSize = 12.sp,
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = tintColor,
                         maxLines = 1,
@@ -236,7 +236,7 @@ fun CategoryCard(item: CategoryItem, onClick: () -> Unit) {
                     fontSize = 11.sp,
                     color = GrayText,
                     fontWeight = FontWeight.Normal,
-                    lineHeight = 16.sp,
+                    lineHeight = 14.sp,
                     minLines = 2,
                     maxLines = 2,
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis

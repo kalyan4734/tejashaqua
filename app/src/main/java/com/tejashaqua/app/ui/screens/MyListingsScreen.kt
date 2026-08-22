@@ -162,7 +162,7 @@ fun MyListingsScreen(
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text(stringResource(R.string.my_listings), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp) },
+                title = { Text(stringResource(R.string.my_listings), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp) },
                 navigationIcon = {
                     IconButton(onClick = {
                         keyboardController?.hide()
@@ -252,9 +252,9 @@ fun ListingCard(
 
                 Column(modifier = Modifier.weight(1f)) {
                     Surface(color = Color(0xFFE8EAF6), shape = RoundedCornerShape(4.dp)) {
-                        Text(text = listing.category, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp), color = Color(0xFF3F51B5), fontSize = 10.sp, fontWeight = FontWeight.Medium)
+                        Text(text = listing.category, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp), color = Color(0xFF3F51B5), fontSize = 12.sp, fontWeight = FontWeight.Medium)
                     }
-                    Text(text = listing.title, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1, color = Color.Black)
+                    Text(text = listing.title, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1, color = Color.Black)
                     Text(text = listing.price, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, color = Color.Black)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Outlined.LocationOn, contentDescription = null, tint = GrayText, modifier = Modifier.size(14.dp))
@@ -262,7 +262,7 @@ fun ListingCard(
                         Text(
                             text = " ${listing.location} • ${getRelativeTime(context, listing.timestamp)}",
                             color = GrayText,
-                            fontSize = 13.sp,
+                            fontSize = 12.sp,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -286,7 +286,7 @@ fun ListingCard(
                         text = stringResource(R.string.delete),
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFFD32F2F),
-                        fontSize = 13.sp,
+                        fontSize = 14.sp,
                         maxLines = 1
                     )
                 }
@@ -303,7 +303,7 @@ fun ListingCard(
                     Text(
                         text = stringResource(R.string.edit_post),
                         fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp,
+                        fontSize = 14.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )

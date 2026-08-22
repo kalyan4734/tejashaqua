@@ -158,7 +158,7 @@ fun EditProfileScreen(
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text(stringResource(R.string.edit_profile), color = Color.White, fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.edit_profile), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp) },
                 navigationIcon = {
                     IconButton(onClick = {
                         keyboardController?.hide()

@@ -69,7 +69,7 @@ fun PrawnRatesScreen(onBackClick: () -> Unit) {
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text(stringResource(R.string.prawn_rates_title), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp) },
+                title = { Text(stringResource(R.string.prawn_rates_title), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp) },
                 navigationIcon = {
                     IconButton(onClick = {
                         keyboardController?.hide()
@@ -93,7 +93,7 @@ fun PrawnRatesScreen(onBackClick: () -> Unit) {
             // Market Selection
             item {
                 Column {
-                    Text(stringResource(R.string.select_market), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                    Text(stringResource(R.string.select_market), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                     Spacer(modifier = Modifier.height(8.dp))
                     ExposedDropdownMenuBox(
                         expanded = expanded,
@@ -140,7 +140,7 @@ fun PrawnRatesScreen(onBackClick: () -> Unit) {
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = if (lastUpdatedDate.isNotEmpty()) lastUpdatedDate else "--",
-                        fontSize = 16.sp,
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.Black
                     )

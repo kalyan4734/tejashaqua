@@ -97,14 +97,14 @@ fun AquaRatesScreen(
             CenterAlignedTopAppBar(
                 title = { 
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(stringResource(R.string.today_aqua_rates), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 19.sp)
+                        Text(stringResource(R.string.today_aqua_rates), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
                         val latestUpdate = rates.maxOfOrNull { it.lastUpdated } ?: 0L
                         if (latestUpdate > 0) {
                             val sdf = java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault())
                             Text(
                                 text = stringResource(R.string.last_updated, sdf.format(java.util.Date(latestUpdate))),
                                 color = Color.White.copy(alpha = 0.8f),
-                                fontSize = 12.sp,
+                                fontSize = 14.sp,
                                 fontWeight = FontWeight.Normal
                             )
                         }
@@ -190,7 +190,7 @@ fun RateItemCard(rate: AquaRate, onClick: () -> Unit) {
             Column {
                 Text(
                     text = rate.getDisplayName(),
-                    fontSize = 18.sp,
+                    fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.Black
                 )
@@ -209,7 +209,7 @@ fun RateItemCard(rate: AquaRate, onClick: () -> Unit) {
                 
                 Text(
                     text = displayPrice,
-                    fontSize = 19.sp,
+                    fontSize = 16.sp,
                     fontWeight = FontWeight.ExtraBold,
                     color = Color.Black
                 )

@@ -82,7 +82,7 @@ fun OtpScreen(
     // Initialize SMS Retriever
     DisposableEffect(Unit) {
         authViewModel.startOtpRetriever()
-        
+
         SmsBroadcastReceiver.setOtpListener(object : SmsBroadcastReceiver.OtpListener {
             override fun onOtpReceived(otp: String) {
                 authViewModel.setAutoOtp(otp)
@@ -176,7 +176,7 @@ fun OtpScreen(
 
         Text(
             text = stringResource(R.string.sent_to, mobileNumber),
-            fontSize = 16.sp,
+            fontSize = 14.sp,
             color = GrayText,
             modifier = Modifier.padding(top = 8.dp)
         )
@@ -193,7 +193,7 @@ fun OtpScreen(
         if (otpValue.isEmpty() && !isLoading) {
             Text(
                 text = stringResource(R.string.waiting_for_otp),
-                fontSize = 12.sp,
+                fontSize = 14.sp,
                 color = AquaBlue.copy(alpha = 0.7f),
                 modifier = Modifier.padding(top = 4.dp)
             )
@@ -251,7 +251,7 @@ fun OtpScreen(
         ) {
             Text(
                 text = if (timerSeconds > 0) stringResource(R.string.resend_otp_in, timerSeconds) else stringResource(R.string.resend_otp),
-                fontSize = 12.sp,
+                fontSize = 14.sp,
                 color = if (timerSeconds > 0) GrayText else AquaBlue,
                 fontWeight = if (timerSeconds > 0) FontWeight.Normal else FontWeight.Bold
             )

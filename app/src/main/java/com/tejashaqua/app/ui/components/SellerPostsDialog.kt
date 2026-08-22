@@ -58,7 +58,7 @@ fun SellerPostsDialog(
                         )
                         Text(
                             text = stringResource(R.string.items_count, sellerPosts.size),
-                            fontSize = 12.sp,
+                            fontSize = 14.sp,
                             color = GrayText
                         )
                     }

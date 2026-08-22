@@ -126,9 +126,9 @@ fun EditListingScreen(
     val postState by listingViewModel.postState.collectAsState()
     val context = LocalContext.current
 
-    val isLocationFetched = location.isNotBlank() && 
-                           !location.contains(fetchingLocText) && 
-                           !location.contains(deniedLocText) && 
+    val isLocationFetched = location.isNotBlank() &&
+                           !location.contains(fetchingLocText) &&
+                           !location.contains(deniedLocText) &&
                            !location.contains(failedLocText)
 
     var tempCameraUri by remember { mutableStateOf<Uri?>(null) }
@@ -165,9 +165,9 @@ fun EditListingScreen(
 
     if (showPhotoOptions) {
         AlertDialog(
-            onDismissRequest = { 
+            onDismissRequest = {
                 keyboardController?.hide()
-                showPhotoOptions = false 
+                showPhotoOptions = false
             },
             title = { Text(stringResource(R.string.choose_photo_source)) },
             text = {
@@ -178,7 +178,7 @@ fun EditListingScreen(
                         modifier = Modifier.clickable {
                             keyboardController?.hide()
                             showPhotoOptions = false
-                            
+
                             pViewModel.requestFeaturePermissions(listOf(PermissionType.CAMERA)) {
                                 val uri = ImageUtils.createImageUri(context)
                                 tempCameraUri = uri
@@ -529,7 +529,7 @@ fun EditListingScreen(
         Scaffold(
             topBar = {
                 CenterAlignedTopAppBar(
-                    title = { Text(screenTitle, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp) },
+                    title = { Text(screenTitle, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp) },
                     navigationIcon = {
                         IconButton(onClick = {
                             keyboardController?.hide()
@@ -543,13 +543,13 @@ fun EditListingScreen(
             },
             bottomBar = {
                 Surface(
-                    tonalElevation = 8.dp, 
+                    tonalElevation = 8.dp,
                     color = MaterialTheme.colorScheme.surface,
                     modifier = Modifier.navigationBarsPadding().imePadding()
                 ) {
                     val onActionClick = {
                         keyboardController?.hide()
-                        
+
                         pViewModel.requestFeaturePermissions(listOf(PermissionType.LOCATION)) {
                             val status = com.tejashaqua.app.utils.PermissionHelper.getStatus(context, PermissionType.LOCATION)
                             if (status == com.tejashaqua.app.utils.PermissionStatus.GRANTED) {
@@ -570,11 +570,11 @@ fun EditListingScreen(
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             val isActionEnabled = isLocationFetched && !isRefreshingLocation && !isWaitingForLocation && !isFetchingData && postState !is ListingViewModel.PostState.Loading
-                            
+
                             OutlinedButton(
-                                onClick = { 
+                                onClick = {
                                     keyboardController?.hide()
-                                    showDeleteDialog = true 
+                                    showDeleteDialog = true
                                 },
                                 modifier = Modifier.weight(1f).height(56.dp),
                                 shape = RoundedCornerShape(12.dp),
@@ -599,7 +599,7 @@ fun EditListingScreen(
                     } else {
                         Box(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
                             val isActionEnabled = isLocationFetched && !isRefreshingLocation && !isWaitingForLocation && !isFetchingData && postState !is ListingViewModel.PostState.Loading
-                            
+
                             Button(
                                 onClick = onActionClick,
                                 modifier = Modifier.fillMaxWidth().height(56.dp),
@@ -718,10 +718,10 @@ fun EditListingScreen(
 
                 item {
                     ListingTextField(
-                        label = stringResource(R.string.description_label), 
-                        value = description, 
-                        onValueChange = { description = it }, 
-                        minLines = 3, 
+                        label = stringResource(R.string.description_label),
+                        value = description,
+                        onValueChange = { description = it },
+                        minLines = 3,
                         isRequired = false,
                         keyboardOptions = keyboardOptionsBase,
                         accentColor = categoryColor
@@ -732,11 +732,11 @@ fun EditListingScreen(
                     item {
                         PhotoSection(
                             photos = selectedPhotos,
-                            onAddPhoto = { 
+                            onAddPhoto = {
                                 keyboardController?.hide()
-                                showPhotoOptions = true 
+                                showPhotoOptions = true
                             },
-                            onRemovePhoto = { index -> 
+                            onRemovePhoto = { index ->
                                 keyboardController?.hide()
                                 selectedPhotos = selectedPhotos.toMutableList().apply { removeAt(index) }
                                 if (selectedPhotos.isNotEmpty()) photoError = false
@@ -761,7 +761,7 @@ fun EditListingScreen(
 
         if (isFetchingData || postState is ListingViewModel.PostState.Loading || isWaitingForLocation || isRefreshingLocation) {
             LoadingOverlay(
-                if (isFetchingData) stringResource(R.string.fetching_details) 
+                if (isFetchingData) stringResource(R.string.fetching_details)
                 else if (isWaitingForLocation || isRefreshingLocation) stringResource(R.string.fetching_location)
                 else stringResource(R.string.saving_listing)
             )
@@ -781,7 +781,7 @@ fun PhotoSection(
         Text(text = androidx.compose.ui.text.buildAnnotatedString {
             append(stringResource(R.string.photos_label))
             append(" *")
-        }, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onBackground)
+        }, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onBackground)
         Spacer(modifier = Modifier.height(12.dp))
         Row(
             modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
@@ -1040,16 +1040,16 @@ fun FishFields(
             }
         }
         ListingTextField(label = stringResource(R.string.fish_age_label), value = fishAge, onValueChange = onFishAgeChange, isError = errors["fishAge"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number), accentColor = accentColor)
-        
+
         ListingTextField(
-            label = stringResource(R.string.no_of_stock_label), 
-            value = quantity, 
+            label = stringResource(R.string.no_of_stock_label),
+            value = quantity,
             onValueChange = onQuantityChange,
-            isError = errors["quantity"] == true, 
-            keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number), 
+            isError = errors["quantity"] == true,
+            keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number),
             accentColor = accentColor
         )
-        
+
         ListingTextField(label = stringResource(R.string.price_label), value = price, onValueChange = onPriceChange, isError = errors["price"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number), accentColor = accentColor)
     }
 }
@@ -1094,7 +1094,7 @@ fun PrawnFields(
                     isOthers = false
                     onPrawnTypeChange(it)
                 }
-            }, 
+            },
             isError = errors["prawnType"] == true,
             accentColor = accentColor
         )
@@ -1115,7 +1115,7 @@ fun PrawnFields(
         }
 
         ListingTextField(label = stringResource(R.string.hatchery_name_label), value = hatcheryName, onValueChange = onHatcheryNameChange, isError = errors["hatcheryName"] == true, keyboardOptions = keyboardOptions, accentColor = accentColor)
-        
+
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(modifier = Modifier.weight(1f)) {
                 ListingTextField(label = stringResource(R.string.rate_label), value = rateValue, onValueChange = onRateValueChange, isError = errors["rateValue"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number), accentColor = accentColor)
@@ -1124,7 +1124,7 @@ fun PrawnFields(
                 ListingDropdown(label = stringResource(R.string.unit_label), value = rateType, options = listOf(stringResource(R.string.unit_paise), stringResource(R.string.unit_rupees)), onSelectionChange = onRateTypeChange, accentColor = accentColor)
             }
         }
-        
+
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(modifier = Modifier.weight(1f)) {
                 ListingTextField(label = stringResource(R.string.stock_label), value = quantity, onValueChange = onQuantityChange, isError = errors["quantity"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number), accentColor = accentColor)
@@ -1146,10 +1146,10 @@ fun EquipmentFields(
 ) {
     val othersStr = stringResource(R.string.fish_others)
     val options = listOf(
-        stringResource(R.string.equip_aerators), stringResource(R.string.equip_motors), 
-        stringResource(R.string.equip_pump_motors), stringResource(R.string.equip_bore_motors), 
-        stringResource(R.string.equip_generators), stringResource(R.string.equip_pump_engines), 
-        stringResource(R.string.equip_boats), stringResource(R.string.equip_mavulu), stringResource(R.string.equip_wires), 
+        stringResource(R.string.equip_aerators), stringResource(R.string.equip_motors),
+        stringResource(R.string.equip_pump_motors), stringResource(R.string.equip_bore_motors),
+        stringResource(R.string.equip_generators), stringResource(R.string.equip_pump_engines),
+        stringResource(R.string.equip_boats), stringResource(R.string.equip_mavulu), stringResource(R.string.equip_wires),
         othersStr
     )
     
@@ -1169,7 +1169,7 @@ fun EquipmentFields(
                     isOthers = false
                     onEquipmentTypeChange(it)
                 }
-            }, 
+            },
             isError = errors["equipmentType"] == true,
             accentColor = accentColor
         )
@@ -1632,7 +1632,7 @@ fun ListingTextField(
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     accentColor: Color = AquaBlue
 ) {
-    val visualTransformation = if (keyboardOptions.keyboardType == KeyboardType.Number || 
+    val visualTransformation = if (keyboardOptions.keyboardType == KeyboardType.Number ||
         keyboardOptions.keyboardType == KeyboardType.Decimal) {
         CurrencyUtils.IndianNumberVisualTransformation()
     } else {
@@ -1645,7 +1645,7 @@ fun ListingTextField(
             if (isRequired) {
                 append(" *")
             }
-        }, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
+        }, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
         Spacer(modifier = Modifier.height(8.dp))
         OutlinedTextField(
             value = value,
@@ -1682,16 +1682,16 @@ fun SearchableListingDropdown(
     Column {
         Text(
             text = "$label *",
-            fontSize = 12.sp,
+            fontSize = 14.sp,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground
         )
         Spacer(modifier = Modifier.height(8.dp))
 
         Surface(
-            onClick = { 
+            onClick = {
                 keyboardController?.hide()
-                showSheet = true 
+                showSheet = true
             },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
@@ -1735,7 +1735,7 @@ fun SearchableListingDropdown(
             ) {
                 Text(
                     text = stringResource(R.string.select_label, label),
-                    fontSize = 18.sp,
+                    fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
@@ -1811,15 +1811,15 @@ fun SearchableListingDropdown(
 fun ListingDropdown(label: String, value: String, options: List<String>, onSelectionChange: (String) -> Unit, isError: Boolean = false, accentColor: Color = AquaBlue) {
     var expanded by remember { mutableStateOf(false) }
     val keyboardController = LocalSoftwareKeyboardController.current
-    
+
     Column {
-        Text(text = "$label *", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
+        Text(text = "$label *", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
         Spacer(modifier = Modifier.height(8.dp))
         ExposedDropdownMenuBox(
             expanded = expanded,
-            onExpandedChange = { 
+            onExpandedChange = {
                 keyboardController?.hide()
-                expanded = !expanded 
+                expanded = !expanded
             }
         ) {
             OutlinedTextField(
@@ -1859,7 +1859,7 @@ fun ListingDropdown(label: String, value: String, options: List<String>, onSelec
 @Composable
 fun LocationSection(location: String, onClick: () -> Unit, isError: Boolean = false, accentColor: Color = AquaBlue) {
     Column {
-        Text(text = stringResource(R.string.location_label), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
+        Text(text = stringResource(R.string.location_label), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
         Spacer(modifier = Modifier.height(8.dp))
         Surface(
             modifier = Modifier.fillMaxWidth().height(56.dp).clickable { onClick() },
@@ -1875,14 +1875,14 @@ fun LocationSection(location: String, onClick: () -> Unit, isError: Boolean = fa
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
                     text = location,
-                    fontSize = 12.sp,
+                    fontSize = 14.sp,
                     color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(stringResource(R.string.change_btn), color = if (isError) MaterialTheme.colorScheme.error else accentColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.change_btn), color = if (isError) MaterialTheme.colorScheme.error else accentColor, fontSize = 14.sp, fontWeight = FontWeight.Bold)
             }
         }
     }

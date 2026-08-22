@@ -98,13 +98,13 @@ fun CustomerFoundDialog(
                     Text(
                         text = "Address:",
                         color = Color(0xFF7986CB),
-                        fontSize = 16.sp,
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
                         text = customer.address,
                         color = Color.White,
-                        fontSize = 12.sp,
+                        fontSize = 14.sp,
                         lineHeight = 22.sp,
                         modifier = Modifier.padding(top = 4.dp),
                         textAlign = TextAlign.Center
@@ -117,13 +117,13 @@ fun CustomerFoundDialog(
                     Text(
                         text = "About Customer:",
                         color = Color(0xFF7986CB),
-                        fontSize = 16.sp,
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
                         text = customer.about,
                         color = Color.White,
-                        fontSize = 12.sp,
+                        fontSize = 14.sp,
                         lineHeight = 20.sp,
                         modifier = Modifier.padding(top = 4.dp),
                         textAlign = TextAlign.Center
@@ -147,7 +147,7 @@ fun CustomerDetailRow(label: String, value: String) {
         Text(
             text = label,
             color = Color(0xFF7986CB),
-            fontSize = 16.sp,
+            fontSize = 14.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.weight(1f),
             textAlign = TextAlign.End
@@ -156,7 +156,7 @@ fun CustomerDetailRow(label: String, value: String) {
         Text(
             text = value,
             color = Color.White,
-            fontSize = 16.sp,
+            fontSize = 14.sp,
             fontWeight = FontWeight.Medium,
             modifier = Modifier.weight(1.5f),
             textAlign = TextAlign.Start

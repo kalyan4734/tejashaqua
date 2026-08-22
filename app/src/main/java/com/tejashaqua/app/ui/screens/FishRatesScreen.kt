@@ -80,12 +80,12 @@ fun FishRatesScreen(onBackClick: () -> Unit) {
             CenterAlignedTopAppBar(
                 title = { 
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(stringResource(R.string.fish_rates_title), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        Text(stringResource(R.string.fish_rates_title), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
                         if (lastUpdatedDate.isNotEmpty()) {
                             Text(
                                 text = stringResource(R.string.last_updated, lastUpdatedDate),
                                 color = Color.White.copy(alpha = 0.8f),
-                                fontSize = 11.sp,
+                                fontSize = 14.sp,
                                 fontWeight = FontWeight.Normal
                             )
                         }
@@ -120,7 +120,7 @@ fun FishRatesScreen(onBackClick: () -> Unit) {
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
                                 text = if (lastUpdatedDate.isNotEmpty()) lastUpdatedDate else "--",
-                                fontSize = 16.sp,
+                                fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.Black
                             )
@@ -143,11 +143,11 @@ fun FishRatesScreen(onBackClick: () -> Unit) {
                                         .padding(vertical = 12.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(stringResource(R.string.fish_table_header), color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1.2f).padding(start = 12.dp), fontSize = 13.sp)
+                                    Text(stringResource(R.string.fish_table_header), color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1.2f).padding(start = 12.dp), fontSize = 14.sp)
                                     Box(modifier = Modifier.width(1.dp).height(20.dp).background(Color.White.copy(alpha = 0.3f)))
-                                    Text(stringResource(R.string.average_table_header), color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f).padding(start = 12.dp), fontSize = 13.sp)
+                                    Text(stringResource(R.string.average_table_header), color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f).padding(start = 12.dp), fontSize = 14.sp)
                                     Box(modifier = Modifier.width(1.dp).height(20.dp).background(Color.White.copy(alpha = 0.3f)))
-                                    Text(stringResource(R.string.price_table_header), color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1.2f).padding(start = 12.dp), fontSize = 13.sp)
+                                    Text(stringResource(R.string.price_table_header), color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1.2f).padding(start = 12.dp), fontSize = 14.sp)
                                 }
 
                                 // Rows
@@ -209,7 +209,7 @@ fun FishRatesScreen(onBackClick: () -> Unit) {
                                                 if (rate.change.isNotEmpty()) {
                                                     Text(
                                                         text = rate.change,
-                                                        fontSize = 11.sp,
+                                                        fontSize = 12.sp,
                                                         color = if (rate.trend == RateTrend.UP) Color(0xFF4CAF50) else if (rate.trend == RateTrend.DOWN) Color(0xFFF44336) else GrayText
                                                     )
                                                 }

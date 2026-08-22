@@ -40,8 +40,11 @@ class ListingViewModel(application: Application) : AndroidViewModel(application)
                     throw Exception("User not authenticated")
                 }
                 
-                // Enforce 2-listing limit for new posts
-                if (existingListingId == null) {
+                val contactNumber = data["contactNumber"]?.toString() ?: ""
+                val isUnlimitedAccount = contactNumber == "9848182726"
+
+                // Enforce 2-listing limit for new posts (Skip for special account)
+                if (existingListingId == null && !isUnlimitedAccount) {
                     val userListings = db.collection("listings")
                         .whereEqualTo("userId", userId)
                         .get()

@@ -103,7 +103,7 @@ fun SelectLocationScreen(
         topBar = {
             Column(modifier = Modifier.background(AquaBlue)) {
                 CenterAlignedTopAppBar(
-                    title = { Text(stringResource(R.string.select_location_title), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 19.sp) },
+                    title = { Text(stringResource(R.string.select_location_title), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp) },
                     navigationIcon = {
                         IconButton(onClick = {
                             keyboardController?.hide()
@@ -126,7 +126,7 @@ fun SelectLocationScreen(
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 8.dp)
                             .heightIn(min = 54.dp),
-                        placeholder = { Text(stringResource(R.string.search_location_placeholder), fontSize = 12.sp) },
+                        placeholder = { Text(stringResource(R.string.search_location_placeholder), fontSize = 16.sp) },
                         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = GrayText) },
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = Color.White,
@@ -163,7 +163,7 @@ fun SelectLocationScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = AquaBlue),
                     enabled = selectedLocation != null
                 ) {
-                    Text(stringResource(R.string.confirm_location), fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                    Text(stringResource(R.string.confirm_location), fontWeight = FontWeight.Bold, fontSize = 18.sp)
                 }
             }
         }
@@ -273,7 +273,7 @@ fun SelectLocationScreen(
                             Text(
                                 text = stringResource(R.string.location_permission_denied),
                                 color = Color.White,
-                                fontSize = 13.sp,
+                                fontSize = 14.sp,
                                 modifier = Modifier.padding(12.dp)
                             )
                         }
@@ -298,7 +298,7 @@ fun SelectLocationScreen(
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(text = selectedLocation!!.first, fontWeight = FontWeight.Bold)
-                                    Text(text = selectedLocation!!.second, fontSize = 13.sp, color = GrayText, maxLines = 1)
+                                    Text(text = selectedLocation!!.second, fontSize = 14.sp, color = GrayText, maxLines = 1)
                                 }
                                 Icon(
                                     imageVector = Icons.Default.Public,
@@ -341,12 +341,12 @@ fun LocationSearchItem(
                 Text(
                     text = location, 
                     fontWeight = FontWeight.SemiBold, 
-                    fontSize = 17.sp, 
+                    fontSize = 16.sp, 
                     color = Color.Black
                 )
                 Text(
                     text = subLocation, 
-                    fontSize = 12.sp,
+                    fontSize = 14.sp,
                     color = GrayText
                 )
             }

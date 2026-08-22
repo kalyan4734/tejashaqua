@@ -85,7 +85,7 @@ fun RateGraphBottomSheet(rate: AquaRate, onDismiss: () -> Unit) {
             ) {
                 Column {
                     Text(text = rate.name, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.Black)
-                    Text(text = "7 Days Rate Trend", fontSize = 12.sp, color = GrayText)
+                    Text(text = "7 Days Rate Trend", fontSize = 14.sp, color = GrayText)
                 }
                 IconButton(onClick = onDismiss) {
                     Icon(Icons.Default.Close, contentDescription = "Close")
@@ -114,14 +114,14 @@ fun RateGraphBottomSheet(rate: AquaRate, onDismiss: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text(text = "Current Rate", fontSize = 12.sp, color = GrayText)
-                    Text(text = rate.price, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                    Text(text = "Current Rate", fontSize = 14.sp, color = GrayText)
+                    Text(text = rate.price, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                 }
                 Column(horizontalAlignment = Alignment.End) {
-                    Text(text = "Change", fontSize = 12.sp, color = GrayText)
+                    Text(text = "Change", fontSize = 14.sp, color = GrayText)
                     Text(
                         text = rate.change, 
-                        fontSize = 16.sp, 
+                        fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         color = if (rate.trend == RateTrend.UP) Color(0xFF4CAF50) else if (rate.trend == RateTrend.DOWN) Color(0xFFF44336) else GrayText
                     )

@@ -30,7 +30,7 @@ fun RateTrendGraph(
     val textMeasurer = rememberTextMeasurer()
     val priceTextStyle = TextStyle(
         color = AquaBlue,
-        fontSize = 10.sp,
+        fontSize = 12.sp,
         fontWeight = FontWeight.Bold
     )
 
@@ -127,7 +127,7 @@ fun RateTrendGraph(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             labels.forEach { label ->
-                Text(text = label, fontSize = 10.sp, color = GrayText)
+                Text(text = label, fontSize = 12.sp, color = GrayText)
             }
         }
     }

@@ -62,7 +62,7 @@ fun ProfileScreen(
 
     // Derived from parent, but kept in local state for instant toggle feedback
     var showMobileNumber by remember(initialShowMobileNumber) { mutableStateOf(initialShowMobileNumber) }
-    
+
     val auth = FirebaseAuth.getInstance()
     val db = FirebaseFirestore.getInstance()
     val currentUserId = auth.currentUser?.uid
@@ -151,7 +151,7 @@ fun ProfileScreen(
 
                 Text(
                     text = stringResource(R.string.logout_confirm),
-                    fontSize = 16.sp,
+                    fontSize = 14.sp,
                     color = Color.Gray
                 )
 
@@ -193,7 +193,7 @@ fun ProfileScreen(
                         fontWeight = FontWeight.Bold
                     )
                 }
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
             }
         }
@@ -202,7 +202,7 @@ fun ProfileScreen(
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text(stringResource(R.string.my_profile), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp) },
+                title = { Text(stringResource(R.string.my_profile), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
@@ -350,7 +350,7 @@ fun ProfileScreen(
                     }
                 }
             }
-            
+
             item { Spacer(modifier = Modifier.height(40.dp)) }
         }
     }
@@ -385,7 +385,7 @@ fun ProfileHeader(userName: String, mobileNumber: String, profilePicUrl: String?
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(text = if (userName.isNotEmpty()) userName else stringResource(R.string.user_label), color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                Text(text = if (mobileNumber.isNotEmpty()) "+91 $mobileNumber" else stringResource(R.string.phone_not_available), color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp)
+                Text(text = if (mobileNumber.isNotEmpty()) "+91 $mobileNumber" else stringResource(R.string.phone_not_available), color = Color.White.copy(alpha = 0.8f), fontSize = 14.sp)
             }
             IconButton(onClick = onEditClick) {
                 Icon(Icons.Default.Edit, contentDescription = "Edit Profile", tint = Color.White, modifier = Modifier.size(24.dp))

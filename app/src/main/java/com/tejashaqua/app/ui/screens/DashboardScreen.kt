@@ -259,23 +259,35 @@ fun DashboardScreen(
                 val matchesSearch = productSearchText.isBlank() || 
                     title.contains(productSearchText.lowercase()) || 
                     location.contains(productSearchText.lowercase()) ||
-                    category.lowercase().contains(productSearchText.lowercase())
+                    category.lowercase().contains(productSearchText.lowercase()) ||
+                    (data["businessSubCategory"]?.toString()?.lowercase()?.contains(productSearchText.lowercase()) ?: false) ||
+                    (data["serviceType"]?.toString()?.lowercase()?.contains(productSearchText.lowercase()) ?: false)
                 
-                val matchesCategory = if (selectedCategoryFilter == "All") {
-                    true
-                } else if (selectedCategoryFilter == "VEHICLES") {
-                    val serviceType = data["serviceType"]?.toString() ?: ""
-                    val fishVehiclesEn = "Live Fish Vehicles"
-                    val fishVehiclesTe = context.getString(R.string.service_live_fish_vehicles)
-                    
-                    category.uppercase() == "VEHICLES" || 
-                    (category.uppercase() == "SERVICES" && (serviceType == fishVehiclesEn || serviceType == fishVehiclesTe))
-                } else if (selectedCategoryFilter == "FEED") {
-                    val businessSubCategory = data["businessSubCategory"]?.toString() ?: ""
-                    category.uppercase() == "FEED" || 
-                    (category.uppercase() == "BUSINESS" && businessSubCategory == "Feed")
-                } else {
-                    category.uppercase() == selectedCategoryFilter
+                val matchesCategory = when (selectedCategoryFilter) {
+                    "All" -> true
+                    "VEHICLES" -> {
+                        val serviceType = data["serviceType"]?.toString() ?: ""
+                        val fishVehiclesEn = "Live Fish Vehicles"
+                        val fishVehiclesTe = context.getString(R.string.service_live_fish_vehicles)
+                        category.uppercase() == "VEHICLES" || 
+                        (category.uppercase() == "SERVICES" && (serviceType == fishVehiclesEn || serviceType == fishVehiclesTe))
+                    }
+                    "FEED" -> {
+                        val businessSubCategory = data["businessSubCategory"]?.toString() ?: ""
+                        category.uppercase() == "FEED" || 
+                        (category.uppercase() == "BUSINESS" && businessSubCategory == "Feed")
+                    }
+                    "BUSINESS" -> {
+                        val businessSubCategory = data["businessSubCategory"]?.toString() ?: ""
+                        category.uppercase() == "BUSINESS" && businessSubCategory != "Feed"
+                    }
+                    "SERVICES" -> {
+                        val serviceType = data["serviceType"]?.toString() ?: ""
+                        val fishVehiclesEn = "Live Fish Vehicles"
+                        val fishVehiclesTe = context.getString(R.string.service_live_fish_vehicles)
+                        category.uppercase() == "SERVICES" && (serviceType != fishVehiclesEn && serviceType != fishVehiclesTe)
+                    }
+                    else -> category.uppercase() == selectedCategoryFilter
                 }
                 
                 matchesSearch && matchesCategory
@@ -515,7 +527,7 @@ fun DashboardScreen(
                             stringResource(R.string.chats),
                             color = Color.White,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 23.sp
+                            fontSize = 22.sp
                         )
                     }
 
@@ -680,7 +692,7 @@ fun DashboardScreen(
                     // Marketplace Section flattened
                     item {
                         Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text(stringResource(R.string.fresh_marketplace), fontWeight = FontWeight.Bold, fontSize = 19.sp, color = DarkBlueText)
+                            Text(stringResource(R.string.fresh_marketplace), fontWeight = FontWeight.Bold, fontSize = 20.sp, color = DarkBlueText)
                             Spacer(modifier = Modifier.weight(1f))
                             Text(stringResource(R.string.items_count, filteredListings.size), color = GrayText, fontSize = 13.sp)
                         }
@@ -873,7 +885,7 @@ fun DashboardScreen(
                 ) {
                     Column(modifier = Modifier.fillMaxWidth().padding(24.dp)) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Text(stringResource(R.string.welcome_title), fontSize = 21.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                            Text(stringResource(R.string.welcome_title), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                             IconButton(onClick = { 
                                 showWelcomeSheet = false
                                 onNameSkip()
@@ -931,7 +943,7 @@ fun DashboardScreen(
                 ) {
                     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp)) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Text(stringResource(R.string.notifications), fontSize = 23.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                            Text(stringResource(R.string.notifications), fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                             IconButton(onClick = { showNotificationsSheet = false }) { Icon(Icons.Default.Close, contentDescription = "Close") }
                         }
                         
@@ -1119,7 +1131,7 @@ fun SearchHeader(
 @Composable
 fun FooterSection() {
     Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
-        Text(stringResource(R.string.footer_text), fontSize = 33.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD1D9E6), lineHeight = 39.sp)
+        Text(stringResource(R.string.footer_text), fontSize = 32.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD1D9E6), lineHeight = 39.sp)
         Spacer(modifier = Modifier.height(24.dp))
     }
 }
@@ -1176,7 +1188,7 @@ fun AquaRatesSection(onRateClick: (AquaRate) -> Unit) {
                 Text(
                     text = stringResource(R.string.today_aqua_rates),
                     fontWeight = FontWeight.Bold,
-                    fontSize = 19.sp,
+                    fontSize = 20.sp,
                     color = DarkBlueText
                 )
                 Row(
@@ -1206,7 +1218,7 @@ fun AquaRatesSection(onRateClick: (AquaRate) -> Unit) {
                     Text(
                         stringResource(R.string.live),
                         color = LiveGreen,
-                        fontSize = 10.sp,
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -1262,7 +1274,7 @@ fun RateCard(
                 Text(
                     text = if (rate.isPrawn) stringResource(R.string.cat_prawns) else stringResource(R.string.cat_fish),
                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                    fontSize = 10.sp,
+                    fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                     color = if (rate.isPrawn) Color(0xFF00796B) else Color(0xFFE65100)
                 )
@@ -1279,7 +1291,7 @@ fun RateCard(
                     Text(
                         text = displayPrice,
                         fontWeight = FontWeight.ExtraBold,
-                        fontSize = 19.sp,
+                        fontSize = 20.sp,
                         color = Color.Black
                     )
                     Text(
