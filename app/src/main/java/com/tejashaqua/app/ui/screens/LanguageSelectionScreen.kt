@@ -18,6 +18,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.content.Intent
+import com.tejashaqua.app.MainActivity
 import com.tejashaqua.app.R
 import com.tejashaqua.app.ui.theme.AquaBlue
 import com.tejashaqua.app.utils.LocaleHelper
@@ -89,7 +91,12 @@ fun LanguageSelectionScreen(
                     val locale = java.util.Locale.forLanguageTag(selectedLanguage)
                     com.google.android.libraries.places.api.Places.initialize(context.applicationContext, context.getString(R.string.google_maps_key), locale)
 
-                    // Call the callback to update the 'isLanguageSelected' state in MainActivity
+                    // Fallback to restarting the application to ensure clean state and correct resource loading
+                    val intent = Intent(context, MainActivity::class.java)
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                    context.startActivity(intent)
+
+                    // Call the callback just in case (though activity will be killed)
                     onLanguageSelected()
                 },
                 modifier = Modifier

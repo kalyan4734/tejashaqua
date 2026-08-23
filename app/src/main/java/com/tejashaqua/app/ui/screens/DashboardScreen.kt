@@ -177,6 +177,7 @@ fun DashboardScreen(
     val fetchedName by locationViewModel.currentLocationName.collectAsState()
     val fetchedSub by locationViewModel.currentSubLocation.collectAsState()
     val userLatLng by locationViewModel.currentLatLng.collectAsState()
+    val isFetchingLocation by locationViewModel.isFetchingLocation.collectAsState()
     val keyboardController = LocalSoftwareKeyboardController.current
 
     LaunchedEffect(fetchedName, fetchedSub) {
@@ -205,7 +206,7 @@ fun DashboardScreen(
     fun loadListings(isFirstPage: Boolean = false) {
         if (isPaginating || (isLastPage && !isFirstPage)) return
 
-        val currentPos = userLatLng ?: return // Require location for sorting
+        val currentPos = userLatLng
 
         if (isFirstPage) {
             isLastPage = false
@@ -214,10 +215,10 @@ fun DashboardScreen(
 
         isPaginating = true
 
-        // Distance-based sorting via Cloud Functions
+        // Sorting via Cloud Functions (Distance if location exists, else Latest First)
         val data = hashMapOf(
-            "lat" to currentPos.latitude,
-            "lng" to currentPos.longitude,
+            "lat" to currentPos?.latitude,
+            "lng" to currentPos?.longitude,
             "category" to selectedCategoryFilter,
             "page" to if (isFirstPage) 0 else currentPage,
             "pageSize" to 10
@@ -247,9 +248,9 @@ fun DashboardScreen(
             }
     }
 
-    // Logic to reload listings when location or category changes
-    LaunchedEffect(userLatLng, selectedCategoryFilter) {
-        if (userLatLng != null) {
+    // Logic to reload listings when location, category or fetching status changes
+    LaunchedEffect(userLatLng, selectedCategoryFilter, isFetchingLocation) {
+        if (!isFetchingLocation) {
             isLoadingListings = true
             loadListings(isFirstPage = true)
         }

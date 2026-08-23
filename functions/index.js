@@ -147,10 +147,6 @@ exports.getListingsByLocation = onCall({
 }, async (request) => {
     const { lat, lng, category, page = 0, pageSize = 10 } = request.data;
 
-    if (!lat || !lng) {
-        return { success: false, message: "Latitude and longitude are required" };
-    }
-
     try {
         let query = admin.firestore().collection("listings");
 
@@ -181,20 +177,24 @@ exports.getListingsByLocation = onCall({
             });
         }
 
-        // Calculate distance and sort
-        listings.forEach(listing => {
-            const lLat = listing.lat || 0;
-            const lLng = listing.lng || 0;
-            if (lLat && lLng) {
-                const dLat = lLat - lat;
-                const dLng = lLng - lng;
-                listing.distance = Math.sqrt(dLat * dLat + dLng * dLng);
-            } else {
-                listing.distance = 999999;
-            }
-        });
-
-        listings.sort((a, b) => a.distance - b.distance);
+        if (lat && lng) {
+            // Distance-based sorting
+            listings.forEach(listing => {
+                const lLat = listing.lat || 0;
+                const lLng = listing.lng || 0;
+                if (lLat && lLng) {
+                    const dLat = lLat - lat;
+                    const dLng = lLng - lng;
+                    listing.distance = Math.sqrt(dLat * dLat + dLng * dLng);
+                } else {
+                    listing.distance = 999999;
+                }
+            });
+            listings.sort((a, b) => a.distance - b.distance);
+        } else {
+            // Fallback: Latest first sorting
+            listings.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+        }
 
         // Pagination
         const start = page * pageSize;

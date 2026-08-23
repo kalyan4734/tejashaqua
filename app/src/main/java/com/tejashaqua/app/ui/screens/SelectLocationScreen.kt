@@ -39,6 +39,10 @@ import com.tejashaqua.app.ui.viewmodel.LocationSearchViewModel
 import com.tejashaqua.app.ui.theme.AquaBlue
 import com.tejashaqua.app.ui.theme.GrayText
 import com.tejashaqua.app.utils.LocaleHelper
+import com.tejashaqua.app.utils.findActivity
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -97,21 +101,27 @@ fun SelectLocationScreen(
         }
     }
 
+    val coroutineScope = rememberCoroutineScope()
+
     fun updateLocationFromLatLng(latLng: LatLng) {
         selectedLatLng = latLng
-        try {
-            val lang = LocaleHelper.getSelectedLanguage(context) ?: "en"
-            val locale = Locale.forLanguageTag(lang)
-            val geocoder = Geocoder(context, locale)
-            val addresses = geocoder.getFromLocation(latLng.latitude, latLng.longitude, 1)
-            if (addresses != null && addresses.isNotEmpty()) {
-                val address = addresses[0]
-                val loc = address.locality ?: address.subAdminArea ?: context.getString(R.string.unknown_location)
-                val sub = address.getAddressLine(0) ?: ""
-                selectedLocation = loc to sub
+        coroutineScope.launch {
+            try {
+                val lang = LocaleHelper.getSelectedLanguage(context) ?: "en"
+                val locale = Locale.forLanguageTag(lang)
+                val geocoder = Geocoder(context, locale)
+                val addresses = withContext(Dispatchers.IO) {
+                    geocoder.getFromLocation(latLng.latitude, latLng.longitude, 1)
+                }
+                if (addresses != null && addresses.isNotEmpty()) {
+                    val address = addresses[0]
+                    val loc = address.locality ?: address.subAdminArea ?: context.getString(R.string.unknown_location)
+                    val sub = address.getAddressLine(0) ?: ""
+                    selectedLocation = loc to sub
+                }
+            } catch (e: Exception) {
+                selectedLocation = context.getString(R.string.selected_point) to "${latLng.latitude}, ${latLng.longitude}"
             }
-        } catch (e: Exception) {
-            selectedLocation = context.getString(R.string.selected_point) to "${latLng.latitude}, ${latLng.longitude}"
         }
     }
 
@@ -232,14 +242,17 @@ fun SelectLocationScreen(
                             .padding(16.dp)
                             .background(AquaBlue.copy(alpha = 0.05f), RoundedCornerShape(12.dp))
                             .clickable {
-                                com.tejashaqua.app.utils.LocationUtils.checkLocationSettings(
-                                    context as Activity,
-                                    onEnabled = { locationViewModel.fetchCurrentLocation(force = true) },
-                                    onError = { exception ->
-                                        val intentSenderRequest = IntentSenderRequest.Builder(exception.resolution).build()
-                                        gpsLauncher.launch(intentSenderRequest)
-                                    }
-                                )
+                                val activity = context.findActivity()
+                                if (activity != null) {
+                                    com.tejashaqua.app.utils.LocationUtils.checkLocationSettings(
+                                        activity,
+                                        onEnabled = { locationViewModel.fetchCurrentLocation(force = true) },
+                                        onError = { exception ->
+                                            val intentSenderRequest = IntentSenderRequest.Builder(exception.resolution.intentSender).build()
+                                            gpsLauncher.launch(intentSenderRequest)
+                                        }
+                                    )
+                                }
                             }
                             .padding(16.dp)
                     ) {

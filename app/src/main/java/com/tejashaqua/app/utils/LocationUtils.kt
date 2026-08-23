@@ -21,25 +21,29 @@ object LocationUtils {
         onEnabled: () -> Unit,
         onError: (ResolvableApiException) -> Unit
     ) {
-        val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5000)
-            .setMinUpdateIntervalMillis(2000)
-            .build()
+        try {
+            val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5000)
+                .setMinUpdateIntervalMillis(2000)
+                .build()
 
-        val builder = LocationSettingsRequest.Builder()
-            .addLocationRequest(locationRequest)
-            .setAlwaysShow(true)
+            val builder = LocationSettingsRequest.Builder()
+                .addLocationRequest(locationRequest)
+                .setAlwaysShow(true)
 
-        val client: SettingsClient = LocationServices.getSettingsClient(activity)
-        val task: Task<LocationSettingsResponse> = client.checkLocationSettings(builder.build())
+            val client: SettingsClient = LocationServices.getSettingsClient(activity)
+            val task: Task<LocationSettingsResponse> = client.checkLocationSettings(builder.build())
 
-        task.addOnSuccessListener {
-            onEnabled()
-        }
-
-        task.addOnFailureListener { exception ->
-            if (exception is ResolvableApiException) {
-                onError(exception)
+            task.addOnSuccessListener {
+                onEnabled()
             }
+
+            task.addOnFailureListener { exception ->
+                if (exception is ResolvableApiException) {
+                    onError(exception)
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("LocationUtils", "Error checking location settings", e)
         }
     }
 }

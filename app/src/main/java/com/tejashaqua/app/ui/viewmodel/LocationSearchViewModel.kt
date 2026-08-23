@@ -158,22 +158,22 @@ class LocationSearchViewModel(application: Application) : AndroidViewModel(appli
         viewModelScope.launch(Dispatchers.IO) {
             val lang = LocaleHelper.getSelectedLanguage(getApplication()) ?: "en"
             val locale = Locale.forLanguageTag(lang)
-            val context = LocaleHelper.wrapContext(getApplication())
             val geocoder = Geocoder(getApplication(), locale)
+            val wrappedContext = LocaleHelper.wrapContext(getApplication(), lang)
             try {
                 val addresses = geocoder.getFromLocation(latitude, longitude, 1)
                 if (addresses != null && addresses.isNotEmpty()) {
                     val address = addresses[0]
-                    _currentLocationName.value = address.locality ?: address.subAdminArea ?: context.getString(R.string.unknown_location)
+                    _currentLocationName.value = address.locality ?: address.subAdminArea ?: wrappedContext.getString(R.string.unknown_location)
                     _currentSubLocation.value = address.getAddressLine(0) ?: ""
                     _currentLatLng.value = LatLng(latitude, longitude)
                 } else {
-                    _currentLocationName.value = context.getString(R.string.unknown_location)
+                    _currentLocationName.value = wrappedContext.getString(R.string.unknown_location)
                     _currentSubLocation.value = "$latitude, $longitude"
                 }
             } catch (e: Exception) {
                 Log.e("LocationVM", "Geocoder error", e)
-                _currentLocationName.value = context.getString(R.string.unknown_location)
+                _currentLocationName.value = wrappedContext.getString(R.string.unknown_location)
                 _currentSubLocation.value = "$latitude, $longitude"
             }
         }
