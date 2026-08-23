@@ -2,7 +2,21 @@ package com.tejashaqua.app.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -11,49 +25,99 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.*
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
+import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PersonOutline
+import androidx.compose.material.icons.filled.PostAdd
+import androidx.compose.material.icons.filled.Public
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
-import androidx.compose.runtime.*
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.text.intl.LocaleList
-import com.tejashaqua.app.utils.LocaleHelper
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.intl.LocaleList
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil.compose.AsyncImage
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.Query
-import com.google.firebase.firestore.DocumentSnapshot
+import com.google.firebase.functions.FirebaseFunctions
 import com.tejashaqua.app.R
 import com.tejashaqua.app.data.model.AquaRate
+import com.tejashaqua.app.data.model.CustomerInfo
 import com.tejashaqua.app.data.model.RateTrend
-import com.tejashaqua.app.ui.viewmodel.LocationSearchViewModel
-import com.tejashaqua.app.utils.CurrencyUtils
-import com.tejashaqua.app.ui.theme.*
+import com.tejashaqua.app.data.repository.CustomerRepository
+import com.tejashaqua.app.ui.components.CustomerFoundDialog
 import com.tejashaqua.app.ui.components.MarketItem
 import com.tejashaqua.app.ui.components.RateGraphBottomSheet
+import com.tejashaqua.app.ui.components.SellerPostsDialog
+import com.tejashaqua.app.ui.theme.AquaBlue
+import com.tejashaqua.app.ui.theme.AquaLightBlue
+import com.tejashaqua.app.ui.theme.DarkBlueText
+import com.tejashaqua.app.ui.theme.GrayText
+import com.tejashaqua.app.ui.theme.LiveGreen
+import com.tejashaqua.app.ui.viewmodel.LocationSearchViewModel
+import com.tejashaqua.app.utils.CurrencyUtils
+import com.tejashaqua.app.utils.LocaleHelper
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-
-import com.tejashaqua.app.data.model.CustomerInfo
-import com.tejashaqua.app.data.repository.CustomerRepository
-import com.tejashaqua.app.ui.components.CustomerFoundDialog
-import com.tejashaqua.app.ui.components.SellerPostsDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -75,7 +139,7 @@ fun DashboardScreen(
     locationViewModel: LocationSearchViewModel = viewModel()
 ) {
     var selectedItem by remember { mutableIntStateOf(initialTab) }
-    
+
     // Sync internal state with initialTab when it changes from outside
     LaunchedEffect(initialTab) {
         selectedItem = initialTab
@@ -93,12 +157,12 @@ fun DashboardScreen(
     LaunchedEffect(currentLang) {
         locationViewModel.updateLocationForLanguage(currentLang)
     }
-    
+
     var showGraphSheet by remember { mutableStateOf(false) }
     var selectedRateForGraph by remember { mutableStateOf<AquaRate?>(null) }
 
     var selectedCustomer by remember { mutableStateOf<CustomerInfo?>(null) }
-    
+
     var showSellerPostsDialog by remember { mutableStateOf(false) }
     var selectedSellerId by remember { mutableStateOf("") }
     var selectedSellerName by remember { mutableStateOf("") }
@@ -112,6 +176,7 @@ fun DashboardScreen(
 
     val fetchedName by locationViewModel.currentLocationName.collectAsState()
     val fetchedSub by locationViewModel.currentSubLocation.collectAsState()
+    val userLatLng by locationViewModel.currentLatLng.collectAsState()
     val keyboardController = LocalSoftwareKeyboardController.current
 
     LaunchedEffect(fetchedName, fetchedSub) {
@@ -120,7 +185,7 @@ fun DashboardScreen(
         }
     }
 
-    var showWelcomeSheet by remember { mutableStateOf(showNameSheetInitial) } 
+    var showWelcomeSheet by remember { mutableStateOf(showNameSheetInitial) }
     var showNotificationsSheet by remember { mutableStateOf(false) }
     var tempName by remember { mutableStateOf("") }
 
@@ -132,90 +197,75 @@ fun DashboardScreen(
     var unreadNotificationCount by remember { mutableIntStateOf(0) }
     var blockedUsers by remember { mutableStateOf<Set<String>>(emptySet()) }
     var isLoadingListings by remember { mutableStateOf(true) }
-    var lastVisibleDoc by remember { mutableStateOf<DocumentSnapshot?>(null) }
     var isLastPage by remember { mutableStateOf(false) }
     var isPaginating by remember { mutableStateOf(false) }
+    var currentPage by remember { mutableIntStateOf(0) }
+    val functions = remember { FirebaseFunctions.getInstance("asia-south1") }
 
     fun loadListings(isFirstPage: Boolean = false) {
+        if (isPaginating || (isLastPage && !isFirstPage)) return
+
+        val currentPos = userLatLng ?: return // Require location for sorting
+
         if (isFirstPage) {
-            // Handled by snapshot listener below for the first page
-            return
+            isLastPage = false
+            currentPage = 0
         }
-        
-        if (isLastPage || isPaginating || lastVisibleDoc == null) return
+
         isPaginating = true
 
-        val query = db.collection("listings")
-            .orderBy("timestamp", Query.Direction.DESCENDING)
-            .startAfter(lastVisibleDoc!!)
-            .limit(10)
+        // Distance-based sorting via Cloud Functions
+        val data = hashMapOf(
+            "lat" to currentPos.latitude,
+            "lng" to currentPos.longitude,
+            "category" to selectedCategoryFilter,
+            "page" to if (isFirstPage) 0 else currentPage,
+            "pageSize" to 10
+        )
 
-        query.get().addOnSuccessListener { snapshot ->
-            val newItems = snapshot.documents.map { doc -> 
-                val data = doc.data?.toMutableMap() ?: mutableMapOf()
-                data["id"] = doc.id
-                data
-            }
-            
-            listings = (listings + newItems).distinctBy { it["id"] }
+        functions.getHttpsCallable("getListingsByLocation").call(data)
+            .addOnSuccessListener { result ->
+                val response = result.data as? Map<*, *>
+                val newItems =
+                    (response?.get("listings") as? List<*>)?.mapNotNull { it as? Map<String, Any> }
+                        ?: emptyList()
 
-            if (snapshot.documents.isNotEmpty()) {
-                lastVisibleDoc = snapshot.documents[snapshot.size() - 1]
+                if (isFirstPage) {
+                    listings = newItems
+                    currentPage = 1
+                } else {
+                    listings = (listings + newItems).distinctBy { it["id"] }
+                    currentPage++
+                }
+
+                isLastPage = response?.get("isLastPage") as? Boolean ?: true
+                isPaginating = false
+                isLoadingListings = false
+            }.addOnFailureListener {
+                isPaginating = false
+                isLoadingListings = false
             }
-            
-            isLastPage = snapshot.size() < 10
-            isPaginating = false
-        }.addOnFailureListener {
-            isPaginating = false
+    }
+
+    // Logic to reload listings when location or category changes
+    LaunchedEffect(userLatLng, selectedCategoryFilter) {
+        if (userLatLng != null) {
+            isLoadingListings = true
+            loadListings(isFirstPage = true)
         }
     }
 
-    // Real-time listener for the first page of listings and badge count
-    LaunchedEffect(currentUserId) {
-        val query = db.collection("listings")
-            .orderBy("timestamp", Query.Direction.DESCENDING)
-            .limit(10)
-            
-                query.addSnapshotListener { snapshot, _ ->
-            isLoadingListings = false
-            snapshot?.let {
-                val newFirstPage = it.documents.map { doc ->
-                    val data = doc.data?.toMutableMap() ?: mutableMapOf()
-                    data["id"] = doc.id
-                    data
-                }
-                
-                // Get the timestamp of the oldest item in the new first page to know where the snapshot boundary is
-                val oldestInSnapshot = newFirstPage.lastOrNull()?.get("timestamp") as? Number ?: 0L
-                
-                // Keep existing items only if they are older than our current snapshot's oldest item.
-                // This ensures that deletions within the first page are correctly reflected.
-                val existingItems = listings.filter { item -> 
-                    val itemTs = (item["timestamp"] as? Number)?.toLong() ?: 0L
-                    itemTs < oldestInSnapshot.toLong() && newFirstPage.none { it["id"] == item["id"] }
-                }
-                
-                listings = (newFirstPage + existingItems).sortedByDescending { (it["timestamp"] as? Number)?.toLong() ?: 0L }
-                
-                // Initialize lastVisibleDoc for pagination if it's the first time
-                if (lastVisibleDoc == null && snapshot.documents.isNotEmpty()) {
-                    lastVisibleDoc = snapshot.documents.last()
-                }
-            }
-        }
-    }
-
+    // Real-time listener for badge count and user updates
     LaunchedEffect(currentUserId) {
         if (currentUserId.isNotEmpty()) {
-            db.collection("users").document(currentUserId)
-                .addSnapshotListener { snapshot, _ ->
-                    if (snapshot != null && snapshot.exists()) {
-                        val blocked = snapshot.get("blockedUsers") as? List<*>
-                        blockedUsers = blocked?.mapNotNull { it?.toString() }?.toSet() ?: emptySet()
-                        
-                        lastCheckedNotifications = snapshot.getLong("lastCheckedNotifications") ?: 0L
-                    }
+            db.collection("users").document(currentUserId).addSnapshotListener { snapshot, _ ->
+                if (snapshot != null && snapshot.exists()) {
+                    val blocked = snapshot.get("blockedUsers") as? List<*>
+                    blockedUsers = blocked?.mapNotNull { it?.toString() }?.toSet() ?: emptySet()
+
+                    lastCheckedNotifications = snapshot.getLong("lastCheckedNotifications") ?: 0L
                 }
+            }
         }
     }
 
@@ -234,8 +284,7 @@ fun DashboardScreen(
 
     LaunchedEffect(currentUserId) {
         if (currentUserId.isNotEmpty()) {
-            db.collection("users").document(currentUserId)
-                .collection("favorites")
+            db.collection("users").document(currentUserId).collection("favorites")
                 .addSnapshotListener { snapshot, _ ->
                     if (snapshot != null) {
                         favoriteIds = snapshot.documents.map { it.id }.toSet()
@@ -244,25 +293,27 @@ fun DashboardScreen(
         }
     }
 
-    val userLatLng by locationViewModel.currentLatLng.collectAsState()
-
-    val filteredListings = remember {
-        derivedStateOf {
-            val filtered = listings.filter { data ->
+    val filteredListings =
+        remember(listings, productSearchText, selectedCategoryFilter, blockedUsers) {
+            listings.filter { data ->
                 val title = data["title"]?.toString()?.lowercase() ?: ""
                 val location = data["location"]?.toString()?.lowercase() ?: ""
                 val category = data["category"]?.toString() ?: ""
                 val userId = data["userId"]?.toString() ?: ""
-                
+
                 if (blockedUsers.contains(userId)) return@filter false
 
-                val matchesSearch = productSearchText.isBlank() || 
-                    title.contains(productSearchText.lowercase()) || 
-                    location.contains(productSearchText.lowercase()) ||
-                    category.lowercase().contains(productSearchText.lowercase()) ||
-                    (data["businessSubCategory"]?.toString()?.lowercase()?.contains(productSearchText.lowercase()) ?: false) ||
-                    (data["serviceType"]?.toString()?.lowercase()?.contains(productSearchText.lowercase()) ?: false)
-                
+                val matchesSearch =
+                    productSearchText.isBlank() || title.contains(productSearchText.lowercase()) || location.contains(
+                        productSearchText.lowercase()
+                    ) || category.lowercase()
+                        .contains(productSearchText.lowercase()) || (data["businessSubCategory"]?.toString()
+                        ?.lowercase()?.contains(productSearchText.lowercase())
+                        ?: false) || (data["serviceType"]?.toString()?.lowercase()
+                        ?.contains(productSearchText.lowercase()) ?: false)
+
+                // Note: Cloud Function already filters by selectedCategoryFilter,
+                // but we keep this local filter for consistency and immediate UI updates if needed.
                 val matchesCategory = when (selectedCategoryFilter) {
                     "All" -> true
                     "VEHICLES" -> {
@@ -273,23 +324,20 @@ fun DashboardScreen(
                         val boreWellTe = context.getString(R.string.service_bore_well)
                         val earthMoversEn = "Earth Movers"
                         val earthMoversTe = context.getString(R.string.service_earth_movers)
-                        
-                        category.uppercase() == "VEHICLES" || 
-                        (category.uppercase() == "SERVICES" && (
-                            serviceType == fishVehiclesEn || serviceType == fishVehiclesTe ||
-                            serviceType == boreWellEn || serviceType == boreWellTe ||
-                            serviceType == earthMoversEn || serviceType == earthMoversTe
-                        ))
+
+                        category.uppercase() == "VEHICLES" || (category.uppercase() == "SERVICES" && (serviceType == fishVehiclesEn || serviceType == fishVehiclesTe || serviceType == boreWellEn || serviceType == boreWellTe || serviceType == earthMoversEn || serviceType == earthMoversTe))
                     }
+
                     "FEED" -> {
                         val businessSubCategory = data["businessSubCategory"]?.toString() ?: ""
-                        category.uppercase() == "FEED" || 
-                        (category.uppercase() == "BUSINESS" && businessSubCategory == "Feed")
+                        category.uppercase() == "FEED" || (category.uppercase() == "BUSINESS" && businessSubCategory == "Feed")
                     }
+
                     "BUSINESS" -> {
                         val businessSubCategory = data["businessSubCategory"]?.toString() ?: ""
                         category.uppercase() == "BUSINESS" && businessSubCategory != "Feed"
                     }
+
                     "SERVICES" -> {
                         val serviceType = data["serviceType"]?.toString() ?: ""
                         val fishVehiclesEn = "Live Fish Vehicles"
@@ -298,37 +346,16 @@ fun DashboardScreen(
                         val boreWellTe = context.getString(R.string.service_bore_well)
                         val earthMoversEn = "Earth Movers"
                         val earthMoversTe = context.getString(R.string.service_earth_movers)
-                        
-                        category.uppercase() == "SERVICES" && (
-                            serviceType != fishVehiclesEn && serviceType != fishVehiclesTe &&
-                            serviceType != boreWellEn && serviceType != boreWellTe &&
-                            serviceType != earthMoversEn && serviceType != earthMoversTe
-                        )
+
+                        category.uppercase() == "SERVICES" && (serviceType != fishVehiclesEn && serviceType != fishVehiclesTe && serviceType != boreWellEn && serviceType != boreWellTe && serviceType != earthMoversEn && serviceType != earthMoversTe)
                     }
+
                     else -> category.uppercase() == selectedCategoryFilter
                 }
-                
+
                 matchesSearch && matchesCategory
             }
-
-            val currentPos = userLatLng
-            if (currentPos != null) {
-                filtered.sortedBy { data ->
-                    val lat = (data["lat"] as? Number)?.toDouble() ?: 0.0
-                    val lng = (data["lng"] as? Number)?.toDouble() ?: 0.0
-                    if (lat != 0.0 && lng != 0.0) {
-                        val dLat = lat - currentPos.latitude
-                        val dLng = lng - currentPos.longitude
-                        dLat * dLat + dLng * dLng
-                    } else {
-                        Double.MAX_VALUE
-                    }
-                }
-            } else {
-                filtered
-            }
         }
-    }.value
 
     val chunkedListings = remember(filteredListings) {
         filteredListings.chunked(2)
@@ -354,29 +381,32 @@ fun DashboardScreen(
             isLoadingChats = false
             return@LaunchedEffect
         }
-        
-        db.collection("chats")
-            .whereArrayContains("participants", currentUserId)
+
+        db.collection("chats").whereArrayContains("participants", currentUserId)
             .addSnapshotListener { snapshot, e ->
                 isLoadingChats = false
                 if (e != null || snapshot == null) return@addSnapshotListener
-                
+
                 chats = snapshot.documents.mapNotNull { doc ->
                     val data = doc.data ?: return@mapNotNull null
                     val sellerId = data["sellerId"]?.toString() ?: ""
                     val buyerId = data["buyerId"]?.toString() ?: ""
-                    val isBuying = if (sellerId.isNotEmpty()) sellerId != currentUserId else buyerId == currentUserId
-                    
+                    val isBuying =
+                        if (sellerId.isNotEmpty()) sellerId != currentUserId else buyerId == currentUserId
+
                     val unreadCounts = data["unreadCounts"] as? Map<*, *>
-                    val unreadCount = (unreadCounts?.get(currentUserId) as? Number)?.toInt() ?: 
-                                     (data["unreadCounts.$currentUserId"] as? Number)?.toInt() ?: 0
+                    val unreadCount = (unreadCounts?.get(currentUserId) as? Number)?.toInt()
+                        ?: (data["unreadCounts.$currentUserId"] as? Number)?.toInt() ?: 0
 
                     val lid = data["listingId"]?.toString() ?: ""
 
                     ChatListItemData(
                         chatId = doc.id,
-                        name = if (isBuying) data["sellerName"]?.toString() ?: context.getString(R.string.seller_label) else data["buyerName"]?.toString() ?: context.getString(R.string.buyer_label),
-                        otherUserId = if (isBuying) data["sellerId"]?.toString() ?: "" else data["buyerId"]?.toString() ?: "",
+                        name = if (isBuying) data["sellerName"]?.toString()
+                            ?: context.getString(R.string.seller_label) else data["buyerName"]?.toString()
+                            ?: context.getString(R.string.buyer_label),
+                        otherUserId = if (isBuying) data["sellerId"]?.toString()
+                            ?: "" else data["buyerId"]?.toString() ?: "",
                         type = if (isBuying) "Buying" else "Selling",
                         listingId = lid,
                         listingInfo = data["listingTitle"]?.toString() ?: "Listing",
@@ -398,20 +428,18 @@ fun DashboardScreen(
 
     LaunchedEffect(chats) {
         val uniqueListingIds = chats.map { it.listingId }
-            .filter { it.isNotEmpty() && !listingStatusMap.containsKey(it) }
-            .distinct()
-            
+            .filter { it.isNotEmpty() && !listingStatusMap.containsKey(it) }.distinct()
+
         if (uniqueListingIds.isNotEmpty()) {
             uniqueListingIds.chunked(10).forEach { chunk ->
                 db.collection("listings")
-                    .whereIn(com.google.firebase.firestore.FieldPath.documentId(), chunk)
-                    .get()
+                    .whereIn(com.google.firebase.firestore.FieldPath.documentId(), chunk).get()
                     .addOnSuccessListener { snapshot ->
                         val foundIds = snapshot.documents.map { it.id }.toSet()
                         chunk.forEach { id ->
                             val exists = foundIds.contains(id)
                             listingStatusMap[id] = exists
-                            
+
                             // Cleanup logic for inactive chats
                             if (!exists) {
                                 val associatedChats = chats.filter { it.listingId == id }
@@ -419,8 +447,10 @@ fun DashboardScreen(
                                     val inactiveSince = chatItem.fullData["inactiveSince"]
                                     if (inactiveSince == null) {
                                         // Tag as inactive
-                                        db.collection("chats").document(chatItem.chatId)
-                                            .update("inactiveSince", com.google.firebase.firestore.FieldValue.serverTimestamp())
+                                        db.collection("chats").document(chatItem.chatId).update(
+                                            "inactiveSince",
+                                            com.google.firebase.firestore.FieldValue.serverTimestamp()
+                                        )
                                     } else {
                                         // Check if 7 days passed
                                         val inactiveTime = when (inactiveSince) {
@@ -428,12 +458,13 @@ fun DashboardScreen(
                                             is Number -> inactiveSince.toLong()
                                             else -> 0L
                                         }
-                                        
+
                                         if (inactiveTime > 0) {
                                             val sevenDaysInMillis = 7 * 24 * 60 * 60 * 1000L
                                             if (System.currentTimeMillis() - inactiveTime > sevenDaysInMillis) {
                                                 // Delete chat
-                                                db.collection("chats").document(chatItem.chatId).delete()
+                                                db.collection("chats").document(chatItem.chatId)
+                                                    .delete()
                                             }
                                         }
                                     }
@@ -447,8 +478,9 @@ fun DashboardScreen(
 
     val filteredChats = remember(chats, chatSearchText, chatSelectedTabIndex) {
         chats.filter {
-            (it.name.contains(chatSearchText, ignoreCase = true) || it.listingInfo.contains(chatSearchText, ignoreCase = true)) &&
-            when (chatSelectedTabIndex) {
+            (it.name.contains(chatSearchText, ignoreCase = true) || it.listingInfo.contains(
+                chatSearchText, ignoreCase = true
+            )) && when (chatSelectedTabIndex) {
                 1 -> it.type == "Buying"
                 2 -> it.type == "Selling"
                 else -> true
@@ -457,225 +489,285 @@ fun DashboardScreen(
     }
 
     val sortedChats = remember(filteredChats, listingStatusMap.toMap()) {
-        filteredChats.sortedWith(
-            compareByDescending<ChatListItemData> { listingStatusMap[it.listingId] ?: true }
-                .thenByDescending { it.time }
-        )
+        filteredChats.sortedWith(compareByDescending<ChatListItemData> {
+            listingStatusMap[it.listingId] ?: true
+        }.thenByDescending { it.time })
     }
 
-    Scaffold(
-        topBar = {
-            if (selectedItem == 0 || selectedItem == 1) {
-                Box(
+    Scaffold(topBar = {
+        if (selectedItem == 0 || selectedItem == 1) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                AquaBlue, AquaLightBlue
+                            )
+                        )
+                    )
+                    .statusBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(brush = Brush.verticalGradient(colors = listOf(AquaBlue, AquaLightBlue)))
-                        .statusBarsPadding()
-                        .padding(horizontal = 16.dp, vertical = 12.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { 
-                                keyboardController?.hide()
-                                onLocationClick() 
-                            }
-                    ) {
-                        Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = fetchedName,
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 17.sp,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Icon(Icons.Default.KeyboardArrowDown, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
-                            }
-                            if (fetchedSub.isNotEmpty()) {
-                                Text(
-                                    text = fetchedSub,
-                                    color = Color.White.copy(alpha = 0.8f),
-                                    fontSize = 14.sp,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                        }
-                        IconButton(onClick = {
+                        .clickable {
                             keyboardController?.hide()
-                            showNotificationsSheet = true
-                            
-                            // Mark as read by updating timestamp to current time
-                            if (currentUserId.isNotEmpty()) {
-                                db.collection("users").document(currentUserId)
-                                    .update("lastCheckedNotifications", System.currentTimeMillis())
-                            }
+                            onLocationClick()
                         }) {
-                            BadgedBox(
-                                badge = {
-                                    if (unreadNotificationCount > 0) {
-                                        Badge(
-                                            containerColor = Color.Red,
-                                            contentColor = Color.White
-                                        ) {
-                                            Text(text = if (unreadNotificationCount > 9) "9+" else unreadNotificationCount.toString())
-                                        }
-                                    }
-                                }
-                            ) {
-                                Icon(Icons.Default.Public, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
-                            }
-                        }
-                    }
-                }
-            } else if (selectedItem == 2) {
-                Column(
-                    modifier = Modifier
-                        .background(brush = Brush.verticalGradient(colors = listOf(AquaBlue, AquaLightBlue)))
-                        .statusBarsPadding()
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            stringResource(R.string.chats),
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 22.sp
-                        )
-                    }
-
-                    TextField(
-                        value = chatSearchText,
-                        onValueChange = { chatSearchText = it },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
-                            .heightIn(min = 48.dp),
-                        placeholder = { Text(stringResource(R.string.search_conversations), fontSize = 14.sp, color = Color.Gray) },
-                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = GrayText) },
-                        trailingIcon = {
-                            if (chatSearchText.isNotEmpty()) {
-                                IconButton(onClick = { chatSearchText = "" }) {
-                                    Icon(Icons.Default.Close, contentDescription = "Clear", tint = GrayText)
-                                }
-                            }
-                        },
-                        colors = TextFieldDefaults.colors(
-                            focusedContainerColor = Color.White,
-                            unfocusedContainerColor = Color.White,
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent,
-                        ),
-                        shape = RoundedCornerShape(24.dp),
-                        singleLine = true
+                    Icon(
+                        Icons.Default.LocationOn,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
                     )
-
-                    TabRow(
-                        selectedTabIndex = chatSelectedTabIndex,
-                        containerColor = Color.White,
-                        contentColor = AquaBlue,
-                        indicator = { tabPositions ->
-                            if (chatSelectedTabIndex < tabPositions.size) {
-                                TabRowDefaults.SecondaryIndicator(
-                                    modifier = Modifier.tabIndicatorOffset(tabPositions[chatSelectedTabIndex]),
-                                    color = AquaBlue,
-                                    height = 3.dp
-                                )
-                            }
-                        },
-                        divider = { HorizontalDivider(color = Color(0xFFEEEEEE)) }
-                    ) {
-                        Tab(selected = chatSelectedTabIndex == 0, onClick = { chatSelectedTabIndex = 0 }) {
-                            Text(stringResource(R.string.all), modifier = Modifier.padding(14.dp), fontWeight = if(chatSelectedTabIndex == 0) FontWeight.Bold else FontWeight.Normal)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = fetchedName,
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 17.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Icon(
+                                Icons.Default.KeyboardArrowDown,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp)
+                            )
                         }
-                        Tab(selected = chatSelectedTabIndex == 1, onClick = { chatSelectedTabIndex = 1 }) {
-                            Text(stringResource(R.string.buying), modifier = Modifier.padding(14.dp), fontWeight = if(chatSelectedTabIndex == 1) FontWeight.Bold else FontWeight.Normal)
-                        }
-                        Tab(selected = chatSelectedTabIndex == 2, onClick = { chatSelectedTabIndex = 2 }) {
-                            Text(stringResource(R.string.selling), modifier = Modifier.padding(14.dp), fontWeight = if(chatSelectedTabIndex == 2) FontWeight.Bold else FontWeight.Normal)
+                        if (fetchedSub.isNotEmpty()) {
+                            Text(
+                                text = fetchedSub,
+                                color = Color.White.copy(alpha = 0.8f),
+                                fontSize = 14.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
                         }
                     }
-                }
-            }
-        },
-        bottomBar = {
-            NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 8.dp) {
-                NavigationBarItem(
-                    icon = { Icon(Icons.Default.Home, stringResource(R.string.home)) },
-                    selected = selectedItem == 0,
-                    onClick = { 
+                    IconButton(onClick = {
                         keyboardController?.hide()
-                        selectedItem = 0 
-                    },
-                    colors = NavigationBarItemDefaults.colors(selectedIconColor = AquaBlue, unselectedIconColor = GrayText)
-                )
-                NavigationBarItem(
-                    icon = { Icon(Icons.Default.Search, stringResource(R.string.search_tab)) },
-                    selected = selectedItem == 1,
-                    onClick = { 
-                        keyboardController?.hide()
-                        selectedItem = 1 
-                    },
-                    colors = NavigationBarItemDefaults.colors(selectedIconColor = AquaBlue, unselectedIconColor = GrayText)
-                )
-                FloatingActionButton(
-                    onClick = {
-                        keyboardController?.hide()
-                        onAddClick()
-                    },
-                    containerColor = AquaBlue,
-                    contentColor = Color.White,
-                    shape = CircleShape,
-                    modifier = Modifier.size(56.dp).offset(y = (-10).dp)
-                ) {
-                    Icon(Icons.Default.Add, stringResource(R.string.add), modifier = Modifier.size(30.dp))
-                }
-                NavigationBarItem(
-                    icon = { 
+                        showNotificationsSheet = true
+
+                        // Mark as read by updating timestamp to current time
+                        if (currentUserId.isNotEmpty()) {
+                            db.collection("users").document(currentUserId)
+                                .update("lastCheckedNotifications", System.currentTimeMillis())
+                        }
+                    }) {
                         BadgedBox(
                             badge = {
-                                if (totalUnreadCount > 0) {
+                                if (unreadNotificationCount > 0) {
                                     Badge(
-                                        containerColor = Color.Red,
-                                        contentColor = Color.White
+                                        containerColor = Color.Red, contentColor = Color.White
                                     ) {
-                                        Text(text = if (totalUnreadCount > 99) "99+" else totalUnreadCount.toString())
+                                        Text(text = if (unreadNotificationCount > 9) "9+" else unreadNotificationCount.toString())
                                     }
                                 }
+                            }) {
+                            Icon(
+                                Icons.Default.Public,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        } else if (selectedItem == 2) {
+            Column(
+                modifier = Modifier
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                AquaBlue, AquaLightBlue
+                            )
+                        )
+                    )
+                    .statusBarsPadding()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        stringResource(R.string.chats),
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 22.sp
+                    )
+                }
+
+                TextField(
+                    value = chatSearchText,
+                    onValueChange = { chatSearchText = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
+                        .heightIn(min = 48.dp),
+                    placeholder = {
+                        Text(
+                            stringResource(R.string.search_conversations),
+                            fontSize = 14.sp,
+                            color = Color.Gray
+                        )
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.Search, contentDescription = null, tint = GrayText
+                        )
+                    },
+                    trailingIcon = {
+                        if (chatSearchText.isNotEmpty()) {
+                            IconButton(onClick = { chatSearchText = "" }) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = "Clear",
+                                    tint = GrayText
+                                )
                             }
-                        ) {
-                            Icon(Icons.AutoMirrored.Filled.Chat, stringResource(R.string.chats))
                         }
                     },
-                    selected = selectedItem == 2,
-                    onClick = { 
-                        keyboardController?.hide()
-                        selectedItem = 2 
-                    },
-                    colors = NavigationBarItemDefaults.colors(selectedIconColor = AquaBlue, unselectedIconColor = GrayText)
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                    ),
+                    shape = RoundedCornerShape(24.dp),
+                    singleLine = true
                 )
-                NavigationBarItem(
-                    icon = { Icon(Icons.Default.Person, stringResource(R.string.profile)) },
-                    selected = selectedItem == 3,
-                    onClick = { 
-                        keyboardController?.hide()
-                        selectedItem = 3
-                        onProfileClick()
+
+                TabRow(
+                    selectedTabIndex = chatSelectedTabIndex,
+                    containerColor = Color.White,
+                    contentColor = AquaBlue,
+                    indicator = { tabPositions ->
+                        if (chatSelectedTabIndex < tabPositions.size) {
+                            TabRowDefaults.SecondaryIndicator(
+                                modifier = Modifier.tabIndicatorOffset(tabPositions[chatSelectedTabIndex]),
+                                color = AquaBlue,
+                                height = 3.dp
+                            )
+                        }
                     },
-                    colors = NavigationBarItemDefaults.colors(selectedIconColor = AquaBlue, unselectedIconColor = GrayText)
-                )
+                    divider = { HorizontalDivider(color = Color(0xFFEEEEEE)) }) {
+                    Tab(
+                        selected = chatSelectedTabIndex == 0,
+                        onClick = { chatSelectedTabIndex = 0 }) {
+                        Text(
+                            stringResource(R.string.all),
+                            modifier = Modifier.padding(14.dp),
+                            fontWeight = if (chatSelectedTabIndex == 0) FontWeight.Bold else FontWeight.Normal
+                        )
+                    }
+                    Tab(
+                        selected = chatSelectedTabIndex == 1,
+                        onClick = { chatSelectedTabIndex = 1 }) {
+                        Text(
+                            stringResource(R.string.buying),
+                            modifier = Modifier.padding(14.dp),
+                            fontWeight = if (chatSelectedTabIndex == 1) FontWeight.Bold else FontWeight.Normal
+                        )
+                    }
+                    Tab(
+                        selected = chatSelectedTabIndex == 2,
+                        onClick = { chatSelectedTabIndex = 2 }) {
+                        Text(
+                            stringResource(R.string.selling),
+                            modifier = Modifier.padding(14.dp),
+                            fontWeight = if (chatSelectedTabIndex == 2) FontWeight.Bold else FontWeight.Normal
+                        )
+                    }
+                }
             }
         }
-    ) { innerPadding ->
+    }, bottomBar = {
+        NavigationBar(
+            containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 8.dp
+        ) {
+            NavigationBarItem(
+                icon = { Icon(Icons.Default.Home, stringResource(R.string.home)) },
+                selected = selectedItem == 0,
+                onClick = {
+                    keyboardController?.hide()
+                    selectedItem = 0
+                },
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = AquaBlue, unselectedIconColor = GrayText
+                )
+            )
+            NavigationBarItem(
+                icon = { Icon(Icons.Default.Search, stringResource(R.string.search_tab)) },
+                selected = selectedItem == 1,
+                onClick = {
+                    keyboardController?.hide()
+                    selectedItem = 1
+                },
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = AquaBlue, unselectedIconColor = GrayText
+                )
+            )
+            FloatingActionButton(
+                onClick = {
+                    keyboardController?.hide()
+                    onAddClick()
+                },
+                containerColor = AquaBlue,
+                contentColor = Color.White,
+                shape = CircleShape,
+                modifier = Modifier
+                    .size(56.dp)
+                    .offset(y = (-10).dp)
+            ) {
+                Icon(
+                    Icons.Default.Add, stringResource(R.string.add), modifier = Modifier.size(30.dp)
+                )
+            }
+            NavigationBarItem(
+                icon = {
+                BadgedBox(
+                    badge = {
+                        if (totalUnreadCount > 0) {
+                            Badge(
+                                containerColor = Color.Red, contentColor = Color.White
+                            ) {
+                                Text(text = if (totalUnreadCount > 99) "99+" else totalUnreadCount.toString())
+                            }
+                        }
+                    }) {
+                    Icon(Icons.AutoMirrored.Filled.Chat, stringResource(R.string.chats))
+                }
+            }, selected = selectedItem == 2, onClick = {
+                keyboardController?.hide()
+                selectedItem = 2
+            }, colors = NavigationBarItemDefaults.colors(
+                selectedIconColor = AquaBlue, unselectedIconColor = GrayText
+            )
+            )
+            NavigationBarItem(
+                icon = { Icon(Icons.Default.Person, stringResource(R.string.profile)) },
+                selected = selectedItem == 3,
+                onClick = {
+                    keyboardController?.hide()
+                    selectedItem = 3
+                    onProfileClick()
+                },
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = AquaBlue, unselectedIconColor = GrayText
+                )
+            )
+        }
+    }) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding)) {
             LazyColumn(
                 modifier = Modifier
@@ -683,15 +775,14 @@ fun DashboardScreen(
                     .background(MaterialTheme.colorScheme.background)
             ) {
                 if (selectedItem == 0 || selectedItem == 1) {
-                    item { 
+                    item {
                         SearchHeader(
                             productSearchText = productSearchText,
-                            onProductSearchChange = { productSearchText = it }
-                        ) 
+                            onProductSearchChange = { productSearchText = it })
                     }
-                    
+
                     if (selectedItem == 0 && productSearchText.isBlank()) {
-                        item { 
+                        item {
                             AquaRatesSection(
                                 onRateClick = { rate ->
                                     if (rate.isPrawn) {
@@ -699,24 +790,34 @@ fun DashboardScreen(
                                     } else {
                                         onFishRatesClick()
                                     }
-                                }
-                            ) 
+                                })
                         }
                     }
 
                     item {
                         CategoryFilterRow(
                             selected = selectedCategoryFilter,
-                            onSelect = { selectedCategoryFilter = it }
-                        )
+                            onSelect = { selectedCategoryFilter = it })
                     }
 
                     // Marketplace Section flattened
                     item {
-                        Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text(stringResource(R.string.fresh_marketplace), fontWeight = FontWeight.Bold, fontSize = 20.sp, color = DarkBlueText)
+                        Row(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                stringResource(R.string.fresh_marketplace),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 20.sp,
+                                color = DarkBlueText
+                            )
                             Spacer(modifier = Modifier.weight(1f))
-                            Text(stringResource(R.string.items_count, filteredListings.size), color = GrayText, fontSize = 13.sp)
+                            Text(
+                                stringResource(R.string.items_count, filteredListings.size),
+                                color = GrayText,
+                                fontSize = 13.sp
+                            )
                         }
                         Spacer(modifier = Modifier.height(12.dp))
                     }
@@ -724,54 +825,75 @@ fun DashboardScreen(
                     if (isLoadingListings) {
                         item {
                             Card(
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).height(200.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp)
+                                    .height(200.dp),
                                 shape = RoundedCornerShape(12.dp),
                                 colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5))
                             ) {
-                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
                                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        CircularProgressIndicator(color = AquaBlue, modifier = Modifier.size(32.dp))
+                                        CircularProgressIndicator(
+                                            color = AquaBlue, modifier = Modifier.size(32.dp)
+                                        )
                                         Spacer(modifier = Modifier.height(12.dp))
-                                        Text(stringResource(R.string.loading_marketplace), color = GrayText, fontSize = 14.sp)
+                                        Text(
+                                            stringResource(R.string.loading_marketplace),
+                                            color = GrayText,
+                                            fontSize = 14.sp
+                                        )
                                     }
                                 }
                             }
                         }
                     } else if (filteredListings.isEmpty()) {
                         item {
-                            Box(modifier = Modifier.fillMaxWidth().height(150.dp), contentAlignment = Alignment.Center) {
-                                val message = if (productSearchText.isEmpty() && selectedCategoryFilter == "All") stringResource(R.string.no_listings) else stringResource(R.string.no_match_search)
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(150.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                val message =
+                                    if (productSearchText.isEmpty() && selectedCategoryFilter == "All") stringResource(
+                                        R.string.no_listings
+                                    ) else stringResource(R.string.no_match_search)
                                 Text(message, color = GrayText)
                             }
                         }
                     } else {
                         items(
-                            count = chunkedListings.size,
-                            key = { index -> 
+                            count = chunkedListings.size, key = { index ->
                                 val row = chunkedListings[index]
                                 row.joinToString("-") { it["id"]?.toString() ?: "" }
-                            }
-                        ) { index ->
+                            }) { index ->
                             val rowItems = chunkedListings[index]
-                            
+
                             // Load more when reaching near the end
-                            if (index >= chunkedListings.size - 2 && !isLastPage && !isPaginating && productSearchText.isBlank() && selectedCategoryFilter == "All") {
+                            if (index >= chunkedListings.size - 2 && !isLastPage && !isPaginating) {
                                 SideEffect {
                                     loadListings(isFirstPage = false)
                                 }
                             }
 
                             Row(
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 6.dp),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
                                 rowItems.forEach { data ->
                                     val listingId = data["id"]?.toString() ?: ""
-                                    val images = (data["images"] as? List<*>)?.filterIsInstance<String>()
+                                    val images =
+                                        (data["images"] as? List<*>)?.filterIsInstance<String>()
                                     val isFavorited = favoriteIds.contains(listingId)
 
                                     val categoryStr = data["category"]?.toString() ?: "Other"
-                                    val displayCategory = when(categoryStr.uppercase()) {
+                                    val displayCategory = when (categoryStr.uppercase()) {
                                         "FISH" -> stringResource(R.string.cat_fish_seed)
                                         "PRAWNS" -> stringResource(R.string.cat_prawns)
                                         "EQUIPMENTS" -> stringResource(R.string.cat_equipments)
@@ -788,44 +910,60 @@ fun DashboardScreen(
                                     val acreText = stringResource(R.string.unit_acre)
                                     val priceLabel = when (categoryStr.uppercase()) {
                                         "PRAWNS" -> {
-                                            val rateVal = data["rateValue"]?.toString()?.takeIf { it.isNotBlank() } ?: naText
+                                            val rateVal = data["rateValue"]?.toString()
+                                                ?.takeIf { it.isNotBlank() } ?: naText
                                             if (rateVal == naText) naText else {
-                                                val formattedRate = CurrencyUtils.formatPrice(rateVal)
+                                                val formattedRate =
+                                                    CurrencyUtils.formatPrice(rateVal)
                                                 val type = data["rateType"]?.toString() ?: "Paise"
-                                                if (type.contains("Paise", ignoreCase = true)) "$formattedRate Paise/Seed" else "₹$formattedRate/Seed"
+                                                if (type.contains(
+                                                        "Paise", ignoreCase = true
+                                                    )
+                                                ) "$formattedRate Paise/Seed" else "₹$formattedRate/Seed"
                                             }
                                         }
+
                                         "FEED" -> "₹${CurrencyUtils.formatPrice(data["ratePerTon"] ?: naText)}/$tonText"
                                         "BUSINESS" -> {
                                             if (data["businessSubCategory"] == "Feed") {
-                                                "₹${CurrencyUtils.formatPrice(data["ratePerTon"]?.toString()?.takeIf { it.isNotBlank() } ?: naText)}/$tonText"
+                                                "₹${
+                                                    CurrencyUtils.formatPrice(
+                                                        data["ratePerTon"]?.toString()
+                                                        ?.takeIf { it.isNotBlank() } ?: naText)
+                                                }/$tonText"
                                             } else {
-                                                val displayVal = data["price"]?.toString()?.takeIf { it.isNotBlank() }
-                                                    ?: data["rateValue"]?.toString()?.takeIf { it.isNotBlank() }
-                                                    ?: data["ratePerTon"]?.toString()?.takeIf { it.isNotBlank() }
-                                                    ?: naText
+                                                val displayVal = data["price"]?.toString()
+                                                    ?.takeIf { it.isNotBlank() }
+                                                    ?: data["rateValue"]?.toString()
+                                                        ?.takeIf { it.isNotBlank() }
+                                                    ?: data["ratePerTon"]?.toString()
+                                                        ?.takeIf { it.isNotBlank() } ?: naText
                                                 "₹${CurrencyUtils.formatPrice(displayVal)}"
                                             }
                                         }
+
                                         "JOBS" -> "₹${CurrencyUtils.formatPrice(data["salary"] ?: naText)}"
                                         "TANKS" -> "₹${CurrencyUtils.formatPrice(data["estPricePerAcre"] ?: naText)}/$acreText"
                                         else -> "₹${CurrencyUtils.formatPrice(data["price"] ?: data["rateValue"] ?: naText)}"
                                     }
 
                                     MarketItem(
-                                        title = data["title"]?.toString()?.takeIf { it.isNotBlank() } ?: stringResource(R.string.no_title),
+                                        title = data["title"]?.toString()
+                                        ?.takeIf { it.isNotBlank() }
+                                        ?: stringResource(R.string.no_title),
                                         price = priceLabel,
                                         category = displayCategory,
                                         location = data["location"]?.toString() ?: "Unknown",
                                         posterName = data["posterName"]?.toString() ?: "User",
                                         imageUrl = images?.firstOrNull(),
                                         isFavorited = isFavorited,
-                                        timestamp = (data["timestamp"] as? com.google.firebase.Timestamp)?.toDate()?.time ?: 
-                                                    (data["timestamp"] as? Long) ?: 0L,
+                                        timestamp = (data["timestamp"] as? com.google.firebase.Timestamp)?.toDate()?.time
+                                            ?: (data["timestamp"] as? Long) ?: 0L,
                                         onFavoriteClick = {
                                             if (currentUserId.isNotEmpty() && listingId.isNotEmpty()) {
-                                                val favRef = db.collection("users").document(currentUserId)
-                                                    .collection("favorites").document(listingId)
+                                                val favRef =
+                                                    db.collection("users").document(currentUserId)
+                                                        .collection("favorites").document(listingId)
                                                 if (isFavorited) {
                                                     favRef.delete()
                                                 } else {
@@ -836,7 +974,8 @@ fun DashboardScreen(
                                         onClick = { onItemClick(data) },
                                         onPosterClick = {
                                             selectedSellerId = data["userId"]?.toString() ?: ""
-                                            selectedSellerName = data["posterName"]?.toString() ?: "User"
+                                            selectedSellerName =
+                                                data["posterName"]?.toString() ?: "User"
                                             if (selectedSellerId.isNotEmpty()) {
                                                 showSellerPostsDialog = true
                                             }
@@ -859,36 +998,51 @@ fun DashboardScreen(
                                         .padding(16.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    CircularProgressIndicator(color = AquaBlue, modifier = Modifier.size(24.dp))
+                                    CircularProgressIndicator(
+                                        color = AquaBlue, modifier = Modifier.size(24.dp)
+                                    )
                                 }
                             }
                         }
                     }
-                    
+
                     if (selectedItem == 0) {
                         item { FooterSection() }
                     }
                 } else if (selectedItem == 2) {
                     if (isLoadingChats) {
                         item {
-                            Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(200.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
                                 CircularProgressIndicator(color = AquaBlue)
                             }
                         }
                     } else if (sortedChats.isEmpty()) {
                         item {
-                            Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(200.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
                                 Text(stringResource(R.string.no_chats), color = GrayText)
                             }
                         }
                     } else {
                         items(sortedChats) { chat ->
                             ChatListItem(
-                                chat = chat, 
+                                chat = chat,
                                 onClick = { onChatListClick(chat.fullData) },
                                 initialListingExists = listingStatusMap[chat.listingId]
                             )
-                            HorizontalDivider(color = Color(0xFFF5F5F5), modifier = Modifier.padding(horizontal = 16.dp))
+                            HorizontalDivider(
+                                color = Color(0xFFF5F5F5),
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
                         }
                     }
                 } else {
@@ -898,8 +1052,9 @@ fun DashboardScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                if (selectedItem == 2) stringResource(R.string.news) else stringResource(R.string.coming_soon),
-                                color = GrayText
+                                if (selectedItem == 2) stringResource(R.string.news) else stringResource(
+                                    R.string.coming_soon
+                                ), color = GrayText
                             )
                         }
                     }
@@ -908,7 +1063,7 @@ fun DashboardScreen(
 
             if (showWelcomeSheet) {
                 ModalBottomSheet(
-                    onDismissRequest = { 
+                    onDismissRequest = {
                         showWelcomeSheet = false
                         onNameSkip()
                     },
@@ -916,43 +1071,98 @@ fun DashboardScreen(
                     containerColor = Color.White,
                     shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
                 ) {
-                    Column(modifier = Modifier.fillMaxWidth().padding(24.dp)) {
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Text(stringResource(R.string.welcome_title), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.Black)
-                            IconButton(onClick = { 
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                stringResource(R.string.welcome_title),
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.Black
+                            )
+                            IconButton(onClick = {
                                 showWelcomeSheet = false
                                 onNameSkip()
                             }) { Icon(Icons.Default.Close, contentDescription = "Close") }
                         }
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text(stringResource(R.string.welcome_desc), fontSize = 12.sp, color = GrayText, lineHeight = 21.sp)
+                        Text(
+                            stringResource(R.string.welcome_desc),
+                            fontSize = 12.sp,
+                            color = GrayText,
+                            lineHeight = 21.sp
+                        )
                         Spacer(modifier = Modifier.height(24.dp))
-                        OutlinedTextField(value = tempName, onValueChange = { tempName = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text(stringResource(R.string.enter_name), color = Color.Gray) }, leadingIcon = { Icon(Icons.Default.PersonOutline, contentDescription = null, tint = Color.Black) }, shape = RoundedCornerShape(12.dp), singleLine = true)
+                        OutlinedTextField(
+                            value = tempName,
+                            onValueChange = { tempName = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            placeholder = {
+                                Text(
+                                    stringResource(R.string.enter_name), color = Color.Gray
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.PersonOutline,
+                                    contentDescription = null,
+                                    tint = Color.Black
+                                )
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            singleLine = true
+                        )
                         Spacer(modifier = Modifier.height(24.dp))
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
                             OutlinedButton(
-                                onClick = { 
+                                onClick = {
                                     showWelcomeSheet = false
                                     onNameSkip()
-                                }, 
-                                modifier = Modifier.weight(1f).height(56.dp), 
-                                shape = RoundedCornerShape(12.dp), 
-                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE0E0E0))
+                                },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(56.dp),
+                                shape = RoundedCornerShape(12.dp),
+                                border = androidx.compose.foundation.BorderStroke(
+                                    1.dp, Color(0xFFE0E0E0)
+                                )
                             ) {
-                                Text(stringResource(R.string.skip_now), fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                                Text(
+                                    stringResource(R.string.skip_now),
+                                    fontSize = 17.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.Black
+                                )
                             }
                             Button(
-                                onClick = { 
+                                onClick = {
                                     if (tempName.isNotBlank()) {
                                         onNameSave(tempName)
                                         showWelcomeSheet = false
-                                    } 
-                                }, 
-                                modifier = Modifier.weight(1f).height(56.dp), 
-                                shape = RoundedCornerShape(12.dp), 
+                                    }
+                                },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(56.dp),
+                                shape = RoundedCornerShape(12.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = AquaBlue)
                             ) {
-                                Text(stringResource(R.string.save), fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                Text(
+                                    stringResource(R.string.save),
+                                    fontSize = 17.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
                             }
                         }
                         Spacer(modifier = Modifier.height(16.dp))
@@ -974,21 +1184,43 @@ fun DashboardScreen(
                     containerColor = Color.White,
                     shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
                 ) {
-                    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp)) {
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Text(stringResource(R.string.notifications), fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color.Black)
-                            IconButton(onClick = { showNotificationsSheet = false }) { Icon(Icons.Default.Close, contentDescription = "Close") }
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp, vertical = 16.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                stringResource(R.string.notifications),
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.Black
+                            )
+                            IconButton(onClick = {
+                                showNotificationsSheet = false
+                            }) { Icon(Icons.Default.Close, contentDescription = "Close") }
                         }
-                        
+
                         Spacer(modifier = Modifier.height(16.dp))
 
                         if (notifications.isEmpty()) {
-                            Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(200.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
                                 Text(stringResource(R.string.no_notifications), color = GrayText)
                             }
                         } else {
                             LazyColumn(
-                                modifier = Modifier.fillMaxWidth().heightIn(max = 500.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(max = 500.dp),
                                 verticalArrangement = Arrangement.spacedBy(12.dp),
                                 contentPadding = PaddingValues(bottom = 24.dp)
                             ) {
@@ -999,7 +1231,8 @@ fun DashboardScreen(
                                     val category = data["category"]?.toString() ?: "Post"
                                     val posterName = data["posterName"]?.toString() ?: "User"
                                     val fullLocation = data["location"]?.toString() ?: ""
-                                    val location = fullLocation.split(",").firstOrNull()?.trim() ?: "Local"
+                                    val location =
+                                        fullLocation.split(",").firstOrNull()?.trim() ?: "Local"
 
                                     Card(
                                         onClick = {
@@ -1008,23 +1241,63 @@ fun DashboardScreen(
                                         },
                                         modifier = Modifier.fillMaxWidth(),
                                         colors = CardDefaults.cardColors(
-                                            containerColor = if (isNew) Color(0xFFF0F7FF) else Color(0xFFFAFAFA)
+                                            containerColor = if (isNew) Color(0xFFF0F7FF) else Color(
+                                                0xFFFAFAFA
+                                            )
                                         ),
                                         shape = RoundedCornerShape(12.dp),
-                                        border = androidx.compose.foundation.BorderStroke(1.dp, if (isNew) AquaBlue.copy(alpha = 0.3f) else Color(0xFFEEEEEE))
+                                        border = androidx.compose.foundation.BorderStroke(
+                                            1.dp, if (isNew) AquaBlue.copy(alpha = 0.3f) else Color(
+                                                0xFFEEEEEE
+                                            )
+                                        )
                                     ) {
-                                        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                                            Box(modifier = Modifier.size(40.dp).background(if (isNew) AquaBlue else Color.LightGray, CircleShape), contentAlignment = Alignment.Center) {
-                                                Icon(Icons.Default.PostAdd, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+                                        Row(
+                                            modifier = Modifier.padding(16.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(40.dp)
+                                                    .background(
+                                                        if (isNew) AquaBlue else Color.LightGray,
+                                                        CircleShape
+                                                    ), contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    Icons.Default.PostAdd,
+                                                    contentDescription = null,
+                                                    tint = Color.White,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
                                             }
                                             Spacer(modifier = Modifier.width(12.dp))
                                             Column(modifier = Modifier.weight(1f)) {
-                                                Text(text = if (isNew) "NEW: $title" else title, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color.Black)
-                                                Text(text = "$category posted by $posterName from $location", fontSize = 13.sp, color = Color.Gray)
-                                                Text(text = SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault()).format(Date(timestamp)), fontSize = 11.sp, color = GrayText)
+                                                Text(
+                                                    text = if (isNew) "NEW: $title" else title,
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 15.sp,
+                                                    color = Color.Black
+                                                )
+                                                Text(
+                                                    text = "$category posted by $posterName from $location",
+                                                    fontSize = 13.sp,
+                                                    color = Color.Gray
+                                                )
+                                                Text(
+                                                    text = SimpleDateFormat(
+                                                        "dd MMM, hh:mm a", Locale.getDefault()
+                                                    ).format(Date(timestamp)),
+                                                    fontSize = 11.sp,
+                                                    color = GrayText
+                                                )
                                             }
                                             if (isNew) {
-                                                Box(modifier = Modifier.size(8.dp).background(Color.Red, CircleShape))
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(8.dp)
+                                                        .background(Color.Red, CircleShape)
+                                                )
                                             }
                                         }
                                     }
@@ -1038,16 +1311,12 @@ fun DashboardScreen(
 
             if (showGraphSheet && selectedRateForGraph != null) {
                 RateGraphBottomSheet(
-                    rate = selectedRateForGraph!!,
-                    onDismiss = { showGraphSheet = false }
-                )
+                    rate = selectedRateForGraph!!, onDismiss = { showGraphSheet = false })
             }
 
             if (selectedCustomer != null) {
                 CustomerFoundDialog(
-                    customer = selectedCustomer!!,
-                    onDismiss = { selectedCustomer = null }
-                )
+                    customer = selectedCustomer!!, onDismiss = { selectedCustomer = null })
             }
 
             if (showSellerPostsDialog) {
@@ -1055,8 +1324,7 @@ fun DashboardScreen(
                     sellerName = selectedSellerName,
                     sellerPosts = selectedSellerPosts,
                     onDismiss = { showSellerPostsDialog = false },
-                    onItemClick = { onItemClick(it) }
-                )
+                    onItemClick = { onItemClick(it) })
             }
         }
     }
@@ -1064,14 +1332,25 @@ fun DashboardScreen(
 
 @Composable
 fun CategoryFilterRow(selected: String, onSelect: (String) -> Unit) {
-    val categories = listOf("All", "FISH", "PRAWNS", "EQUIPMENTS", "VEHICLES", "FEED", "SERVICES", "TANKS", "BUSINESS", "JOBS")
-    
+    val categories = listOf(
+        "All",
+        "FISH",
+        "PRAWNS",
+        "EQUIPMENTS",
+        "VEHICLES",
+        "FEED",
+        "SERVICES",
+        "TANKS",
+        "BUSINESS",
+        "JOBS"
+    )
+
     LazyRow(
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         items(categories) { category ->
-            val label = when(category) {
+            val label = when (category) {
                 "All" -> stringResource(R.string.all)
                 "FISH" -> stringResource(R.string.cat_fish_seed)
                 "PRAWNS" -> stringResource(R.string.cat_prawns)
@@ -1084,8 +1363,8 @@ fun CategoryFilterRow(selected: String, onSelect: (String) -> Unit) {
                 "JOBS" -> stringResource(R.string.cat_jobs)
                 else -> category
             }
-            
-            val selectedColor = when(category) {
+
+            val selectedColor = when (category) {
                 "FISH" -> Color(0xFF009688)
                 "PRAWNS" -> Color(0xFF3F51B5)
                 "EQUIPMENTS" -> Color(0xFF1976D2)
@@ -1097,14 +1376,13 @@ fun CategoryFilterRow(selected: String, onSelect: (String) -> Unit) {
                 "JOBS" -> Color(0xFF673AB7)
                 else -> AquaBlue
             }
-            
+
             FilterChip(
                 selected = selected == category,
                 onClick = { onSelect(category) },
                 label = { Text(label) },
                 colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = selectedColor,
-                    selectedLabelColor = Color.White
+                    selectedContainerColor = selectedColor, selectedLabelColor = Color.White
                 )
             )
         }
@@ -1113,8 +1391,7 @@ fun CategoryFilterRow(selected: String, onSelect: (String) -> Unit) {
 
 @Composable
 fun SearchHeader(
-    productSearchText: String,
-    onProductSearchChange: (String) -> Unit
+    productSearchText: String, onProductSearchChange: (String) -> Unit
 ) {
     val focusManager = LocalFocusManager.current
     val context = LocalContext.current
@@ -1127,19 +1404,31 @@ fun SearchHeader(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(brush = Brush.verticalGradient(colors = listOf(AquaLightBlue, MaterialTheme.colorScheme.background)))
+            .background(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        AquaLightBlue, MaterialTheme.colorScheme.background
+                    )
+                )
+            )
             .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
         TextField(
             value = productSearchText,
             onValueChange = { onProductSearchChange(it) },
-            modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 50.dp),
             placeholder = { Text(stringResource(R.string.search_placeholder), fontSize = 14.sp) },
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = GrayText) },
+            leadingIcon = {
+                Icon(
+                    Icons.Default.Search, contentDescription = null, tint = GrayText
+                )
+            },
             trailingIcon = {
                 if (productSearchText.isNotEmpty()) {
-                    IconButton(onClick = { 
-                        onProductSearchChange("") 
+                    IconButton(onClick = {
+                        onProductSearchChange("")
                         focusManager.clearFocus()
                     }) {
                         Icon(Icons.Default.Close, contentDescription = "Clear", tint = GrayText)
@@ -1164,7 +1453,13 @@ fun SearchHeader(
 @Composable
 fun FooterSection() {
     Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
-        Text(stringResource(R.string.footer_text), fontSize = 32.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD1D9E6), lineHeight = 39.sp)
+        Text(
+            stringResource(R.string.footer_text),
+            fontSize = 32.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFFD1D9E6),
+            lineHeight = 39.sp
+        )
         Spacer(modifier = Modifier.height(24.dp))
     }
 }
@@ -1182,33 +1477,51 @@ fun AquaRatesSection(onRateClick: (AquaRate) -> Unit) {
     )
 
     LaunchedEffect(Unit) {
-        db.collection("aqua_rates")
-            .addSnapshotListener { value, _ ->
-                if (value != null) {
-                    val fetchedMap = value.documents.associateBy({ it.id.lowercase(Locale.ROOT) }, { doc ->
+        db.collection("aqua_rates").addSnapshotListener { value, _ ->
+            if (value != null) {
+                val fetchedMap =
+                    value.documents.associateBy({ it.id.lowercase(Locale.ROOT) }, { doc ->
                         val price = doc.getString("price") ?: "--"
                         val change = doc.getString("change") ?: ""
                         val trendStr = doc.getString("trend") ?: "FLAT"
-                        val trend = try { RateTrend.valueOf(trendStr) } catch (_: Exception) { RateTrend.FLAT }
-                        val isPrawn = doc.getBoolean("isPrawn") ?: (doc.id.lowercase(Locale.ROOT) == "prawns")
-                        
+                        val trend = try {
+                            RateTrend.valueOf(trendStr)
+                        } catch (_: Exception) {
+                            RateTrend.FLAT
+                        }
+                        val isPrawn =
+                            doc.getBoolean("isPrawn") ?: (doc.id.lowercase(Locale.ROOT) == "prawns")
+
                         AquaRate(doc.id, price, change, trend, isPrawn)
                     })
 
-                    // Merge with the fixed list of fish types
-                    rates = fishTypes.map { fish ->
-                        fetchedMap[fish.lowercase(Locale.ROOT)] ?: AquaRate(fish, "--", "", RateTrend.FLAT, isPrawn = fish.lowercase(Locale.ROOT) == "prawns")
-                    }
-                }
-                
-                if (rates.all { it.price == "--" }) {
-                    rates = listOf(
-                        AquaRate("Prawns", context.getString(R.string.no_data_available), context.getString(R.string.view_all_prices), RateTrend.FLAT, isPrawn = true),
-                        AquaRate("Rohu", context.getString(R.string.no_data_available), "", RateTrend.FLAT)
+                // Merge with the fixed list of fish types
+                rates = fishTypes.map { fish ->
+                    fetchedMap[fish.lowercase(Locale.ROOT)] ?: AquaRate(
+                        fish,
+                        "--",
+                        "",
+                        RateTrend.FLAT,
+                        isPrawn = fish.lowercase(Locale.ROOT) == "prawns"
                     )
                 }
-                isLoading = false
             }
+
+            if (rates.all { it.price == "--" }) {
+                rates = listOf(
+                    AquaRate(
+                        "Prawns",
+                        context.getString(R.string.no_data_available),
+                        context.getString(R.string.view_all_prices),
+                        RateTrend.FLAT,
+                        isPrawn = true
+                    ), AquaRate(
+                        "Rohu", context.getString(R.string.no_data_available), "", RateTrend.FLAT
+                    )
+                )
+            }
+            isLoading = false
+        }
     }
 
     Column(modifier = Modifier.padding(16.dp)) {
@@ -1239,14 +1552,17 @@ fun AquaRatesSection(onRateClick: (AquaRate) -> Unit) {
                 }
             }
             Surface(
-                color = Color(0xFFE8F5E9),
-                shape = CircleShape
+                color = Color(0xFFE8F5E9), shape = CircleShape
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                 ) {
-                    Box(modifier = Modifier.size(6.dp).background(LiveGreen, CircleShape))
+                    Box(
+                        modifier = Modifier
+                            .size(6.dp)
+                            .background(LiveGreen, CircleShape)
+                    )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         stringResource(R.string.live),
@@ -1259,14 +1575,11 @@ fun AquaRatesSection(onRateClick: (AquaRate) -> Unit) {
         }
         Spacer(modifier = Modifier.height(12.dp))
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             rates.forEach { rate ->
                 RateCard(
-                    rate = rate,
-                    onClick = { onRateClick(rate) },
-                    modifier = Modifier.weight(1f)
+                    rate = rate, onClick = { onRateClick(rate) }, modifier = Modifier.weight(1f)
                 )
             }
         }
@@ -1275,17 +1588,12 @@ fun AquaRatesSection(onRateClick: (AquaRate) -> Unit) {
 
 @Composable
 fun RateCard(
-    rate: AquaRate,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    rate: AquaRate, onClick: () -> Unit, modifier: Modifier = Modifier
 ) {
-    val isNoData = rate.price == "--" ||
-                  rate.price == "N/A" || 
-                  rate.price.lowercase(java.util.Locale.ROOT).contains("no change") ||
-                  rate.price.contains("మార్పు లేదు") ||
-                  rate.price == "No data available for today" ||
-                  rate.price == "ఈ రోజు డేటా అందుబాటులో లేదు" ||
-                  rate.price == stringResource(R.string.no_data_available)
+    val isNoData = rate.price == "--" || rate.price == "N/A" || rate.price.lowercase(Locale.ROOT)
+        .contains("no change") || rate.price.contains("మార్పు లేదు") || rate.price == "No data available for today" || rate.price == "ఈ రోజు డేటా అందుబాటులో లేదు" || rate.price == stringResource(
+        R.string.no_data_available
+    )
 
     val displayPrice = if (isNoData) stringResource(R.string.no_data_available) else rate.price
 
@@ -1305,7 +1613,9 @@ fun RateCard(
                 shape = RoundedCornerShape(4.dp)
             ) {
                 Text(
-                    text = if (rate.isPrawn) stringResource(R.string.cat_prawns) else stringResource(R.string.cat_fish),
+                    text = if (rate.isPrawn) stringResource(R.string.cat_prawns) else stringResource(
+                        R.string.cat_fish
+                    ),
                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
@@ -1328,7 +1638,9 @@ fun RateCard(
                         color = Color.Black
                     )
                     Text(
-                        text = if (rate.isPrawn) stringResource(R.string.count_label, "100") else rate.getDisplayName(),
+                        text = if (rate.isPrawn) stringResource(
+                            R.string.count_label, "100"
+                        ) else rate.getDisplayName(),
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = if (rate.isPrawn) Color(0xFF3F51B5) else Color(0xFF009688)

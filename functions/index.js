@@ -140,6 +140,80 @@ exports.resendOtp = onCall({
 });
 
 /**
+ * Returns listings sorted by distance from the user's location.
+ */
+exports.getListingsByLocation = onCall({
+    enforceAppCheck: false
+}, async (request) => {
+    const { lat, lng, category, page = 0, pageSize = 10 } = request.data;
+
+    if (!lat || !lng) {
+        return { success: false, message: "Latitude and longitude are required" };
+    }
+
+    try {
+        let query = admin.firestore().collection("listings");
+
+        const snapshot = await query.get();
+        let listings = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        // Filter by category using the same logic as the app
+        if (category && category !== "All") {
+            listings = listings.filter(l => {
+                const lCat = (l.category || "").toUpperCase();
+                const lServiceType = l.serviceType || "";
+                const lBusSubCat = l.businessSubCategory || "";
+
+                switch (category.toUpperCase()) {
+                    case "VEHICLES":
+                        return lCat === "VEHICLES" || (lCat === "SERVICES" &&
+                            (lServiceType === "Live Fish Vehicles" || lServiceType === "Bore Well" || lServiceType === "Earth Movers"));
+                    case "FEED":
+                        return lCat === "FEED" || (lCat === "BUSINESS" && lBusSubCat === "Feed");
+                    case "BUSINESS":
+                        return lCat === "BUSINESS" && lBusSubCat !== "Feed";
+                    case "SERVICES":
+                        return lCat === "SERVICES" &&
+                            !(lServiceType === "Live Fish Vehicles" || lServiceType === "Bore Well" || lServiceType === "Earth Movers");
+                    default:
+                        return lCat === category.toUpperCase();
+                }
+            });
+        }
+
+        // Calculate distance and sort
+        listings.forEach(listing => {
+            const lLat = listing.lat || 0;
+            const lLng = listing.lng || 0;
+            if (lLat && lLng) {
+                const dLat = lLat - lat;
+                const dLng = lLng - lng;
+                listing.distance = Math.sqrt(dLat * dLat + dLng * dLng);
+            } else {
+                listing.distance = 999999;
+            }
+        });
+
+        listings.sort((a, b) => a.distance - b.distance);
+
+        // Pagination
+        const start = page * pageSize;
+        const paginatedListings = listings.slice(start, start + pageSize);
+        const isLastPage = start + pageSize >= listings.length;
+
+        return {
+            success: true,
+            listings: paginatedListings,
+            isLastPage: isLastPage,
+            totalCount: listings.length
+        };
+    } catch (error) {
+        logger.error("getListingsByLocation error:", error);
+        return { success: false, message: "Failed to fetch listings" };
+    }
+});
+
+/**
  * Triggered on new listings.
  * Notifies all users about the new post.
  */
