@@ -1,6 +1,10 @@
 package com.tejashaqua.app.ui.screens
 
+import android.app.Activity
 import android.location.Geocoder
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -56,6 +60,18 @@ fun SelectLocationScreen(
     
     val keyboardController = LocalSoftwareKeyboardController.current
     val context = LocalContext.current
+    
+    val isGpsEnabled by locationViewModel.isGpsEnabled.collectAsState()
+    val isFetchingLocation by locationViewModel.isFetchingLocation.collectAsState()
+
+    val gpsLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartIntentSenderForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            locationViewModel.fetchCurrentLocation(force = true)
+        }
+    }
+
     val currentLang = LocaleHelper.getSelectedLanguage(context) ?: "en"
     val keyboardOptions = KeyboardOptions(
         hintLocales = if (currentLang == "te") LocaleList("te") else null
@@ -209,7 +225,64 @@ fun SelectLocationScreen(
             }
 
             if (selectedTabIndex == 0) {
+                if (!isGpsEnabled && searchText.isBlank()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                            .background(AquaBlue.copy(alpha = 0.05f), RoundedCornerShape(12.dp))
+                            .clickable {
+                                com.tejashaqua.app.utils.LocationUtils.checkLocationSettings(
+                                    context as Activity,
+                                    onEnabled = { locationViewModel.fetchCurrentLocation(force = true) },
+                                    onError = { exception ->
+                                        val intentSenderRequest = IntentSenderRequest.Builder(exception.resolution).build()
+                                        gpsLauncher.launch(intentSenderRequest)
+                                    }
+                                )
+                            }
+                            .padding(16.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.LocationOn,
+                                contentDescription = null,
+                                tint = AquaBlue,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = stringResource(R.string.enable_gps_title),
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.Black
+                                )
+                                Text(
+                                    text = stringResource(R.string.enable_gps_desc),
+                                    fontSize = 14.sp,
+                                    color = GrayText
+                                )
+                            }
+                            Text(
+                                text = stringResource(R.string.turn_on_location),
+                                color = AquaBlue,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
+                            )
+                        }
+                    }
+                }
+
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    if (isFetchingLocation && searchResults.isEmpty()) {
+                        item {
+                            LinearProgressIndicator(
+                                modifier = Modifier.fillMaxWidth(),
+                                color = AquaBlue
+                            )
+                        }
+                    }
+
                     items(searchResults) { prediction ->
                         val primaryText = prediction.getPrimaryText(null).toString()
                         val secondaryText = prediction.getSecondaryText(null).toString()

@@ -4,7 +4,7 @@
     <string name="tejash_aqua">తేజశ్ ఆక్వా!</string>
     <string name="enter_mobile_number">మీ మొబైల్ నంబర్‌ను నమోదు చేయండి</string>
     <string name="country_code">+91</string>
-    <string name="phone_placeholder">9876543210</string>
+    <string name="phone_placeholder">98765 43210</string>
     <string name="invalid_phone_error">దయచేసి సరైన 10-అంకెల మొబైల్ నంబర్‌ను నమోదు చేయండి</string>
     <string name="otp_helper_text">మీ నంబర్‌ను ధృవీకరించడానికి మేము 6-అంకెల OTPని పంపుతాము</string>
     <string name="send_otp">OTP పంపండి</string>
@@ -42,6 +42,10 @@
     <string name="location_not_found">స్థానం కనుగొనబడలేదు</string>
     <string name="failed_get_location">స్థానాన్ని పొందడంలో విఫలమైంది</string>
     <string name="location_permission_denied">స్థాన అనుమతి నిరాకరించబడింది. మాన్యువల్‌గా ఎంచుకోవడానికి ఇక్కడ నొక్కండి.</string>
+    <string name="enable_gps_message">GPS/స్థాన సేవలు నిలిపివేయబడ్డాయి. ప్రారంభించడానికి ఇక్కడ నొక్కండి.</string>
+    <string name="enable_gps_title">స్థాన సేవలు నిలిపివేయబడ్డాయి</string>
+    <string name="enable_gps_desc">మీ ప్రస్తుత స్థానాన్ని పొందడానికి స్థాన సేవలు అవసరం. దయచేసి సిస్టమ్ సెట్టింగ్‌లలో GPS/స్థాన సేవలను ప్రారంభించండి.</string>
+    <string name="turn_on_location">లొకేషన్‌ను ఆన్ చేయండి</string>
 
     <!-- Welcome Sheet -->
     <string name="welcome_title">తేజశ్ ఆక్వాకు స్వాగతం! 👋</string>
@@ -314,6 +318,7 @@
     <string name="all_rights_reserved">© 2026 తేజశ్ ఆక్వా. అన్ని హక్కులు ప్రత్యేకించబడ్డాయి.</string>
     <string name="choose_language">మీ భాషను ఎంచుకోండి</string>
     <string name="signing_in">మిమ్మల్ని లాగిన్ చేస్తోంది…</string>
+    <string name="please_wait">దయచేసి వేచి ఉండండి…</string>
     <string name="admin_portal">అడ్మిన్ పోర్టల్</string>
     <string name="user_label">వినియోగదారు</string>
     <string name="delete_listing">జాబితాను తొలగించండి</string>

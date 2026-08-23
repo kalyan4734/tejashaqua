@@ -51,6 +51,7 @@ import com.tejashaqua.app.R
 import com.tejashaqua.app.ui.theme.AquaBlue
 import com.tejashaqua.app.ui.theme.GrayText
 import com.tejashaqua.app.utils.CurrencyUtils
+import com.tejashaqua.app.ui.components.LoadingOverlay
 
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.tejashaqua.app.ui.viewmodel.UserActionViewModel
@@ -102,7 +103,24 @@ fun ChatScreen(
         hintLocales = if (currentLang == "te") LocaleList("te") else null
     )
     
-    val title = listingDetails["title"]?.toString() ?: listingDetails["listingTitle"]?.toString() ?: stringResource(R.string.no_title)
+    val title = remember(listingDetails, currentLang) {
+        val cat = listingDetails["category"]?.toString()?.uppercase() ?: ""
+        val subCat = listingDetails["businessSubCategory"]?.toString() ?: ""
+        
+        listingDetails["title"]?.toString()?.takeIf { it.isNotBlank() }
+            ?: listingDetails["listingTitle"]?.toString()?.takeIf { it.isNotBlank() }
+            ?: when {
+                cat == "BUSINESS" && subCat == "Medicine" -> listingDetails["medicineName"]?.toString()
+                cat == "BUSINESS" && subCat == "Feed" -> listingDetails["feedName"]?.toString()
+                cat == "FEED" -> listingDetails["feedName"]?.toString()
+                cat == "TANKS" -> {
+                    val acres = listingDetails["tankAcres"]?.toString() ?: ""
+                    if (acres.isNotBlank()) "$acres Acres Tank" else null
+                }
+                cat == "JOBS" -> listingDetails["jobType"]?.toString()
+                else -> null
+            } ?: context.getString(R.string.no_title)
+    }
     
     // Improved logic to find the best available price value
     val rawPrice = listingDetails["rateValue"]?.toString()?.takeIf { it.isNotBlank() }
@@ -164,6 +182,7 @@ fun ChatScreen(
     val listState = rememberLazyListState()
     var initialMessageSent by remember { mutableStateOf(false) }
     var listingExists by remember { mutableStateOf(true) }
+    var isAutoMessaging by remember { mutableStateOf(false) }
 
     // Fetch full listing details if missing (e.g. when coming from ChatList)
     LaunchedEffect(listingId) {
@@ -299,20 +318,34 @@ fun ChatScreen(
         // 1. Navigation requested it (sendInitialMessage)
         // 2. We haven't sent it in this session (initialMessageSent)
         // 3. The chat history is actually empty (verified from Firestore)
-        // 4. We have a real location (or we've waited long enough)
         if (sendInitialMessage && !initialMessageSent && chatMessages.isEmpty() && currentUserId.isNotEmpty() && currentUserId != sellerUserId) {
+            isAutoMessaging = true
             if (isValidLocation) {
                 initialMessageSent = true
                 val city = currentUserLocation.split(",").firstOrNull()?.trim() ?: currentUserLocation
                 val defaultMsg = context.getString(R.string.initial_chat_message, sellerName, title, currentUserName, city, currentUserPhone)
                 sendMessage(defaultMsg)
+                isAutoMessaging = false
             } else if (currentUserLocation == deniedText || currentUserLocation == failedText || currentUserLocation == notFoundText) {
                 // If location failed or was denied, don't keep waiting, send with "Unknown"
                 initialMessageSent = true
                 val city = context.getString(R.string.unknown_location)
                 val defaultMsg = context.getString(R.string.initial_chat_message, sellerName, title, currentUserName, city, currentUserPhone)
                 sendMessage(defaultMsg)
+                isAutoMessaging = false
+            } else {
+                // Special case: if it stays "Fetching..." for more than 3 seconds, just send with "Unknown"
+                kotlinx.coroutines.delay(3000)
+                if (!initialMessageSent && chatMessages.isEmpty()) {
+                    initialMessageSent = true
+                    val city = context.getString(R.string.unknown_location)
+                    val defaultMsg = context.getString(R.string.initial_chat_message, sellerName, title, currentUserName, city, currentUserPhone)
+                    sendMessage(defaultMsg)
+                }
+                isAutoMessaging = false
             }
+        } else {
+            isAutoMessaging = false
         }
     }
 
@@ -587,6 +620,10 @@ fun ChatScreen(
                     ChatBubble(msg, if (!msg.isFromMe) sellerName else currentUserName, listingExists)
                 }
             }
+        }
+
+        if (isAutoMessaging) {
+            LoadingOverlay(stringResource(R.string.please_wait))
         }
     }
 }

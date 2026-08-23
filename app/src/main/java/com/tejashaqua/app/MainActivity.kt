@@ -12,8 +12,10 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.activity.compose.LocalActivityResultRegistryOwner
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -22,7 +24,9 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.core.content.ContextCompat
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -142,21 +146,24 @@ class MainActivity : AppCompatActivity() {
                 val networkStatus by networkObserver.observe.collectAsState(initial = NetworkObserver.Status.Available)
                 val currentIntent by intentFlow.collectAsState()
 
+                var selectedLanguageCode by rememberSaveable { 
+                    mutableStateOf(LocaleHelper.getSelectedLanguage(context)) 
+                }
+
                 var appVersion by remember { mutableStateOf("1.0.0") }
                 var needsUpdate by remember { mutableStateOf(false) }
                 var updateUrl by remember { mutableStateOf("https://play.google.com/store/apps/details?id=com.tejashaqua.app") }
 
-                var currentScreen by remember { mutableStateOf("splash") }
-                var languageSelectionSource by remember { mutableStateOf("splash") }
-                var mobileNumber by remember { mutableStateOf("") }
-                var userName by remember { mutableStateOf("User") }
-                var userId by remember { mutableStateOf("") }
-                var joinedAt by remember { mutableLongStateOf(0L) }
-                var isAdmin by remember { mutableStateOf(false) }
+                var currentScreen by rememberSaveable { mutableStateOf("splash") }
+                var languageSelectionSource by rememberSaveable { mutableStateOf("splash") }
+                var mobileNumber by rememberSaveable { mutableStateOf("") }
+                var userName by rememberSaveable { mutableStateOf("User") }
+                var userId by rememberSaveable { mutableStateOf("") }
+                var joinedAt by rememberSaveable { mutableLongStateOf(0L) }
+                var isAdmin by rememberSaveable { mutableStateOf(false) }
                 val showMobileNumber = (authState as? AuthState.Success)?.showMobileNumber ?: false
 
-                val isLanguageSelected =
-                    remember { mutableStateOf(LocaleHelper.getSelectedLanguage(context) != null) }
+                val isLanguageSelected = selectedLanguageCode != null
 
                 var selectedCategory by remember { mutableStateOf(ListingCategory.FISH) }
                 var isEditMode by remember { mutableStateOf(false) }
@@ -167,8 +174,8 @@ class MainActivity : AppCompatActivity() {
                 var chatSourceScreen by remember { mutableStateOf("detailed_page") }
                 var shouldSendInitialChatMessage by remember { mutableStateOf(false) }
 
-                var dashboardTab by remember { mutableIntStateOf(0) }
-                var showNoInternetDialog by remember { mutableStateOf(false) }
+                var dashboardTab by rememberSaveable { mutableIntStateOf(0) }
+                var showNoInternetDialog by rememberSaveable { mutableStateOf(false) }
                 var isNavigatingToDetailedPage by remember { mutableStateOf(false) }
 
                 var lastBackPressTime by remember { mutableLongStateOf(0L) }
@@ -246,6 +253,41 @@ class MainActivity : AppCompatActivity() {
                                 }
                                 currentScreen = "detailed_page"
                             }
+                    }
+                }
+
+                val onRateUsClick: () -> Unit = {
+                    val appId = "com.tejashaqua.app"
+                    val marketUri = android.net.Uri.parse("market://details?id=$appId")
+                    val marketIntent = android.content.Intent(android.content.Intent.ACTION_VIEW, marketUri).apply {
+                        addFlags(android.content.Intent.FLAG_ACTIVITY_NO_HISTORY or
+                                android.content.Intent.FLAG_ACTIVITY_NEW_DOCUMENT or
+                                android.content.Intent.FLAG_ACTIVITY_MULTIPLE_TASK or
+                                android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                        setPackage("com.android.vending")
+                    }
+                    
+                    try {
+                        context.startActivity(marketIntent)
+                    } catch (e: Exception) {
+                        // If specifically targeting Play Store fails, try generic market intent
+                        val genericMarketIntent = android.content.Intent(android.content.Intent.ACTION_VIEW, marketUri).apply {
+                            addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        try {
+                            context.startActivity(genericMarketIntent)
+                        } catch (e2: Exception) {
+                            // Fallback to browser
+                            val webIntent = android.content.Intent(android.content.Intent.ACTION_VIEW, 
+                                android.net.Uri.parse("https://play.google.com/store/apps/details?id=$appId")).apply {
+                                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            try {
+                                context.startActivity(webIntent)
+                            } catch (e3: Exception) {
+                                Toast.makeText(context, "Unable to open Play Store", Toast.LENGTH_SHORT).show()
+                            }
+                        }
                     }
                 }
 
@@ -607,34 +649,43 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 Box(modifier = Modifier.fillMaxSize()) {
-                    if (needsUpdate) {
-                        ForceUpdateScreen(updateUrl = updateUrl)
-                    } else {
-                        when (currentScreen) {
-                            "splash" -> SplashScreen(onTimeout = {
-                                if (!isLanguageSelected.value) {
-                                    languageSelectionSource = "splash"
-                                    currentScreen = "language_selection"
-                                } else if (authState is AuthState.Success) {
-                                    currentScreen = "dashboard"
-                                } else if (authState is AuthState.Idle) {
-                                    currentScreen = "login"
-                                }
-                            })
-
-                            "language_selection" -> LanguageSelectionScreen(
-                                onLanguageSelected = {
-                                    isLanguageSelected.value = true
-                                    if (languageSelectionSource == "profile") {
-                                        currentScreen = "profile"
+                    val localizedContext = remember(selectedLanguageCode) {
+                        LocaleHelper.wrapContext(context, selectedLanguageCode)
+                    }
+                    
+                    CompositionLocalProvider(
+                        LocalContext provides localizedContext,
+                        LocalConfiguration provides localizedContext.resources.configuration,
+                        LocalActivityResultRegistryOwner provides this@MainActivity
+                    ) {
+                        if (needsUpdate) {
+                            ForceUpdateScreen(updateUrl = updateUrl)
+                        } else {
+                            when (currentScreen) {
+                                "splash" -> SplashScreen(onTimeout = {
+                                    if (!isLanguageSelected) {
+                                        languageSelectionSource = "splash"
+                                        currentScreen = "language_selection"
                                     } else if (authState is AuthState.Success) {
                                         currentScreen = "dashboard"
-                                    } else {
+                                    } else if (authState is AuthState.Idle) {
                                         currentScreen = "login"
                                     }
-                                }, onBackClick = if (languageSelectionSource == "profile") {
-                                    { currentScreen = "profile" }
-                                } else null)
+                                })
+
+                                "language_selection" -> LanguageSelectionScreen(
+                                    onLanguageSelected = {
+                                        selectedLanguageCode = LocaleHelper.getSelectedLanguage(context)
+                                        if (languageSelectionSource == "profile") {
+                                            currentScreen = "profile"
+                                        } else if (authState is AuthState.Success) {
+                                            currentScreen = "dashboard"
+                                        } else {
+                                            currentScreen = "login"
+                                        }
+                                    }, onBackClick = if (languageSelectionSource == "profile") {
+                                        { currentScreen = "profile" }
+                                    } else null)
 
                             "login" -> {
                                 // Clear any stale verification data when entering login screen
@@ -770,10 +821,13 @@ class MainActivity : AppCompatActivity() {
                             }
 
                             "chat" -> selectedListingData?.let { data ->
+                                val sId = data["userId"]?.toString() ?: data["posterId"]?.toString() ?: ""
+                                val lId = data["id"]?.toString() ?: data["listingId"]?.toString() ?: ""
+                                
                                 ChatScreen(
                                     sellerName = data["posterName"]?.toString() ?: "Seller",
-                                    sellerUserId = data["userId"]?.toString() ?: "",
-                                    listingId = data["id"]?.toString() ?: "",
+                                    sellerUserId = sId,
+                                    listingId = lId,
                                     listingData = data,
                                     currentUserId = userId,
                                     currentUserName = userName,
@@ -946,6 +1000,7 @@ class MainActivity : AppCompatActivity() {
                                     languageSelectionSource = "profile"
                                     currentScreen = "language_selection"
                                 },
+                                onRateUsClick = onRateUsClick,
                                 isAdmin = isAdmin,
                                 onAdminClick = { currentScreen = "admin_dashboard" },
                                 initialShowMobileNumber = showMobileNumber,
@@ -1036,6 +1091,7 @@ class MainActivity : AppCompatActivity() {
                             },
                             onDismiss = { pViewModel.dismissSettingsDialog() }
                         )
+                    }
                     }
                 }
             }

@@ -1,6 +1,5 @@
 package com.tejashaqua.app.ui.screens
 
-import android.content.Intent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -90,21 +89,8 @@ fun LanguageSelectionScreen(
                     val locale = java.util.Locale.forLanguageTag(selectedLanguage)
                     com.google.android.libraries.places.api.Places.initialize(context.applicationContext, context.getString(R.string.google_maps_key), locale)
 
+                    // Call the callback to update the 'isLanguageSelected' state in MainActivity
                     onLanguageSelected()
-                    
-                    // Force full restart of the app for strict OEM skins like Oppo/Vivo/Realme
-                    val activity = context as? android.app.Activity
-                    activity?.let {
-                        val restartIntent = it.packageManager.getLaunchIntentForPackage(it.packageName)
-                        if (restartIntent != null) {
-                            restartIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                            it.startActivity(restartIntent)
-                            it.finish()
-                            Runtime.getRuntime().exit(0)
-                        } else {
-                            it.recreate()
-                        }
-                    }
                 },
                 modifier = Modifier
                     .fillMaxWidth()

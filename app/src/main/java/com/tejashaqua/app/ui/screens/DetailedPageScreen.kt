@@ -23,6 +23,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -90,10 +91,11 @@ fun DetailedPageScreen(
     val naText = stringResource(R.string.not_available_short)
     val tonText = stringResource(R.string.unit_ton)
     val acreText = stringResource(R.string.unit_acre)
+    val currentLang = LocaleHelper.getSelectedLanguage(context) ?: "en"
 
     val title = listingData["title"]?.toString() ?: stringResource(R.string.no_title)
     val categoryStr = listingData["category"]?.toString() ?: "Other"
-    val displayCategory = remember(categoryStr) {
+    val displayCategory = remember(categoryStr, currentLang) {
         when(categoryStr.uppercase()) {
             "FISH" -> context.getString(R.string.cat_fish_seed)
             "PRAWNS" -> context.getString(R.string.cat_prawns)
@@ -108,14 +110,14 @@ fun DetailedPageScreen(
         }
     }
     
-    val priceLabel = remember(listingData) {
+    val priceLabel = remember(listingData, currentLang) {
         when (categoryStr.uppercase()) {
             "PRAWNS" -> {
                 val rateVal = listingData["rateValue"]?.toString()?.takeIf { it.isNotBlank() } ?: naText
                 if (rateVal == naText) naText else {
                     val formattedRate = CurrencyUtils.formatPrice(rateVal)
                     val type = listingData["rateType"]?.toString() ?: "Paise"
-                    if (type.contains("Paise", ignoreCase = true)) "$formattedRate Paise/Seed" else "₹$formattedRate/Seed"
+                    if (type.contains("Paise", ignoreCase = true)) "$formattedRate ${context.getString(R.string.unit_paise)}/Seed" else "₹$formattedRate/Seed"
                 }
             }
             "FEED" -> "₹${CurrencyUtils.formatPrice(listingData["ratePerTon"] ?: naText)}/$tonText"
@@ -140,7 +142,6 @@ fun DetailedPageScreen(
     // Use the first part of the address (Locality) as the main location
     val location = fullLocation.split(",").firstOrNull()?.trim() ?: fullLocation
     
-    val currentLang = LocaleHelper.getSelectedLanguage(context) ?: "en"
     var localizedLocation by remember(fullLocation, currentLang) { mutableStateOf(location) }
 
     LaunchedEffect(listingData["lat"], listingData["lng"], currentLang) {
@@ -533,7 +534,13 @@ fun DetailedPageScreen(
         ) {
             // 1. Main Image
             item {
-                Box(modifier = Modifier.fillMaxWidth().height(250.dp).background(Color(0xFFF5F5F5)).clickable { if (images.isNotEmpty()) showFullScreenPager = true }) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(1f) // Square container like OLX
+                        .background(Color(0xFFF5F5F5))
+                        .clickable { if (images.isNotEmpty()) showFullScreenPager = true }
+                ) {
                     if (images.isNotEmpty()) {
                         HorizontalPager(
                             state = pagerState,
@@ -541,13 +548,28 @@ fun DetailedPageScreen(
                         ) { page ->
                             val imageUrl = images[page]?.toString() ?: ""
                             if (imageUrl.isNotEmpty()) {
-                                AsyncImage(
-                                    model = imageUrl,
-                                    contentDescription = "Listing Image ${page + 1}",
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Crop,
-                                    error = painterResource(id = R.drawable.app_logo)
-                                )
+                                Box(modifier = Modifier.fillMaxSize()) {
+                                    // Blurred background filling the container
+                                    AsyncImage(
+                                        model = imageUrl,
+                                        contentDescription = null,
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .blur(50.dp),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                    // Slight dark overlay to make the main image pop
+                                    Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.1f)))
+
+                                    // Actual image centered and fit
+                                    AsyncImage(
+                                        model = imageUrl,
+                                        contentDescription = "Listing Image ${page + 1}",
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.Fit,
+                                        error = painterResource(id = R.drawable.app_logo)
+                                    )
+                                }
                             }
                         }
                     } else if (categoryStr.uppercase() == "JOBS") {

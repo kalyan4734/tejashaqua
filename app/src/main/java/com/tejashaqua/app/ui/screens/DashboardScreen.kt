@@ -148,7 +148,7 @@ fun DashboardScreen(
         val query = db.collection("listings")
             .orderBy("timestamp", Query.Direction.DESCENDING)
             .startAfter(lastVisibleDoc!!)
-            .limit(20)
+            .limit(10)
 
         query.get().addOnSuccessListener { snapshot ->
             val newItems = snapshot.documents.map { doc -> 
@@ -163,7 +163,7 @@ fun DashboardScreen(
                 lastVisibleDoc = snapshot.documents[snapshot.size() - 1]
             }
             
-            isLastPage = snapshot.size() < 20
+            isLastPage = snapshot.size() < 10
             isPaginating = false
         }.addOnFailureListener {
             isPaginating = false
@@ -174,7 +174,7 @@ fun DashboardScreen(
     LaunchedEffect(currentUserId) {
         val query = db.collection("listings")
             .orderBy("timestamp", Query.Direction.DESCENDING)
-            .limit(20)
+            .limit(10)
             
                 query.addSnapshotListener { snapshot, _ ->
             isLoadingListings = false

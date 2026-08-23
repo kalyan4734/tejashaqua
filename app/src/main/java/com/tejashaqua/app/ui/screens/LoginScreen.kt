@@ -85,9 +85,10 @@ fun LoginScreen(
                     append(stringResource(R.string.tejash_aqua))
                 }
             },
-            fontSize = 28.sp,
+            fontSize = 22.sp,
             fontWeight = FontWeight.Bold,
-            color = Color.Black
+            color = Color.Black,
+            maxLines = 1
         )
 
         Spacer(modifier = Modifier.height(32.dp))

@@ -4,7 +4,7 @@
     <string name="tejash_aqua">Tejash Aqua!</string>
     <string name="enter_mobile_number">Enter Your Mobile Number</string>
     <string name="country_code">+91</string>
-    <string name="phone_placeholder">9876543210</string>
+    <string name="phone_placeholder">98765 43210</string>
     <string name="invalid_phone_error">Please enter a valid 10-digit mobile number</string>
     <string name="otp_helper_text">We will send a 6-digit OTP to verify your number</string>
     <string name="send_otp">Send OTP</string>
@@ -42,6 +42,10 @@
     <string name="location_not_found">Location not found</string>
     <string name="failed_get_location">Failed to get location</string>
     <string name="location_permission_denied">Location access denied. Tap to select manually.</string>
+    <string name="enable_gps_message">GPS/Location services disabled. Tap to enable.</string>
+    <string name="enable_gps_title">Location Services Disabled</string>
+    <string name="enable_gps_desc">Location services are required to fetch your current location. Please turn on GPS/Location services in system settings.</string>
+    <string name="turn_on_location">Turn On Location</string>
 
     <!-- Welcome Sheet -->
     <string name="welcome_title">Welcome to Tejash Aqua! 👋</string>
@@ -315,6 +319,7 @@
     <string name="all_rights_reserved">© 2026 Tejash Aqua. All rights reserved.</string>
     <string name="choose_language">Choose Your Language</string>
     <string name="signing_in">Signing you in…</string>
+    <string name="please_wait">Please wait…</string>
     <string name="admin_portal">Admin Portal</string>
     <string name="user_label">User</string>
     <string name="delete_listing">Delete Listing</string>

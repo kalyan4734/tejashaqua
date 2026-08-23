@@ -46,6 +46,12 @@ class LocationSearchViewModel(application: Application) : AndroidViewModel(appli
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
 
+    private val _isGpsEnabled = MutableStateFlow(true)
+    val isGpsEnabled: StateFlow<Boolean> = _isGpsEnabled
+
+    private val _isFetchingLocation = MutableStateFlow(false)
+    val isFetchingLocation: StateFlow<Boolean> = _isFetchingLocation
+
     var isManualSelection = false
         private set
 
@@ -78,6 +84,23 @@ class LocationSearchViewModel(application: Application) : AndroidViewModel(appli
         
         if (!isManualSelection) {
             _currentLocationName.value = context.getString(R.string.fetching_location)
+            _isFetchingLocation.value = true
+        }
+
+        // Check if GPS is enabled
+        val locationManager = getApplication<Application>().getSystemService(android.content.Context.LOCATION_SERVICE) as android.location.LocationManager
+        val isGpsEnabled = locationManager.isProviderEnabled(android.location.LocationManager.GPS_PROVIDER)
+        val isNetworkEnabled = locationManager.isProviderEnabled(android.location.LocationManager.NETWORK_PROVIDER)
+        
+        _isGpsEnabled.value = isGpsEnabled || isNetworkEnabled
+
+        if (!isGpsEnabled && !isNetworkEnabled) {
+            Log.d("LocationVM", "GPS and Network providers are disabled")
+            if (!isManualSelection) {
+                _currentLocationName.value = context.getString(R.string.enable_gps_message)
+                _isFetchingLocation.value = false
+            }
+            return
         }
 
         try {
@@ -95,6 +118,7 @@ class LocationSearchViewModel(application: Application) : AndroidViewModel(appli
             fusedLocationClient.getCurrentLocation(priority, cts.token)
                 .addOnSuccessListener { currentLoc ->
                     Log.d("LocationVM", "getCurrentLocation success: $currentLoc")
+                    _isFetchingLocation.value = false
                     if (currentLoc != null) {
                         if (!isManualSelection) {
                             _currentLatLng.value = LatLng(currentLoc.latitude, currentLoc.longitude)
@@ -116,12 +140,14 @@ class LocationSearchViewModel(application: Application) : AndroidViewModel(appli
                 }
                 .addOnFailureListener { e ->
                     Log.e("LocationVM", "getCurrentLocation failure", e)
+                    _isFetchingLocation.value = false
                     if (!isManualSelection) {
                         _currentLocationName.value = context.getString(R.string.failed_get_location)
                     }
                 }
         } catch (e: SecurityException) {
             Log.e("LocationVM", "SecurityException: permission denied", e)
+            _isFetchingLocation.value = false
             if (!isManualSelection) {
                 _currentLocationName.value = context.getString(R.string.location_permission_denied)
             }

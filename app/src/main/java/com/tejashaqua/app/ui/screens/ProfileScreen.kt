@@ -49,6 +49,7 @@ fun ProfileScreen(
     onAboutClick: () -> Unit,
     onLogoutClick: () -> Unit,
     onChangeLanguageClick: () -> Unit,
+    onRateUsClick: () -> Unit = {},
     isAdmin: Boolean = false,
     onAdminClick: () -> Unit = {},
     initialShowMobileNumber: Boolean = false,
@@ -297,16 +298,7 @@ fun ProfileScreen(
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = Color(0xFFF0F0F0))
                         ProfileMenuItem(Icons.Default.Language, stringResource(R.string.change_language), Color(0xFFE91E63), onClick = onChangeLanguageClick)
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = Color(0xFFF0F0F0))
-                        val context = LocalContext.current
-                        ProfileMenuItem(Icons.Default.Star, stringResource(R.string.rate_us), Color(0xFFFF9800), onClick = {
-                            val uri = android.net.Uri.parse("market://details?id=${context.packageName}")
-                            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, uri)
-                            try {
-                                context.startActivity(intent)
-                            } catch (e: Exception) {
-                                context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://play.google.com/store/apps/details?id=${context.packageName}")))
-                            }
-                        })
+                        ProfileMenuItem(Icons.Default.Star, stringResource(R.string.rate_us), Color(0xFFFF9800), onClick = onRateUsClick)
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = Color(0xFFF0F0F0))
                         ProfileMenuItem(Icons.Default.Info, stringResource(R.string.about_app), Color(0xFF03A9F4), onClick = onAboutClick)
                     }
