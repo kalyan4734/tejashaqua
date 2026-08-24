@@ -706,6 +706,7 @@ fun ChatBubble(message: ChatMessage, senderName: String, listingExists: Boolean 
                                 .firstOrNull()?.let { annotation ->
                                     val intent = Intent(Intent.ACTION_DIAL).apply {
                                         data = Uri.parse("tel:${annotation.item}")
+                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                                     }
                                     context.startActivity(intent)
                                 }

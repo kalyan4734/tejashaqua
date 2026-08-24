@@ -62,7 +62,9 @@ fun ForceUpdateScreen(updateUrl: String) {
 
         Button(
             onClick = {
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(updateUrl))
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(updateUrl)).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
                 context.startActivity(intent)
             },
             modifier = Modifier

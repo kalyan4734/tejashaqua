@@ -12,18 +12,24 @@ object LocationUtils {
 
     fun isGpsEnabled(context: Context): Boolean {
         val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
-                locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+        return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+            locationManager.isLocationEnabled
+        } else {
+            locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
+                    locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+        }
     }
 
     fun checkLocationSettings(
         activity: Activity,
         onEnabled: () -> Unit,
-        onError: (ResolvableApiException) -> Unit
+        onError: (ResolvableApiException) -> Unit,
+        onFailure: (Exception) -> Unit = {}
     ) {
         try {
             val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5000)
                 .setMinUpdateIntervalMillis(2000)
+                .setWaitForAccurateLocation(false)
                 .build()
 
             val builder = LocationSettingsRequest.Builder()
@@ -40,10 +46,13 @@ object LocationUtils {
             task.addOnFailureListener { exception ->
                 if (exception is ResolvableApiException) {
                     onError(exception)
+                } else {
+                    onFailure(exception)
                 }
             }
         } catch (e: Exception) {
             android.util.Log.e("LocationUtils", "Error checking location settings", e)
+            onFailure(e)
         }
     }
 }

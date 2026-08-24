@@ -420,6 +420,7 @@ fun DetailedPageScreen(
                                         if (contactNumber.isNotEmpty()) {
                                             val intent = android.content.Intent(android.content.Intent.ACTION_DIAL).apply {
                                                 data = android.net.Uri.parse("tel:$contactNumber")
+                                                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
                                             }
                                             context.startActivity(intent)
                                         } else {
@@ -837,7 +838,9 @@ fun DetailedPageScreen(
                             val targetLat = lat ?: finalLat
                             val targetLng = lng ?: finalLng
                             val gmmIntentUri = "geo:$targetLat,$targetLng?q=${android.net.Uri.encode(fullLocation)}".toUri()
-                            val mapIntent = android.content.Intent(android.content.Intent.ACTION_VIEW, gmmIntentUri)
+                            val mapIntent = android.content.Intent(android.content.Intent.ACTION_VIEW, gmmIntentUri).apply {
+                                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
                             mapIntent.setPackage("com.google.android.apps.maps")
                             context.startActivity(mapIntent)
                         }) {

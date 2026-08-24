@@ -1086,6 +1086,7 @@ class MainActivity : AppCompatActivity() {
                                 pViewModel.dismissSettingsDialog()
                                 val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
                                     data = android.net.Uri.fromParts("package", packageName, null)
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                                 }
                                 startActivity(intent)
                             },

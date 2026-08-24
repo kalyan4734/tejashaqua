@@ -85,18 +85,20 @@ fun LanguageSelectionScreen(
             Button(
                 onClick = {
                     LocaleHelper.setLocale(context, selectedLanguage)
-                    LocaleHelper.updateContextLocale(context, selectedLanguage)
                     
                     // Re-initialize Places SDK with the new locale
                     val locale = java.util.Locale.forLanguageTag(selectedLanguage)
                     com.google.android.libraries.places.api.Places.initialize(context.applicationContext, context.getString(R.string.google_maps_key), locale)
 
-                    // Fallback to restarting the application to ensure clean state and correct resource loading
-                    val intent = Intent(context, MainActivity::class.java)
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                    context.startActivity(intent)
+                    // On Android 13+ (API 33), setApplicationLocales handles recreation automatically.
+                    // For older versions, we manually restart the activity.
+                    if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.TIRAMISU) {
+                        val intent = Intent(context, MainActivity::class.java)
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                        context.startActivity(intent)
+                    }
 
-                    // Call the callback just in case (though activity will be killed)
+                    // Call the callback to notify the parent
                     onLanguageSelected()
                 },
                 modifier = Modifier

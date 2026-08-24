@@ -74,6 +74,22 @@ class LocationSearchViewModel(application: Application) : AndroidViewModel(appli
         }
     }
 
+    fun refreshGpsStatus() {
+        val locationManager = getApplication<Application>().getSystemService(android.content.Context.LOCATION_SERVICE) as android.location.LocationManager
+        val isLocationEnabled = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+            locationManager.isLocationEnabled
+        } else {
+            locationManager.isProviderEnabled(android.location.LocationManager.GPS_PROVIDER) ||
+                    locationManager.isProviderEnabled(android.location.LocationManager.NETWORK_PROVIDER)
+        }
+        if (_isGpsEnabled.value != isLocationEnabled) {
+            _isGpsEnabled.value = isLocationEnabled
+            if (isLocationEnabled) {
+                fetchCurrentLocation(force = true)
+            }
+        }
+    }
+
     fun fetchCurrentLocation(force: Boolean = false) {
         if (force) isManualSelection = false
 
@@ -89,13 +105,17 @@ class LocationSearchViewModel(application: Application) : AndroidViewModel(appli
 
         // Check if GPS is enabled
         val locationManager = getApplication<Application>().getSystemService(android.content.Context.LOCATION_SERVICE) as android.location.LocationManager
-        val isGpsEnabled = locationManager.isProviderEnabled(android.location.LocationManager.GPS_PROVIDER)
-        val isNetworkEnabled = locationManager.isProviderEnabled(android.location.LocationManager.NETWORK_PROVIDER)
+        val isLocationEnabled = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+            locationManager.isLocationEnabled
+        } else {
+            locationManager.isProviderEnabled(android.location.LocationManager.GPS_PROVIDER) ||
+                    locationManager.isProviderEnabled(android.location.LocationManager.NETWORK_PROVIDER)
+        }
         
-        _isGpsEnabled.value = isGpsEnabled || isNetworkEnabled
+        _isGpsEnabled.value = isLocationEnabled
 
-        if (!isGpsEnabled && !isNetworkEnabled) {
-            Log.d("LocationVM", "GPS and Network providers are disabled")
+        if (!isLocationEnabled) {
+            Log.d("LocationVM", "Location services are disabled")
             if (!isManualSelection) {
                 _currentLocationName.value = context.getString(R.string.enable_gps_message)
                 _isFetchingLocation.value = false

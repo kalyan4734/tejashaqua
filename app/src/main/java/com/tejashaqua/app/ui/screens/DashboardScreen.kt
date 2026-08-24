@@ -527,9 +527,10 @@ fun DashboardScreen(
                     Spacer(modifier = Modifier.width(8.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
+                            val isGpsDisabled = fetchedName == stringResource(R.string.enable_gps_message)
                             Text(
                                 text = fetchedName,
-                                color = Color.White,
+                                color = if (isGpsDisabled) Color(0xFFFFEB3B) else Color.White,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 17.sp,
                                 maxLines = 1,
@@ -538,7 +539,7 @@ fun DashboardScreen(
                             Icon(
                                 Icons.Default.KeyboardArrowDown,
                                 contentDescription = null,
-                                tint = Color.White,
+                                tint = if (isGpsDisabled) Color(0xFFFFEB3B) else Color.White,
                                 modifier = Modifier.size(20.dp)
                             )
                         }

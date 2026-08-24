@@ -41,6 +41,7 @@ import com.tejashaqua.app.ui.theme.GrayText
 import com.tejashaqua.app.utils.LocaleHelper
 import com.tejashaqua.app.utils.findActivity
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.*
@@ -64,6 +65,7 @@ fun SelectLocationScreen(
     
     val keyboardController = LocalSoftwareKeyboardController.current
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     
     val isGpsEnabled by locationViewModel.isGpsEnabled.collectAsState()
     val isFetchingLocation by locationViewModel.isFetchingLocation.collectAsState()
@@ -71,8 +73,26 @@ fun SelectLocationScreen(
     val gpsLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartIntentSenderForResult()
     ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            locationViewModel.fetchCurrentLocation(force = true)
+        coroutineScope.launch {
+            delay(1000) // Give system time to update
+            locationViewModel.refreshGpsStatus()
+            if (result.resultCode == Activity.RESULT_OK) {
+                locationViewModel.fetchCurrentLocation(force = true)
+            }
+        }
+    }
+
+    // Refresh status when returning to screen
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                locationViewModel.refreshGpsStatus()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
 
@@ -100,8 +120,6 @@ fun SelectLocationScreen(
             }
         }
     }
-
-    val coroutineScope = rememberCoroutineScope()
 
     fun updateLocationFromLatLng(latLng: LatLng) {
         selectedLatLng = latLng
@@ -241,19 +259,6 @@ fun SelectLocationScreen(
                             .fillMaxWidth()
                             .padding(16.dp)
                             .background(AquaBlue.copy(alpha = 0.05f), RoundedCornerShape(12.dp))
-                            .clickable {
-                                val activity = context.findActivity()
-                                if (activity != null) {
-                                    com.tejashaqua.app.utils.LocationUtils.checkLocationSettings(
-                                        activity,
-                                        onEnabled = { locationViewModel.fetchCurrentLocation(force = true) },
-                                        onError = { exception ->
-                                            val intentSenderRequest = IntentSenderRequest.Builder(exception.resolution.intentSender).build()
-                                            gpsLauncher.launch(intentSenderRequest)
-                                        }
-                                    )
-                                }
-                            }
                             .padding(16.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -276,12 +281,60 @@ fun SelectLocationScreen(
                                     color = GrayText
                                 )
                             }
-                            Text(
-                                text = stringResource(R.string.turn_on_location),
-                                color = AquaBlue,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp
+                            TextButton(
+                                onClick = {
+                                    val activity = context.findActivity()
+                                    if (activity != null) {
+                                        // Force refresh status first
+                                        locationViewModel.refreshGpsStatus()
+                                        
+                                        com.tejashaqua.app.utils.LocationUtils.checkLocationSettings(
+                                            activity,
+                                            onEnabled = { 
+                                                locationViewModel.refreshGpsStatus()
+                                                locationViewModel.fetchCurrentLocation(force = true) 
+                                            },
+                                            onError = { exception ->
+                                                try {
+                                                    val intentSenderRequest = IntentSenderRequest.Builder(exception.resolution.intentSender).build()
+                                                    gpsLauncher.launch(intentSenderRequest)
+                                                } catch (e: Exception) {
+                                                    // Fallback to settings
+                                                    val intent = android.content.Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS).apply {
+                                                        addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                                                    }
+                                                    context.startActivity(intent)
+                                                }
+                                            },
+                                            onFailure = {
+                                                // If dialog fails to even check, open settings
+                                                try {
+                                                    val intent = android.content.Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS).apply {
+                                                        addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                                                    }
+                                                    context.startActivity(intent)
+                                                } catch (e: Exception) {
+                                                    android.util.Log.e("SelectLocation", "Error opening settings", e)
+                                                }
+                                            }
+                                        )
+                                    } else {
+                                        // Fallback if activity is null
+                                        val intent = android.content.Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS).apply {
+                                            addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                                        }
+                                        context.startActivity(intent)
+                                    }
+                                }
                             )
+{
+                                Text(
+                                    text = stringResource(R.string.turn_on_location),
+                                    color = AquaBlue,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp
+                                )
+                            }
                         }
                     }
                 }
