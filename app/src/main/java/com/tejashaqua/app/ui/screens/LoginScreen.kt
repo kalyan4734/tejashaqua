@@ -160,6 +160,8 @@ fun LoginScreen(
                 colors = OutlinedTextFieldDefaults.colors(
                     unfocusedBorderColor = Color(0xFFE0E0E0),
                     focusedBorderColor = AquaBlue,
+                    focusedTextColor = Color.Black,
+                    unfocusedTextColor = Color.Black,
                     cursorColor = AquaBlue
                 )
             )

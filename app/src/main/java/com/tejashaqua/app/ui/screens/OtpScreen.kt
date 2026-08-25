@@ -230,7 +230,7 @@ fun OtpScreen(
                                 ),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(char, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
+                            Text(char, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center, color = Color.Black)
                         }
                     }
                 }

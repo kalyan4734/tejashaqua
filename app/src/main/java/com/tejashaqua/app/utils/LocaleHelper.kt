@@ -2,6 +2,7 @@ package com.tejashaqua.app.utils
 
 import android.content.Context
 import android.content.res.Configuration
+import android.os.Build
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
 import androidx.core.content.edit
@@ -13,11 +14,11 @@ object LocaleHelper {
     private const val KEY_LOCATION_DISCLOSURE_SHOWN = "location_disclosure_shown"
 
     fun setLocale(context: Context, languageCode: String) {
-        // 1. Save to SharedPreferences for reliable read-back across all versions
+        // 1. Save to SharedPreferences immediately (Source of truth)
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit(commit = true) { putString(KEY_LANGUAGE, languageCode) }
         
-        // 2. Apply via AppCompatDelegate (Android 13+ Per-app language and pre-13 persistence)
+        // 2. Apply via AppCompatDelegate
         val appLocale: LocaleListCompat = LocaleListCompat.forLanguageTags(languageCode)
         AppCompatDelegate.setApplicationLocales(appLocale)
         
@@ -27,52 +28,56 @@ object LocaleHelper {
     }
 
     fun getSelectedLanguage(context: Context): String? {
-        // 1. Try AppCompatDelegate (handles both Android 13+ and pre-13 via persistence)
+        // 1. Always prioritize SharedPreferences to avoid system sync "vice-versa" bugs
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val saved = prefs.getString(KEY_LANGUAGE, null)
+        if (saved != null) return saved
+
+        // 2. Fallback to AppCompatDelegate
         try {
             val currentLocales = AppCompatDelegate.getApplicationLocales()
             if (!currentLocales.isEmpty) {
-                val tag = currentLocales.get(0)?.toLanguageTag()
-                if (tag != null) return tag
+                return currentLocales.get(0)?.toLanguageTag()
             }
-        } catch (_: Exception) {
-            // Fallback to prefs
-        }
-
-        // 2. Fallback to SharedPreferences
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        return prefs.getString(KEY_LANGUAGE, null)
+        } catch (_: Exception) {}
+        
+        return null
     }
 
     fun applySavedLocale(context: Context) {
         val languageCode = getSelectedLanguage(context) ?: return
         val appLocale: LocaleListCompat = LocaleListCompat.forLanguageTags(languageCode)
         
-        // Sync AppCompatDelegate if necessary
         if (AppCompatDelegate.getApplicationLocales().toLanguageTags() != appLocale.toLanguageTags()) {
             AppCompatDelegate.setApplicationLocales(appLocale)
         }
-        
-        // Update JVM default
         Locale.setDefault(Locale.forLanguageTag(languageCode))
     }
 
-    /**
-     * Used in attachBaseContext to wrap context with correct locale.
-     * This is crucial for pre-Android 13 devices to load correct resources.
-     */
     fun wrapContext(context: Context, languageCode: String? = null): Context {
         val code = languageCode ?: getSelectedLanguage(context) ?: return context
         val locale = Locale.forLanguageTag(code)
         Locale.setDefault(locale)
         
+        // Android 13+ handles this perfectly via the OS
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            return context
+        }
+
+        val manufacturer = Build.MANUFACTURER.lowercase(Locale.ROOT)
+        val isOppoRealme = manufacturer.contains("oppo") || manufacturer.contains("realme")
+        
+        // On Oppo/Realme Android 11/12, manual wrapping in attachBaseContext 
+        // conflicts with AppCompatDelegate and causes language swapping/mirroring.
+        if (isOppoRealme && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && languageCode == null) {
+            return context
+        }
+
         val resources = context.resources
-        val configuration = resources.configuration
-        val newConfig = Configuration(configuration)
+        val configuration = Configuration(resources.configuration)
+        configuration.setLocale(locale)
         
-        // setLocale automatically handles layout direction (LTR/RTL) on API 17+
-        newConfig.setLocale(locale)
-        
-        return context.createConfigurationContext(newConfig)
+        return context.createConfigurationContext(configuration)
     }
 
     fun isLocationDisclosureShown(context: Context): Boolean {

@@ -48,6 +48,7 @@ import com.tejashaqua.app.data.model.ListingCategory
 import com.tejashaqua.app.R
 import com.tejashaqua.app.utils.CurrencyUtils
 import com.tejashaqua.app.utils.LocaleHelper
+import kotlinx.coroutines.launch
 import com.tejashaqua.app.ui.components.MarketItem
 import com.tejashaqua.app.ui.components.SellerPostsDialog
 import com.tejashaqua.app.ui.theme.AquaBlue
@@ -590,21 +591,6 @@ fun DetailedPageScreen(
                             alpha = 0.3f
                         )
                     }
-                    
-                    if (images.size > 1) {
-                        Surface(
-                            modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
-                            color = Color.Black.copy(alpha = 0.6f),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Text(
-                                text = "${pagerState.currentPage + 1}/${images.size}",
-                                color = Color.White,
-                                fontSize = 13.sp,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                            )
-                        }
-                    }
                 }
             }
 
@@ -940,34 +926,49 @@ fun FullScreenImageDialog(
     initialPage: Int,
     onDismiss: () -> Unit
 ) {
+    val coroutineScope = rememberCoroutineScope()
     val fullScreenPagerState = rememberPagerState(initialPage = initialPage) { images.size }
-    val scaleStates = remember { mutableStateMapOf<Int, Float>() }
-    val isZoomed = (scaleStates[fullScreenPagerState.currentPage] ?: 1f) > 1f
+    
+    // Global zoom state to control pager scrollability
+    var isAnyImageZoomed by remember { mutableStateOf(false) }
 
     Dialog(
         onDismissRequest = onDismiss,
         properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
     ) {
         Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+            // Main Pager
             HorizontalPager(
                 state = fullScreenPagerState,
                 modifier = Modifier.fillMaxSize(),
-                userScrollEnabled = !isZoomed
+                userScrollEnabled = !isAnyImageZoomed, // Disable pager scroll ONLY when zoomed
+                pageSpacing = 16.dp
             ) { page ->
                 var scale by remember { mutableFloatStateOf(1f) }
                 var offset by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
 
+                // Sync local scale with global pager state
                 LaunchedEffect(scale) {
-                    scaleStates[page] = scale
+                    if (fullScreenPagerState.currentPage == page) {
+                        isAnyImageZoomed = scale > 1.05f
+                    }
+                }
+                
+                // Reset zoom when this page is no longer primary
+                LaunchedEffect(fullScreenPagerState.currentPage) {
+                    if (fullScreenPagerState.currentPage != page) {
+                        scale = 1f
+                        offset = androidx.compose.ui.geometry.Offset.Zero
+                    }
                 }
 
                 BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
                     val state = androidx.compose.foundation.gestures.rememberTransformableState { zoomChange, offsetChange, _ ->
-                        val newScale = (scale * zoomChange).coerceIn(1f, 5f)
+                        scale = (scale * zoomChange).coerceIn(1f, 5f)
                         
-                        if (newScale > 1f) {
-                            val extraWidth = (newScale - 1) * constraints.maxWidth
-                            val extraHeight = (newScale - 1) * constraints.maxHeight
+                        if (scale > 1f) {
+                            val extraWidth = (scale - 1) * constraints.maxWidth
+                            val extraHeight = (scale - 1) * constraints.maxHeight
                             val maxX = extraWidth / 2
                             val maxY = extraHeight / 2
                             
@@ -979,7 +980,6 @@ fun FullScreenImageDialog(
                         } else {
                             offset = androidx.compose.ui.geometry.Offset.Zero
                         }
-                        scale = newScale
                     }
 
                     Box(
@@ -993,7 +993,7 @@ fun FullScreenImageDialog(
                                             scale = 1f
                                             offset = androidx.compose.ui.geometry.Offset.Zero
                                         } else {
-                                            scale = 2f
+                                            scale = 2.5f
                                         }
                                     }
                                 )
@@ -1017,19 +1017,79 @@ fun FullScreenImageDialog(
                 }
             }
             
-            IconButton(
-                onClick = onDismiss,
-                modifier = Modifier.align(Alignment.TopEnd).padding(16.dp)
+            // Close Button and Counter
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(16.dp)
             ) {
-                Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
+                Surface(
+                    color = Color.Black.copy(alpha = 0.5f),
+                    shape = RoundedCornerShape(20.dp),
+                    modifier = Modifier.align(Alignment.Center)
+                ) {
+                    Text(
+                        text = "${fullScreenPagerState.currentPage + 1} / ${images.size}",
+                        color = Color.White,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                
+                IconButton(
+                    onClick = onDismiss,
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                ) {
+                    Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
+                }
             }
             
+            // Fixed Thumbnail Scroller
             if (images.size > 1) {
-                Text(
-                    text = "${fullScreenPagerState.currentPage + 1}/${images.size}",
-                    color = Color.White,
-                    modifier = Modifier.align(Alignment.BottomCenter).padding(24.dp)
-                )
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 60.dp) // Significantly increased clearance
+                ) {
+                    LazyRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        items(images.size) { index ->
+                            val isSelected = fullScreenPagerState.currentPage == index
+                            Box(
+                                modifier = Modifier
+                                    .padding(horizontal = 4.dp)
+                                    .size(64.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .border(
+                                        width = if (isSelected) 2.dp else 1.dp,
+                                        color = if (isSelected) Color.White else Color.White.copy(alpha = 0.4f),
+                                        shape = RoundedCornerShape(8.dp)
+                                    )
+                                    .clickable {
+                                        coroutineScope.launch {
+                                            fullScreenPagerState.animateScrollToPage(index)
+                                        }
+                                    }
+                            ) {
+                                AsyncImage(
+                                    model = images[index]?.toString() ?: "",
+                                    contentDescription = null,
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop,
+                                    alpha = if (isSelected) 1f else 0.5f
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
     }

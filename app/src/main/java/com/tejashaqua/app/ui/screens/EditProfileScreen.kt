@@ -263,7 +263,14 @@ fun EditProfileScreen(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     singleLine = true,
-                    keyboardOptions = keyboardOptions
+                    keyboardOptions = keyboardOptions,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = AquaBlue,
+                        unfocusedBorderColor = Color(0xFFE0E0E0),
+                        focusedTextColor = Color.Black,
+                        unfocusedTextColor = Color.Black,
+                        cursorColor = AquaBlue
+                    )
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -275,7 +282,12 @@ fun EditProfileScreen(
                     modifier = Modifier.fillMaxWidth(),
                     enabled = false,
                     readOnly = true,
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        disabledBorderColor = Color(0xFFE0E0E0),
+                        disabledTextColor = Color.Black,
+                        disabledLabelColor = GrayText
+                    )
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))

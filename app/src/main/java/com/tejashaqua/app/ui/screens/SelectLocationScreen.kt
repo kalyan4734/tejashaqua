@@ -177,6 +177,9 @@ fun SelectLocationScreen(
                             unfocusedContainerColor = Color.White,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
+                            focusedTextColor = Color.Black,
+                            unfocusedTextColor = Color.Black,
+                            cursorColor = AquaBlue
                         ),
                         shape = RoundedCornerShape(12.dp),
                         singleLine = true,

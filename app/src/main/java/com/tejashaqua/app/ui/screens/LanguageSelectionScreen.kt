@@ -90,15 +90,15 @@ fun LanguageSelectionScreen(
                     val locale = java.util.Locale.forLanguageTag(selectedLanguage)
                     com.google.android.libraries.places.api.Places.initialize(context.applicationContext, context.getString(R.string.google_maps_key), locale)
 
-                    // On Android 13+ (API 33), setApplicationLocales handles recreation automatically.
-                    // For older versions, we manually restart the activity.
+                    // On Android 13+, system handles recreation.
+                    // For Android 11/12 (especially Oppo), we do a slight delay before manual restart
+                    // to ensure SharedPreferences and AppCompatDelegate are in sync.
                     if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.TIRAMISU) {
                         val intent = Intent(context, MainActivity::class.java)
                         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
                         context.startActivity(intent)
                     }
 
-                    // Call the callback to notify the parent
                     onLanguageSelected()
                 },
                 modifier = Modifier

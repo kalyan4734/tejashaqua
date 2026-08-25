@@ -522,7 +522,10 @@ fun AdminRateItem(
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = AquaBlue,
                     unfocusedBorderColor = Color(0xFFE0E0E0),
-                    disabledBorderColor = Color(0xFFF5F5F5)
+                    disabledBorderColor = Color(0xFFF5F5F5),
+                    focusedTextColor = Color.Black,
+                    unfocusedTextColor = Color.Black,
+                    cursorColor = AquaBlue
                 )
             )
         }
@@ -703,7 +706,10 @@ fun PrawnRatesAdmin(selectedDate: Long, onBackClick: () -> Unit) {
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedBorderColor = AquaBlue,
                                     unfocusedBorderColor = Color(0xFFE0E0E0),
-                                    disabledContainerColor = Color(0xFFF9F9F9)
+                                    disabledContainerColor = Color(0xFFF9F9F9),
+                                    focusedTextColor = Color.Black,
+                                    unfocusedTextColor = Color.Black,
+                                    cursorColor = AquaBlue
                                 )
                             )
                         }

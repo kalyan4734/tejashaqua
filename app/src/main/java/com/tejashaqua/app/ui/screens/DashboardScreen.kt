@@ -644,6 +644,9 @@ fun DashboardScreen(
                         unfocusedContainerColor = Color.White,
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent,
+                        focusedTextColor = Color.Black,
+                        unfocusedTextColor = Color.Black,
+                        cursorColor = AquaBlue
                     ),
                     shape = RoundedCornerShape(24.dp),
                     singleLine = true
@@ -1421,7 +1424,7 @@ fun SearchHeader(
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = 50.dp),
-            placeholder = { Text(stringResource(R.string.search_placeholder), fontSize = 14.sp) },
+            placeholder = { Text(stringResource(R.string.search_placeholder), fontSize = 14.sp, color = GrayText) },
             leadingIcon = {
                 Icon(
                     Icons.Default.Search, contentDescription = null, tint = GrayText
@@ -1443,6 +1446,9 @@ fun SearchHeader(
                 disabledContainerColor = Color.White,
                 focusedIndicatorColor = Color.Transparent,
                 unfocusedIndicatorColor = Color.Transparent,
+                focusedTextColor = Color.Black,
+                unfocusedTextColor = Color.Black,
+                cursorColor = AquaBlue
             ),
             shape = RoundedCornerShape(25.dp),
             singleLine = true,
@@ -1471,7 +1477,14 @@ fun AquaRatesSection(onRateClick: (AquaRate) -> Unit) {
     val currentDate = SimpleDateFormat("MMMM dd, yyyy", Locale.getDefault()).format(Date())
     val context = LocalContext.current
     val db = FirebaseFirestore.getInstance()
-    var rates by remember { mutableStateOf<List<AquaRate>>(emptyList()) }
+    
+    // Initialize with placeholders to ensure section is always visible
+    var rates by remember { mutableStateOf<List<AquaRate>>(
+        listOf(
+            AquaRate("Prawns", "--", "", RateTrend.FLAT, isPrawn = true),
+            AquaRate("Rohu", "--", "", RateTrend.FLAT, isPrawn = false)
+        )
+    ) }
     var isLoading by remember { mutableStateOf(true) }
 
     val fishTypes = listOf(
@@ -1479,10 +1492,15 @@ fun AquaRatesSection(onRateClick: (AquaRate) -> Unit) {
     )
 
     LaunchedEffect(Unit) {
-        db.collection("aqua_rates").addSnapshotListener { value, _ ->
-            if (value != null) {
+        db.collection("aqua_rates").addSnapshotListener { value, error ->
+            if (error != null) {
+                isLoading = false
+                return@addSnapshotListener
+            }
+
+            if (value != null && !value.isEmpty) {
                 val fetchedMap =
-                    value.documents.associateBy({ it.id.lowercase(Locale.ROOT) }, { doc ->
+                    value.documents.associateBy({ it.id.lowercase(Locale.ROOT).trim() }, { doc ->
                         val price = doc.getString("price") ?: "--"
                         val change = doc.getString("change") ?: ""
                         val trendStr = doc.getString("trend") ?: "FLAT"
@@ -1492,23 +1510,24 @@ fun AquaRatesSection(onRateClick: (AquaRate) -> Unit) {
                             RateTrend.FLAT
                         }
                         val isPrawn =
-                            doc.getBoolean("isPrawn") ?: (doc.id.lowercase(Locale.ROOT) == "prawns")
+                            doc.getBoolean("isPrawn") ?: (doc.id.lowercase(Locale.ROOT).trim() == "prawns")
 
                         AquaRate(doc.id, price, change, trend, isPrawn)
                     })
 
                 // Merge with the fixed list of fish types
                 rates = fishTypes.map { fish ->
-                    fetchedMap[fish.lowercase(Locale.ROOT)] ?: AquaRate(
+                    fetchedMap[fish.lowercase(Locale.ROOT).trim()] ?: AquaRate(
                         fish,
                         "--",
                         "",
                         RateTrend.FLAT,
-                        isPrawn = fish.lowercase(Locale.ROOT) == "prawns"
+                        isPrawn = fish.lowercase(Locale.ROOT).trim() == "prawns"
                     )
                 }
             }
 
+            // Fallback if still no valid data after merging
             if (rates.all { it.price == "--" }) {
                 rates = listOf(
                     AquaRate(

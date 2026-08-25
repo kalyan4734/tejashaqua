@@ -1673,7 +1673,10 @@ fun ListingTextField(
                 unfocusedBorderColor = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline,
                 focusedBorderColor = if (isError) MaterialTheme.colorScheme.error else accentColor,
                 unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                focusedContainerColor = MaterialTheme.colorScheme.surface
+                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                focusedTextColor = Color.Black,
+                unfocusedTextColor = Color.Black,
+                cursorColor = accentColor
             )
         )
     }
@@ -1770,7 +1773,10 @@ fun SearchableListingDropdown(
                     },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = accentColor,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                        focusedTextColor = Color.Black,
+                        unfocusedTextColor = Color.Black,
+                        cursorColor = accentColor
                     )
                 )
 
@@ -1847,7 +1853,10 @@ fun ListingDropdown(label: String, value: String, options: List<String>, onSelec
                     unfocusedBorderColor = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline,
                     focusedBorderColor = if (isError) MaterialTheme.colorScheme.error else accentColor,
                     unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                    focusedContainerColor = MaterialTheme.colorScheme.surface
+                    focusedContainerColor = MaterialTheme.colorScheme.surface,
+                    focusedTextColor = Color.Black,
+                    unfocusedTextColor = Color.Black,
+                    cursorColor = accentColor
                 )
             )
             ExposedDropdownMenu(
