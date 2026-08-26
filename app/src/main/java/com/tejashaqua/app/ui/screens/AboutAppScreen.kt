@@ -1,4 +1,4 @@
-package com.tejashaqua.app.ui.screens
+ package com.tejashaqua.app.ui.screens
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background

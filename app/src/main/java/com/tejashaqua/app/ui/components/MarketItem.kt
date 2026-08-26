@@ -30,6 +30,13 @@ import com.tejashaqua.app.R
 import com.tejashaqua.app.ui.theme.AquaBlue
 import com.tejashaqua.app.ui.theme.GrayText
 
+import androidx.compose.runtime.*
+import com.tejashaqua.app.utils.LocaleHelper
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import android.location.Geocoder
+import java.util.Locale
+
 @Composable
 fun MarketItem(
     title: String,
@@ -44,12 +51,41 @@ fun MarketItem(
     onFavoriteClick: (() -> Unit)? = null,
     onClick: (() -> Unit)? = null,
     onPosterClick: (() -> Unit)? = null,
-    rawCategory: String = ""
+    rawCategory: String = "",
+    lat: Double? = null,
+    lng: Double? = null
 ) {
     val context = LocalContext.current
-    val displayLocation = remember(location) {
+    val currentLang = LocaleHelper.getSelectedLanguage(context) ?: "en"
+    
+    // Initial short location from the full string
+    val shortLocation = remember(location) {
         location.split(",").firstOrNull()?.trim() ?: location
     }
+    
+    var localizedLocation by remember(location, currentLang) { mutableStateOf(shortLocation) }
+
+    // Localize location if coordinates are available
+    LaunchedEffect(lat, lng, currentLang) {
+        if (lat != null && lng != null) {
+            withContext(Dispatchers.IO) {
+                try {
+                    val locale = Locale.forLanguageTag(currentLang)
+                    val geocoder = Geocoder(context, locale)
+                    val addresses = geocoder.getFromLocation(lat, lng, 1)
+                    if (!addresses.isNullOrEmpty()) {
+                        val address = addresses[0]
+                        val newLoc = address.locality ?: address.subAdminArea ?: shortLocation
+                        localizedLocation = newLoc
+                    }
+                } catch (e: Exception) {
+                    // Fallback to original short location
+                }
+            }
+        }
+    }
+
+    val displayLocation = localizedLocation
 
     val timeAgo = remember(timestamp) {
         if (timestamp == 0L) "" else {

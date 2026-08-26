@@ -150,7 +150,7 @@ class MainActivity : AppCompatActivity() {
                     mutableStateOf(LocaleHelper.getSelectedLanguage(context)) 
                 }
 
-                var appVersion by remember { mutableStateOf("1.0.0") }
+                var appVersion by remember { mutableStateOf("1.2") }
                 var needsUpdate by remember { mutableStateOf(false) }
                 var updateUrl by remember { mutableStateOf("https://play.google.com/store/apps/details?id=com.tejashaqua.app") }
 

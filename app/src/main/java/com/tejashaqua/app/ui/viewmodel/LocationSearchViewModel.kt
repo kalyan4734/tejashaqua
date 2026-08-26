@@ -70,7 +70,7 @@ class LocationSearchViewModel(application: Application) : AndroidViewModel(appli
     fun updateLocationForLanguage(lang: String) {
         val latLng = _currentLatLng.value
         if (latLng != null) {
-            updateLocationData(latLng.latitude, latLng.longitude)
+            updateLocationData(latLng.latitude, latLng.longitude, lang)
         }
     }
 
@@ -174,9 +174,9 @@ class LocationSearchViewModel(application: Application) : AndroidViewModel(appli
         }
     }
 
-    private fun updateLocationData(latitude: Double, longitude: Double) {
+    private fun updateLocationData(latitude: Double, longitude: Double, langOverride: String? = null) {
         viewModelScope.launch(Dispatchers.IO) {
-            val lang = LocaleHelper.getSelectedLanguage(getApplication()) ?: "en"
+            val lang = langOverride ?: LocaleHelper.getSelectedLanguage(getApplication()) ?: "en"
             val locale = Locale.forLanguageTag(lang)
             val geocoder = Geocoder(getApplication(), locale)
             val wrappedContext = LocaleHelper.wrapContext(getApplication(), lang)
@@ -184,8 +184,17 @@ class LocationSearchViewModel(application: Application) : AndroidViewModel(appli
                 val addresses = geocoder.getFromLocation(latitude, longitude, 1)
                 if (addresses != null && addresses.isNotEmpty()) {
                     val address = addresses[0]
-                    _currentLocationName.value = address.locality ?: address.subAdminArea ?: wrappedContext.getString(R.string.unknown_location)
-                    _currentSubLocation.value = address.getAddressLine(0) ?: ""
+                    
+                    // Localize locality
+                    val locality = address.locality ?: address.subAdminArea ?: wrappedContext.getString(R.string.unknown_location)
+                    _currentLocationName.value = locality
+                    
+                    // Construct a localized sub-location if possible
+                    val subLoc = address.subLocality ?: address.thoroughfare ?: ""
+                    val adminArea = address.adminArea ?: ""
+                    val displaySub = if (subLoc.isNotEmpty()) "$subLoc, $adminArea" else address.getAddressLine(0) ?: ""
+                    
+                    _currentSubLocation.value = displaySub
                     _currentLatLng.value = LatLng(latitude, longitude)
                 } else {
                     _currentLocationName.value = wrappedContext.getString(R.string.unknown_location)

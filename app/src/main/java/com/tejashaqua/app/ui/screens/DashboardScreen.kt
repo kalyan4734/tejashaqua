@@ -986,6 +986,8 @@ fun DashboardScreen(
                                             }
                                         },
                                         rawCategory = categoryStr,
+                                        lat = (data["lat"] as? Number)?.toDouble(),
+                                        lng = (data["lng"] as? Number)?.toDouble(),
                                         modifier = Modifier.weight(1f)
                                     )
                                 }
@@ -1236,8 +1238,27 @@ fun DashboardScreen(
                                     val category = data["category"]?.toString() ?: "Post"
                                     val posterName = data["posterName"]?.toString() ?: "User"
                                     val fullLocation = data["location"]?.toString() ?: ""
-                                    val location =
-                                        fullLocation.split(",").firstOrNull()?.trim() ?: "Local"
+                                    val shortLoc = fullLocation.split(",").firstOrNull()?.trim() ?: "Local"
+                                    
+                                    var localizedLoc by remember(fullLocation, currentLang) { mutableStateOf(shortLoc) }
+                                    val lat = (data["lat"] as? Number)?.toDouble()
+                                    val lng = (data["lng"] as? Number)?.toDouble()
+                                    
+                                    LaunchedEffect(lat, lng, currentLang) {
+                                        if (lat != null && lng != null) {
+                                            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                                try {
+                                                    val locale = java.util.Locale.forLanguageTag(currentLang)
+                                                    val geocoder = android.location.Geocoder(context, locale)
+                                                    val addresses = geocoder.getFromLocation(lat, lng, 1)
+                                                    if (!addresses.isNullOrEmpty()) {
+                                                        val address = addresses[0]
+                                                        localizedLoc = address.locality ?: address.subAdminArea ?: shortLoc
+                                                    }
+                                                } catch (e: Exception) {}
+                                            }
+                                        }
+                                    }
 
                                     Card(
                                         onClick = {
@@ -1285,7 +1306,7 @@ fun DashboardScreen(
                                                     color = Color.Black
                                                 )
                                                 Text(
-                                                    text = "$category posted by $posterName from $location",
+                                                    text = "$category posted by $posterName from $localizedLoc",
                                                     fontSize = 13.sp,
                                                     color = Color.Gray
                                                 )

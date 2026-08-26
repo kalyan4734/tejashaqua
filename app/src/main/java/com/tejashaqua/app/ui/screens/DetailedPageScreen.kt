@@ -1,7 +1,10 @@
 package com.tejashaqua.app.ui.screens
 
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.transformable
+import androidx.compose.foundation.gestures.*
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.input.pointer.util.VelocityTracker
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.graphicsLayer
 import android.location.Geocoder
@@ -926,7 +929,6 @@ fun FullScreenImageDialog(
     initialPage: Int,
     onDismiss: () -> Unit
 ) {
-    val coroutineScope = rememberCoroutineScope()
     val fullScreenPagerState = rememberPagerState(initialPage = initialPage) { images.size }
     
     // Global zoom state to control pager scrollability
@@ -937,7 +939,7 @@ fun FullScreenImageDialog(
         properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
     ) {
         Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
-            // Main Pager
+            // Main Pager (ViewPager implementation for swiping)
             HorizontalPager(
                 state = fullScreenPagerState,
                 modifier = Modifier.fillMaxSize(),
@@ -945,7 +947,7 @@ fun FullScreenImageDialog(
                 pageSpacing = 16.dp
             ) { page ->
                 var scale by remember { mutableFloatStateOf(1f) }
-                var offset by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
+                var offset by remember { mutableStateOf(Offset.Zero) }
 
                 // Sync local scale with global pager state
                 LaunchedEffect(scale) {
@@ -958,42 +960,70 @@ fun FullScreenImageDialog(
                 LaunchedEffect(fullScreenPagerState.currentPage) {
                     if (fullScreenPagerState.currentPage != page) {
                         scale = 1f
-                        offset = androidx.compose.ui.geometry.Offset.Zero
+                        offset = Offset.Zero
                     }
                 }
+                
+                // Vertical swipe to dismiss logic removed to avoid conflict with horizontal paging
+                val animatedScale by animateFloatAsState(targetValue = scale, label = "scale")
+                val animatedOffsetX by animateFloatAsState(targetValue = offset.x, label = "offsetX")
+                val animatedOffsetY by animateFloatAsState(targetValue = offset.y, label = "offsetY")
 
-                BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-                    val state = androidx.compose.foundation.gestures.rememberTransformableState { zoomChange, offsetChange, _ ->
-                        scale = (scale * zoomChange).coerceIn(1f, 5f)
-                        
-                        if (scale > 1f) {
-                            val extraWidth = (scale - 1) * constraints.maxWidth
-                            val extraHeight = (scale - 1) * constraints.maxHeight
-                            val maxX = extraWidth / 2
-                            val maxY = extraHeight / 2
-                            
-                            val newOffset = offset + offsetChange
-                            offset = androidx.compose.ui.geometry.Offset(
-                                x = newOffset.x.coerceIn(-maxX, maxX),
-                                y = newOffset.y.coerceIn(-maxY, maxY)
-                            )
-                        } else {
-                            offset = androidx.compose.ui.geometry.Offset.Zero
-                        }
-                    }
-
+                BoxWithConstraints(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .transformable(state = state)
+                            .pointerInput(scale) {
+                                // Panning logic: Only active when zoomed in
+                                if (scale > 1.05f) {
+                                    detectDragGestures(
+                                        onDrag = { change, dragAmount ->
+                                            val extraWidth = (scale - 1) * constraints.maxWidth
+                                            val extraHeight = (scale - 1) * constraints.maxHeight
+                                            val maxX = extraWidth / 2
+                                            val maxY = extraHeight / 2
+                                            
+                                            val newOffset = offset + dragAmount
+                                            offset = Offset(
+                                                x = newOffset.x.coerceIn(-maxX, maxX),
+                                                y = newOffset.y.coerceIn(-maxY, maxY)
+                                            )
+                                            change.consume()
+                                        }
+                                    )
+                                }
+                            }
                             .pointerInput(Unit) {
+                                // Double tap to zoom logic
                                 detectTapGestures(
-                                    onDoubleTap = {
-                                        if (scale > 1f) {
+                                    onDoubleTap = { tapOffset ->
+                                        if (scale > 1.05f) {
+                                            // Reset zoom
                                             scale = 1f
-                                            offset = androidx.compose.ui.geometry.Offset.Zero
+                                            offset = Offset.Zero
                                         } else {
-                                            scale = 2.5f
+                                            // Zoom in to 3x
+                                            val targetScale = 3f
+                                            scale = targetScale
+                                            
+                                            // Calculate offset to zoom towards the tap point
+                                            val centerX = constraints.maxWidth / 2
+                                            val centerY = constraints.maxHeight / 2
+                                            val dx = (centerX - tapOffset.x) * (targetScale - 1f)
+                                            val dy = (centerY - tapOffset.y) * (targetScale - 1f)
+                                            
+                                            val extraWidth = (targetScale - 1) * constraints.maxWidth
+                                            val extraHeight = (targetScale - 1) * constraints.maxHeight
+                                            val maxX = extraWidth / 2
+                                            val maxY = extraHeight / 2
+                                            
+                                            offset = Offset(
+                                                x = dx.coerceIn(-maxX, maxX),
+                                                y = dy.coerceIn(-maxY, maxY)
+                                            )
                                         }
                                     }
                                 )
@@ -1006,10 +1036,10 @@ fun FullScreenImageDialog(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .graphicsLayer(
-                                    scaleX = scale,
-                                    scaleY = scale,
-                                    translationX = offset.x,
-                                    translationY = offset.y
+                                    scaleX = animatedScale,
+                                    scaleY = animatedScale,
+                                    translationX = animatedOffsetX,
+                                    translationY = animatedOffsetY
                                 ),
                             contentScale = ContentScale.Fit
                         )
@@ -1017,7 +1047,7 @@ fun FullScreenImageDialog(
                 }
             }
             
-            // Close Button and Counter
+            // Overlays
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1045,50 +1075,6 @@ fun FullScreenImageDialog(
                         .background(Color.Black.copy(alpha = 0.5f), CircleShape)
                 ) {
                     Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
-                }
-            }
-            
-            // Fixed Thumbnail Scroller
-            if (images.size > 1) {
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(bottom = 60.dp) // Significantly increased clearance
-                ) {
-                    LazyRow(
-                        modifier = Modifier.fillMaxWidth(),
-                        contentPadding = PaddingValues(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        items(images.size) { index ->
-                            val isSelected = fullScreenPagerState.currentPage == index
-                            Box(
-                                modifier = Modifier
-                                    .padding(horizontal = 4.dp)
-                                    .size(64.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .border(
-                                        width = if (isSelected) 2.dp else 1.dp,
-                                        color = if (isSelected) Color.White else Color.White.copy(alpha = 0.4f),
-                                        shape = RoundedCornerShape(8.dp)
-                                    )
-                                    .clickable {
-                                        coroutineScope.launch {
-                                            fullScreenPagerState.animateScrollToPage(index)
-                                        }
-                                    }
-                            ) {
-                                AsyncImage(
-                                    model = images[index]?.toString() ?: "",
-                                    contentDescription = null,
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Crop,
-                                    alpha = if (isSelected) 1f else 0.5f
-                                )
-                            }
-                        }
-                    }
                 }
             }
         }
