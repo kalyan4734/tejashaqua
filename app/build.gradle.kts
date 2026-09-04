@@ -11,7 +11,7 @@ plugins {
 
 android {
     namespace = "com.tejashaqua.app"
-    compileSdk = 35
+    compileSdk = 36
 
     val keystorePropertiesFile = rootProject.file("keystore.properties")
     val keystoreProperties = Properties()
@@ -32,10 +32,16 @@ android {
         applicationId = "com.tejashaqua.app"
         minSdk = 24
         targetSdk = 35
-        versionCode = 28
+        versionCode = 31
         versionName = "1.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    bundle {
+        language {
+            enableSplit = false
+        }
     }
 
     buildFeatures {

@@ -145,7 +145,7 @@ exports.resendOtp = onCall({
 exports.getListingsByLocation = onCall({
     enforceAppCheck: false
 }, async (request) => {
-    const { lat, lng, category, page = 0, pageSize = 10 } = request.data;
+    const { lat, lng, locationName, category, page = 0, pageSize = 10 } = request.data;
 
     try {
         let query = admin.firestore().collection("listings");
@@ -177,23 +177,49 @@ exports.getListingsByLocation = onCall({
             });
         }
 
+        const normalizedUserLocation = (locationName || "").toLowerCase().trim();
+
         if (lat && lng) {
             // Distance-based sorting
             listings.forEach(listing => {
                 const lLat = listing.lat || 0;
                 const lLng = listing.lng || 0;
+                const lLoc = (listing.location || "").toLowerCase();
+
                 if (lLat && lLng) {
+                    // Approximate distance for sorting purposes
                     const dLat = lLat - lat;
                     const dLng = lLng - lng;
                     listing.distance = Math.sqrt(dLat * dLat + dLng * dLng);
+
+                    // Priority boost for exact village/location string match
+                    if (normalizedUserLocation && lLoc.includes(normalizedUserLocation)) {
+                        listing.distance = listing.distance * 0.5; // Make it seem "closer"
+                    }
                 } else {
                     listing.distance = 999999;
                 }
             });
-            listings.sort((a, b) => a.distance - b.distance);
+
+            // Sort by distance first, then by timestamp (latest first) for items at same distance
+            listings.sort((a, b) => {
+                if (Math.abs(a.distance - b.distance) < 0.001) { // Within ~100m
+                    return (b.timestamp || 0) - (a.timestamp || 0);
+                }
+                return a.distance - b.distance;
+            });
         } else {
             // Fallback: Latest first sorting
-            listings.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+            listings.sort((a, b) => {
+                // If locationName is provided, prioritize matching strings even without lat/lng
+                if (normalizedUserLocation) {
+                    const aMatch = (a.location || "").toLowerCase().includes(normalizedUserLocation);
+                    const bMatch = (b.location || "").toLowerCase().includes(normalizedUserLocation);
+                    if (aMatch && !bMatch) return -1;
+                    if (!aMatch && bMatch) return 1;
+                }
+                return (b.timestamp || 0) - (a.timestamp || 0);
+            });
         }
 
         // Pagination

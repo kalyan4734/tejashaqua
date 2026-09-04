@@ -25,6 +25,12 @@ object LocaleHelper {
         // 3. Update JVM default locale
         val locale = Locale.forLanguageTag(languageCode)
         Locale.setDefault(locale)
+        
+        // 4. Force configuration update for the current context
+        val resources = context.resources
+        val configuration = resources.configuration
+        configuration.setLocales(android.os.LocaleList(locale))
+        context.createConfigurationContext(configuration)
     }
 
     fun getSelectedLanguage(context: Context): String? {
@@ -59,23 +65,10 @@ object LocaleHelper {
         val locale = Locale.forLanguageTag(code)
         Locale.setDefault(locale)
         
-        // Android 13+ handles this perfectly via the OS
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            return context
-        }
-
-        val manufacturer = Build.MANUFACTURER.lowercase(Locale.ROOT)
-        val isOppoRealme = manufacturer.contains("oppo") || manufacturer.contains("realme")
-        
-        // On Oppo/Realme Android 11/12, manual wrapping in attachBaseContext 
-        // conflicts with AppCompatDelegate and causes language swapping/mirroring.
-        if (isOppoRealme && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && languageCode == null) {
-            return context
-        }
-
         val resources = context.resources
         val configuration = Configuration(resources.configuration)
-        configuration.setLocale(locale)
+        configuration.setLocales(android.os.LocaleList(locale))
+        configuration.setLayoutDirection(locale)
         
         return context.createConfigurationContext(configuration)
     }

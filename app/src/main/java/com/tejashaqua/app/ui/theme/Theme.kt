@@ -43,7 +43,7 @@ fun TejashAquaTheme(
 
     val currentDensity = LocalDensity.current
     CompositionLocalProvider(
-        LocalDensity provides Density(currentDensity.density, fontScale = 1f)
+        LocalDensity provides Density(currentDensity.density, fontScale = 0.94f)
     ) {
         MaterialTheme(
             colorScheme = colorScheme,

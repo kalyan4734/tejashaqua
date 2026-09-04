@@ -52,6 +52,9 @@ class LocationSearchViewModel(application: Application) : AndroidViewModel(appli
     private val _isFetchingLocation = MutableStateFlow(false)
     val isFetchingLocation: StateFlow<Boolean> = _isFetchingLocation
 
+    private val _isFetchingPlaceDetails = MutableStateFlow(false)
+    val isFetchingPlaceDetails: StateFlow<Boolean> = _isFetchingPlaceDetails
+
     var isManualSelection = false
         private set
 
@@ -241,17 +244,20 @@ class LocationSearchViewModel(application: Application) : AndroidViewModel(appli
         val client = getPlacesClient()
         if (client == null) return
 
+        _isFetchingPlaceDetails.value = true
         val placeFields = listOf(Place.Field.LAT_LNG)
         val request = FetchPlaceRequest.newInstance(placeId, placeFields)
 
         client.fetchPlace(request)
             .addOnSuccessListener { response ->
+                _isFetchingPlaceDetails.value = false
                 response.place.latLng?.let { latLng ->
                     val modelLatLng = LatLng(latLng.latitude, latLng.longitude)
                     callback(modelLatLng)
                 }
             }
             .addOnFailureListener { exception ->
+                _isFetchingPlaceDetails.value = false
                 _error.value = exception.message
             }
     }

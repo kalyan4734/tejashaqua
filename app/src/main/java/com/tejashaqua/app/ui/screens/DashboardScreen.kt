@@ -219,6 +219,7 @@ fun DashboardScreen(
         val data = hashMapOf(
             "lat" to currentPos?.latitude,
             "lng" to currentPos?.longitude,
+            "locationName" to fetchedName,
             "category" to selectedCategoryFilter,
             "page" to if (isFirstPage) 0 else currentPage,
             "pageSize" to 10

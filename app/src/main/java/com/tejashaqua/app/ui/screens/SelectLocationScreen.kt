@@ -69,6 +69,7 @@ fun SelectLocationScreen(
     
     val isGpsEnabled by locationViewModel.isGpsEnabled.collectAsState()
     val isFetchingLocation by locationViewModel.isFetchingLocation.collectAsState()
+    val isFetchingPlaceDetails by locationViewModel.isFetchingPlaceDetails.collectAsState()
 
     val gpsLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartIntentSenderForResult()
@@ -208,9 +209,13 @@ fun SelectLocationScreen(
                         .height(56.dp),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = AquaBlue),
-                    enabled = selectedLocation != null
+                    enabled = selectedLocation != null && selectedLatLng != null && !isFetchingPlaceDetails
                 ) {
-                    Text(stringResource(R.string.confirm_location), fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                    if (isFetchingPlaceDetails) {
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                    } else {
+                        Text(stringResource(R.string.confirm_location), fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                    }
                 }
             }
         }

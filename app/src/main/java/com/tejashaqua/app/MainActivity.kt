@@ -11,6 +11,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.compose.LocalActivityResultRegistryOwner
 import androidx.compose.foundation.layout.Box
@@ -31,6 +32,7 @@ import androidx.core.content.ContextCompat
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
@@ -93,12 +95,12 @@ import com.tejashaqua.app.ui.components.SettingsRedirectDialog
 class MainActivity : AppCompatActivity() {
     private lateinit var firebaseAnalytics: FirebaseAnalytics
     private val intentFlow = MutableStateFlow<Intent?>(null)
-    private var permissionViewModel: PermissionViewModel? = null
+    private val permissionViewModel: PermissionViewModel by viewModels()
 
     override fun onResume() {
         super.onResume()
         AppStateTracker.isAppInForeground = true
-        permissionViewModel?.updatePermissionStates()
+        permissionViewModel.updatePermissionStates()
     }
 
     override fun onPause() {
@@ -127,537 +129,540 @@ class MainActivity : AppCompatActivity() {
 
         // --- PRINT APP HASH FOR OTP AUTO-FILL ---
         // Copy this string from Logcat and add it to your MSG91 SMS Template
-        val helper = com.tejashaqua.app.utils.AppSignatureHelper(this)
-        android.util.Log.d("AppSignature", "App Hash: ${helper.appSignatures}")
+        // val helper = com.tejashaqua.app.utils.AppSignatureHelper(this)
+        // android.util.Log.d("AppSignature", "App Hash: ${helper.appSignatures}")
 
         intentFlow.value = intent
         firebaseAnalytics = FirebaseAnalytics.getInstance(this)
         LocaleHelper.applySavedLocale(this)
         enableEdgeToEdge()
         setContent {
-            TejashAquaTheme {
-                val authViewModel: AuthViewModel = viewModel()
-                val locationViewModel: LocationSearchViewModel = viewModel()
-                val authState by authViewModel.authState.collectAsState()
-                val deviceLatLng by locationViewModel.currentLatLng.collectAsState()
-                val context = LocalContext.current
-                
-                val networkObserver = remember { NetworkObserver(context) }
-                val networkStatus by networkObserver.observe.collectAsState(initial = NetworkObserver.Status.Available)
-                val currentIntent by intentFlow.collectAsState()
+            val context = LocalContext.current
+            val currentIntent by intentFlow.collectAsState()
+            
+            var selectedLanguageCode by rememberSaveable { 
+                mutableStateOf(LocaleHelper.getSelectedLanguage(context)) 
+            }
 
-                var selectedLanguageCode by rememberSaveable { 
-                    mutableStateOf(LocaleHelper.getSelectedLanguage(context)) 
-                }
+            val localizedContext = remember(selectedLanguageCode) {
+                LocaleHelper.wrapContext(context, selectedLanguageCode)
+            }
 
-                var appVersion by remember { mutableStateOf("1.2") }
-                var needsUpdate by remember { mutableStateOf(false) }
-                var updateUrl by remember { mutableStateOf("https://play.google.com/store/apps/details?id=com.tejashaqua.app") }
-
-                var currentScreen by rememberSaveable { mutableStateOf("splash") }
-                var languageSelectionSource by rememberSaveable { mutableStateOf("splash") }
-                var mobileNumber by rememberSaveable { mutableStateOf("") }
-                var userName by rememberSaveable { mutableStateOf("User") }
-                var userId by rememberSaveable { mutableStateOf("") }
-                var joinedAt by rememberSaveable { mutableLongStateOf(0L) }
-                var isAdmin by rememberSaveable { mutableStateOf(false) }
-                val showMobileNumber = (authState as? AuthState.Success)?.showMobileNumber ?: false
-
-                val isLanguageSelected = selectedLanguageCode != null
-
-                var selectedCategory by remember { mutableStateOf(ListingCategory.FISH) }
-                var isEditMode by remember { mutableStateOf(false) }
-                var selectedListingId by remember { mutableStateOf<String?>(null) }
-                var selectedListingData by remember { mutableStateOf<Map<String, Any>?>(null) }
-                var listingBackStack by remember { mutableStateOf(listOf<Map<String, Any>>()) }
-                var detailedPageSource by remember { mutableStateOf("dashboard") }
-                var chatSourceScreen by remember { mutableStateOf("detailed_page") }
-                var shouldSendInitialChatMessage by remember { mutableStateOf(false) }
-
-                var dashboardTab by rememberSaveable { mutableIntStateOf(0) }
-                var showNoInternetDialog by rememberSaveable { mutableStateOf(false) }
-                var isNavigatingToDetailedPage by remember { mutableStateOf(false) }
-
-                var lastBackPressTime by remember { mutableLongStateOf(0L) }
-
-                // Reset dialog when internet returns
-                LaunchedEffect(networkStatus) {
-                    if (networkStatus == NetworkObserver.Status.Available) {
-                        showNoInternetDialog = false
-                    }
-                }
-
-                LaunchedEffect(currentScreen) {
-                    val bundle = Bundle()
-                    bundle.putString(FirebaseAnalytics.Param.SCREEN_NAME, currentScreen)
-                    bundle.putString(FirebaseAnalytics.Param.SCREEN_CLASS, "MainActivity")
-                    firebaseAnalytics.logEvent(FirebaseAnalytics.Event.SCREEN_VIEW, bundle)
-                }
-
-                val fetchingLocText = stringResource(R.string.fetching_location)
-                var currentLocationName by remember { mutableStateOf(fetchingLocText) }
-                var currentSubLocation by remember { mutableStateOf("") }
-
-                val fetchedName by locationViewModel.currentLocationName.collectAsState()
-                val fetchedSub by locationViewModel.currentSubLocation.collectAsState()
-
-                LaunchedEffect(fetchedName, fetchedSub) {
-                    if (fetchedName.isNotBlank()) {
-                        currentLocationName = fetchedName
-                        currentSubLocation = fetchedSub
-                    }
-                }
-
-                // Track where the location picker was opened from
-                var locationPickerSource by remember { mutableStateOf("dashboard") }
-                var pickedListingLocation by remember { mutableStateOf<Pair<String, LatLng?>?>(null) }
-
-                // --- NAVIGATION HELPERS ---
-                val navigateToDetailedPage: (Map<String, Any>, String) -> Unit = { data, source ->
-                    val lid = data["id"]?.toString() ?: data["listingId"]?.toString() ?: ""
-                    val sellerId = data["userId"]?.toString() ?: data["sellerId"]?.toString() ?: ""
+            CompositionLocalProvider(
+                LocalContext provides localizedContext,
+                LocalConfiguration provides localizedContext.resources.configuration,
+                LocalActivityResultRegistryOwner provides this@MainActivity
+            ) {
+                TejashAquaTheme {
+                    val authViewModel: AuthViewModel = viewModel()
+                    val locationViewModel: LocationSearchViewModel = viewModel()
+                    val authState by authViewModel.authState.collectAsState()
+                    val deviceLatLng by locationViewModel.currentLatLng.collectAsState()
                     
-                    if (sellerId.isEmpty()) {
-                        selectedListingData = data
-                        detailedPageSource = source
-                        listingBackStack = emptyList()
-                        currentScreen = "detailed_page"
-                    } else {
-                        isNavigatingToDetailedPage = true
-                        // ALWAYS fetch user preference before navigating to ensure NO flicker
-                        // Firestore 'get()' will use cache if available, so it's very fast.
-                        FirebaseFirestore.getInstance().collection("users").document(sellerId).get()
-                            .addOnSuccessListener { doc ->
-                                isNavigatingToDetailedPage = false
-                                val updatedData = data.toMutableMap()
-                                val showMobile = doc.getBoolean("showMobileNumber") ?: false
-                                val joined = doc.getLong("joinedAt") ?: 0L
-                                updatedData["sellerShowMobile"] = showMobile
-                                updatedData["sellerJoinedAt"] = joined
-                                if (lid.isNotEmpty()) updatedData["id"] = lid
-                                
-                                selectedListingData = updatedData
-                                detailedPageSource = source
-                                // Only reset backstack if not coming from detailed page itself
-                                if (source != "detailed_page") {
-                                    listingBackStack = emptyList()
-                                }
-                                currentScreen = "detailed_page"
-                            }
-                            .addOnFailureListener {
-                                isNavigatingToDetailedPage = false
-                                selectedListingData = data
-                                detailedPageSource = source
-                                if (source != "detailed_page") {
-                                    listingBackStack = emptyList()
-                                }
-                                currentScreen = "detailed_page"
-                            }
-                    }
-                }
+                    val networkObserver = remember { NetworkObserver(localizedContext) }
+                    val networkStatus by networkObserver.observe.collectAsState(initial = NetworkObserver.Status.Available)
 
-                val onRateUsClick: () -> Unit = {
-                    val appId = "com.tejashaqua.app"
-                    val marketUri = android.net.Uri.parse("market://details?id=$appId")
-                    val marketIntent = android.content.Intent(android.content.Intent.ACTION_VIEW, marketUri).apply {
-                        addFlags(android.content.Intent.FLAG_ACTIVITY_NO_HISTORY or
-                                android.content.Intent.FLAG_ACTIVITY_NEW_DOCUMENT or
-                                android.content.Intent.FLAG_ACTIVITY_MULTIPLE_TASK or
-                                android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-                        setPackage("com.android.vending")
+                    var appVersion by remember { mutableStateOf("1.2") }
+                    var needsUpdate by remember { mutableStateOf(false) }
+                    var updateUrl by remember { mutableStateOf("https://play.google.com/store/apps/details?id=com.tejashaqua.app") }
+
+                    var currentScreen by rememberSaveable { 
+                        mutableStateOf(currentIntent?.getStringExtra("start_screen") ?: "splash") 
                     }
-                    
-                    try {
-                        context.startActivity(marketIntent)
-                    } catch (e: Exception) {
-                        // If specifically targeting Play Store fails, try generic market intent
-                        val genericMarketIntent = android.content.Intent(android.content.Intent.ACTION_VIEW, marketUri).apply {
-                            addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+
+                    var languageSelectionSource by rememberSaveable { mutableStateOf("splash") }
+                    var mobileNumber by rememberSaveable { mutableStateOf("") }
+                    var userName by rememberSaveable { mutableStateOf("User") }
+                    var userId by rememberSaveable { mutableStateOf("") }
+                    var joinedAt by rememberSaveable { mutableLongStateOf(0L) }
+                    var isAdmin by rememberSaveable { mutableStateOf(false) }
+                    val showMobileNumber = (authState as? AuthState.Success)?.showMobileNumber ?: false
+
+                    val isLanguageSelected = selectedLanguageCode != null
+
+                    var selectedCategory by remember { mutableStateOf(ListingCategory.FISH) }
+                    var isEditMode by remember { mutableStateOf(false) }
+                    var selectedListingId by remember { mutableStateOf<String?>(null) }
+                    var selectedListingData by remember { mutableStateOf<Map<String, Any>?>(null) }
+                    var listingBackStack by remember { mutableStateOf(listOf<Map<String, Any>>()) }
+                    var detailedPageSource by remember { mutableStateOf("dashboard") }
+                    var chatSourceScreen by remember { mutableStateOf("detailed_page") }
+                    var shouldSendInitialChatMessage by remember { mutableStateOf(false) }
+
+                    var dashboardTab by rememberSaveable { mutableIntStateOf(0) }
+                    var showNoInternetDialog by rememberSaveable { mutableStateOf(false) }
+                    var isNavigatingToDetailedPage by remember { mutableStateOf(false) }
+
+                    var lastBackPressTime by remember { mutableLongStateOf(0L) }
+
+                    // Reset dialog when internet returns
+                    LaunchedEffect(networkStatus) {
+                        if (networkStatus == NetworkObserver.Status.Available) {
+                            showNoInternetDialog = false
                         }
+                    }
+
+                    LaunchedEffect(currentScreen) {
+                        val bundle = Bundle()
+                        bundle.putString(FirebaseAnalytics.Param.SCREEN_NAME, currentScreen)
+                        bundle.putString(FirebaseAnalytics.Param.SCREEN_CLASS, "MainActivity")
+                        firebaseAnalytics.logEvent(FirebaseAnalytics.Event.SCREEN_VIEW, bundle)
+                    }
+
+                    val fetchingLocText = stringResource(R.string.fetching_location)
+                    var currentLocationName by remember { mutableStateOf(fetchingLocText) }
+                    var currentSubLocation by remember { mutableStateOf("") }
+
+                    val fetchedName by locationViewModel.currentLocationName.collectAsState()
+                    val fetchedSub by locationViewModel.currentSubLocation.collectAsState()
+
+                    LaunchedEffect(fetchedName, fetchedSub) {
+                        if (fetchedName.isNotBlank()) {
+                            currentLocationName = fetchedName
+                            currentSubLocation = fetchedSub
+                        }
+                    }
+
+                    // Track where the location picker was opened from
+                    var locationPickerSource by remember { mutableStateOf("dashboard") }
+                    var pickedListingLocation by remember { mutableStateOf<Pair<String, LatLng?>?>(null) }
+
+                    // --- NAVIGATION HELPERS ---
+                    val navigateToDetailedPage: (Map<String, Any>, String) -> Unit = { data, source ->
+                        val lid = data["id"]?.toString() ?: data["listingId"]?.toString() ?: ""
+                        val sellerId = data["userId"]?.toString() ?: data["sellerId"]?.toString() ?: ""
+                        
+                        if (sellerId.isEmpty()) {
+                            selectedListingData = data
+                            detailedPageSource = source
+                            listingBackStack = emptyList()
+                            currentScreen = "detailed_page"
+                        } else {
+                            isNavigatingToDetailedPage = true
+                            // ALWAYS fetch user preference before navigating to ensure NO flicker
+                            // Firestore 'get()' will use cache if available, so it's very fast.
+                            FirebaseFirestore.getInstance().collection("users").document(sellerId).get()
+                                .addOnSuccessListener { doc ->
+                                    isNavigatingToDetailedPage = false
+                                    val updatedData = data.toMutableMap()
+                                    val showMobile = doc.getBoolean("showMobileNumber") ?: false
+                                    val joined = doc.getLong("joinedAt") ?: 0L
+                                    updatedData["sellerShowMobile"] = showMobile
+                                    updatedData["sellerJoinedAt"] = joined
+                                    if (lid.isNotEmpty()) updatedData["id"] = lid
+                                    
+                                    selectedListingData = updatedData
+                                    detailedPageSource = source
+                                    // Only reset backstack if not coming from detailed page itself
+                                    if (source != "detailed_page") {
+                                        listingBackStack = emptyList()
+                                    }
+                                    currentScreen = "detailed_page"
+                                }
+                                .addOnFailureListener {
+                                    isNavigatingToDetailedPage = false
+                                    selectedListingData = data
+                                    detailedPageSource = source
+                                    if (source != "detailed_page") {
+                                        listingBackStack = emptyList()
+                                    }
+                                    currentScreen = "detailed_page"
+                                }
+                        }
+                    }
+
+                    val onRateUsClick: () -> Unit = {
+                        val appId = "com.tejashaqua.app"
+                        val marketUri = android.net.Uri.parse("market://details?id=$appId")
+                        val marketIntent = android.content.Intent(android.content.Intent.ACTION_VIEW, marketUri).apply {
+                            addFlags(android.content.Intent.FLAG_ACTIVITY_NO_HISTORY or
+                                    android.content.Intent.FLAG_ACTIVITY_NEW_DOCUMENT or
+                                    android.content.Intent.FLAG_ACTIVITY_MULTIPLE_TASK or
+                                    android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                            setPackage("com.android.vending")
+                        }
+                        
                         try {
-                            context.startActivity(genericMarketIntent)
-                        } catch (e2: Exception) {
-                            // Fallback to browser
-                            val webIntent = android.content.Intent(android.content.Intent.ACTION_VIEW, 
-                                android.net.Uri.parse("https://play.google.com/store/apps/details?id=$appId")).apply {
+                            localizedContext.startActivity(marketIntent)
+                        } catch (e: Exception) {
+                            // If specifically targeting Play Store fails, try generic market intent
+                            val genericMarketIntent = android.content.Intent(android.content.Intent.ACTION_VIEW, marketUri).apply {
                                 addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
                             }
                             try {
-                                context.startActivity(webIntent)
-                            } catch (e3: Exception) {
-                                Toast.makeText(context, "Unable to open Play Store", Toast.LENGTH_SHORT).show()
+                                localizedContext.startActivity(genericMarketIntent)
+                            } catch (e2: Exception) {
+                                // Fallback to browser
+                                val webIntent = android.content.Intent(android.content.Intent.ACTION_VIEW, 
+                                    android.net.Uri.parse("https://play.google.com/store/apps/details?id=$appId")).apply {
+                                    addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                                }
+                                try {
+                                    localizedContext.startActivity(webIntent)
+                                } catch (e3: Exception) {
+                                    Toast.makeText(localizedContext, "Unable to open Play Store", Toast.LENGTH_SHORT).show()
+                                }
                             }
                         }
                     }
-                }
 
-                // Handle Notification Click Navigation
-                LaunchedEffect(currentIntent, userId) {
-                    val intentToProcess = currentIntent
-                    if (intentToProcess == null || userId.isEmpty()) return@LaunchedEffect
-                    
-                    val type = intentToProcess.getStringExtra("type") 
-                        ?: if (intentToProcess.action == "OPEN_CHAT") "chat" 
-                        else if (intentToProcess.action == "OPEN_RATES") "rates" 
-                        else if (intentToProcess.action == "OPEN_LISTING") "listing"
-                        else null
-                    val chatId = intentToProcess.getStringExtra("chatId")
-
-                    android.util.Log.d("NAV", "Processing intent: type=$type, chatId=$chatId, action=${intentToProcess.action}")
-
-                    if (type == "chat" && chatId != null) {
-                        // Consume intent immediately to prevent double processing
-                        intentFlow.value = null
+                    // Handle Notification Click Navigation
+                    LaunchedEffect(currentIntent, userId) {
+                        val intentToProcess = currentIntent
+                        if (intentToProcess == null || userId.isEmpty()) return@LaunchedEffect
                         
-                        FirebaseFirestore.getInstance().collection("chats").document(chatId)
-                            .get().addOnSuccessListener { doc ->
-                                if (doc.exists()) {
-                                    val data = doc.data ?: return@addOnSuccessListener
-                                    val isBuying = data["buyerId"] == userId
+                        val type = intentToProcess.getStringExtra("type") 
+                            ?: if (intentToProcess.action == "OPEN_CHAT") "chat" 
+                            else if (intentToProcess.action == "OPEN_RATES") "rates" 
+                            else if (intentToProcess.action == "OPEN_LISTING") "listing"
+                            else null
+                        val chatId = intentToProcess.getStringExtra("chatId")
 
-                                    val updatedData = data.toMutableMap()
-                                    val lid = data["listingId"]?.toString() ?: ""
-                                    updatedData["id"] = lid
-                                    updatedData["posterName"] = if (isBuying) data["sellerName"]
-                                        ?: "Seller" else data["buyerName"] ?: "User"
-                                    updatedData["userId"] = if (isBuying) data["sellerId"]
-                                        ?: "" else data["buyerId"] ?: ""
-                                    updatedData["title"] = data["listingTitle"] ?: ""
-                                    updatedData["price"] = data["listingPrice"] ?: ""
-                                    updatedData["location"] = data["listingLocation"] ?: ""
-                                    val img = data["listingImage"]?.toString() ?: ""
-                                    if (img.isNotEmpty()) {
-                                        updatedData["images"] = listOf(img)
-                                    }
+                        android.util.Log.d("NAV", "Processing intent: type=$type, chatId=$chatId, action=${intentToProcess.action}")
 
-                                    // Pre-fetch detailed info if possible but don't overwrite screen
-                                    val sellerId = updatedData["userId"].toString()
-                                    if (sellerId.isNotEmpty() && lid.isNotEmpty()) {
-                                        // Check if listing exists first
-                                        FirebaseFirestore.getInstance().collection("listings").document(lid).get()
-                                            .addOnSuccessListener { listingDoc ->
-                                                if (listingDoc.exists()) {
-                                                    FirebaseFirestore.getInstance().collection("users").document(sellerId).get()
-                                                        .addOnSuccessListener { sellerDoc ->
-                                                            val showMobile = sellerDoc.getBoolean("showMobileNumber") ?: false
-                                                            val joined = sellerDoc.getLong("joinedAt") ?: 0L
-                                                            updatedData["sellerShowMobile"] = showMobile
-                                                            updatedData["sellerJoinedAt"] = joined
-                                                            
-                                                            selectedListingData = updatedData
-                                                            chatSourceScreen = "dashboard"
-                                                            dashboardTab = 2
-                                                            shouldSendInitialChatMessage = false
-                                                            currentScreen = "chat"
-                                                        }
-                                                        .addOnFailureListener {
-                                                            selectedListingData = updatedData
-                                                            chatSourceScreen = "dashboard"
-                                                            dashboardTab = 2
-                                                            shouldSendInitialChatMessage = false
-                                                            currentScreen = "chat"
-                                                        }
-                                                } else {
-                                                    // Listing doesn't exist anymore
-                                                    Toast.makeText(context, context.getString(R.string.listing_deleted_title), Toast.LENGTH_SHORT).show()
-                                                    currentScreen = "dashboard"
-                                                    dashboardTab = 2 // Go to chat list instead
+                        if (type == "chat" && chatId != null) {
+                            // Consume intent immediately to prevent double processing
+                            intentFlow.value = null
+                            
+                            FirebaseFirestore.getInstance().collection("chats").document(chatId)
+                                .get().addOnSuccessListener { doc ->
+                                    if (doc.exists()) {
+                                        val data = doc.data ?: return@addOnSuccessListener
+                                        val isBuying = data["buyerId"] == userId
+
+                                        val updatedData = data.toMutableMap()
+                                        val lid = data["listingId"]?.toString() ?: ""
+                                        updatedData["id"] = lid
+                                        updatedData["posterName"] = if (isBuying) data["sellerName"]
+                                            ?: "Seller" else data["buyerName"] ?: "User"
+                                        updatedData["userId"] = if (isBuying) data["sellerId"]
+                                            ?: "" else data["buyerId"] ?: ""
+                                        updatedData["title"] = data["listingTitle"] ?: ""
+                                        updatedData["price"] = data["listingPrice"] ?: ""
+                                        updatedData["location"] = data["listingLocation"] ?: ""
+                                        val img = data["listingImage"]?.toString() ?: ""
+                                        if (img.isNotEmpty()) {
+                                            updatedData["images"] = listOf(img)
+                                        }
+
+                                        // Pre-fetch detailed info if possible but don't overwrite screen
+                                        val sellerId = updatedData["userId"].toString()
+                                        if (sellerId.isNotEmpty() && lid.isNotEmpty()) {
+                                            // Check if listing exists first
+                                            FirebaseFirestore.getInstance().collection("listings").document(lid).get()
+                                                .addOnSuccessListener { listingDoc ->
+                                                    if (listingDoc.exists()) {
+                                                        FirebaseFirestore.getInstance().collection("users").document(sellerId).get()
+                                                            .addOnSuccessListener { sellerDoc ->
+                                                                val showMobile = sellerDoc.getBoolean("showMobileNumber") ?: false
+                                                                val joined = sellerDoc.getLong("joinedAt") ?: 0L
+                                                                updatedData["sellerShowMobile"] = showMobile
+                                                                updatedData["sellerJoinedAt"] = joined
+                                                                
+                                                                selectedListingData = updatedData
+                                                                chatSourceScreen = "dashboard"
+                                                                dashboardTab = 2
+                                                                shouldSendInitialChatMessage = false
+                                                                currentScreen = "chat"
+                                                            }
+                                                            .addOnFailureListener {
+                                                                selectedListingData = updatedData
+                                                                chatSourceScreen = "dashboard"
+                                                                dashboardTab = 2
+                                                                shouldSendInitialChatMessage = false
+                                                                currentScreen = "chat"
+                                                            }
+                                                    } else {
+                                                        // Listing doesn't exist anymore
+                                                        Toast.makeText(localizedContext, localizedContext.getString(R.string.listing_deleted_title), Toast.LENGTH_SHORT).show()
+                                                        currentScreen = "dashboard"
+                                                        dashboardTab = 2 // Go to chat list instead
+                                                    }
                                                 }
-                                            }
-                                            .addOnFailureListener {
-                                                currentScreen = "dashboard"
-                                                dashboardTab = 2
-                                            }
+                                                .addOnFailureListener {
+                                                    currentScreen = "dashboard"
+                                                    dashboardTab = 2
+                                                }
+                                        } else {
+                                            selectedListingData = updatedData
+                                            chatSourceScreen = "dashboard"
+                                            dashboardTab = 2
+                                            shouldSendInitialChatMessage = false
+                                            currentScreen = "chat"
+                                        }
                                     } else {
-                                        selectedListingData = updatedData
-                                        chatSourceScreen = "dashboard"
+                                        // Chat doesn't exist
+                                        currentScreen = "dashboard"
                                         dashboardTab = 2
-                                        shouldSendInitialChatMessage = false
-                                        currentScreen = "chat"
                                     }
-                                } else {
-                                    // Chat doesn't exist
+                                }
+                                .addOnFailureListener {
                                     currentScreen = "dashboard"
                                     dashboardTab = 2
                                 }
-                            }
-                            .addOnFailureListener {
-                                currentScreen = "dashboard"
-                                dashboardTab = 2
-                            }
-                    } else if (type == "rates") {
-                        intentFlow.value = null
-                        currentScreen = "aqua_rates"
-                    } else if (type == "listing") {
-                        intentFlow.value = null
-                        currentScreen = "dashboard"
-                        dashboardTab = 0
-                    }
-                }
-
-                LaunchedEffect(Unit) {
-                    FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
-                        if (task.isSuccessful) {
-                            android.util.Log.d("FCM_TOKEN", task.result)
+                        } else if (type == "rates") {
+                            intentFlow.value = null
+                            currentScreen = "aqua_rates"
+                        } else if (type == "listing") {
+                            intentFlow.value = null
+                            currentScreen = "dashboard"
+                            dashboardTab = 0
                         }
                     }
-                    val db = FirebaseFirestore.getInstance()
-                    db.collection("app_config").document("version").get()
-                        .addOnSuccessListener { document ->
-                            if (document.exists()) {
-                                val minVersion = document.getLong("min_version_code") ?: 0L
-                                val url = document.getString("update_url") ?: ""
-                                if (url.isNotEmpty()) updateUrl = url
 
-                                val remoteVersionName = document.getString("app_version")
-                                if (remoteVersionName != null) appVersion = remoteVersionName
+                    LaunchedEffect(Unit) {
+                        FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+                            if (task.isSuccessful) {
+                                android.util.Log.d("FCM_TOKEN", task.result)
+                            }
+                        }
+                        val db = FirebaseFirestore.getInstance()
+                        db.collection("app_config").document("version").get()
+                            .addOnSuccessListener { document ->
+                                if (document.exists()) {
+                                    val minVersion = document.getLong("min_version_code") ?: 0L
+                                    val url = document.getString("update_url") ?: ""
+                                    if (url.isNotEmpty()) updateUrl = url
 
-                                try {
-                                    val packageInfo = context.packageManager.getPackageInfo(
-                                        context.packageName,
-                                        0
-                                    )
-                                    val currentVersion =
-                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                                            packageInfo.longVersionCode
-                                        } else {
-                                            @Suppress("DEPRECATION") packageInfo.versionCode.toLong()
+                                    val remoteVersionName = document.getString("app_version")
+                                    if (remoteVersionName != null) appVersion = remoteVersionName
+
+                                    try {
+                                        val packageInfo = localizedContext.packageManager.getPackageInfo(
+                                            localizedContext.packageName,
+                                            0
+                                        )
+                                        val currentVersion =
+                                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                                                packageInfo.longVersionCode
+                                            } else {
+                                                @Suppress("DEPRECATION") packageInfo.versionCode.toLong()
+                                            }
+
+                                        if (currentVersion < minVersion) {
+                                            needsUpdate = true
                                         }
-
-                                    if (currentVersion < minVersion) {
-                                        needsUpdate = true
+                                    } catch (e: PackageManager.NameNotFoundException) {
+                                        e.printStackTrace()
                                     }
-                                } catch (e: PackageManager.NameNotFoundException) {
-                                    e.printStackTrace()
                                 }
                             }
-                        }
-                }
+                    }
 
-                BackHandler(enabled = true) {
-                    if (currentScreen == "dashboard" || currentScreen == "login" || currentScreen == "splash") {
-                        val currentTime = System.currentTimeMillis()
-                        if (currentTime - lastBackPressTime < 2000) {
-                            finish()
+                    BackHandler(enabled = true) {
+                        if (currentScreen == "dashboard" || currentScreen == "login" || currentScreen == "splash") {
+                            val currentTime = System.currentTimeMillis()
+                            if (currentTime - lastBackPressTime < 2000) {
+                                finish()
+                            } else {
+                                lastBackPressTime = currentTime
+                                Toast.makeText(localizedContext, localizedContext.getString(R.string.press_back_again), Toast.LENGTH_SHORT).show()
+                            }
                         } else {
-                            lastBackPressTime = currentTime
-                            Toast.makeText(context, context.getString(R.string.press_back_again), Toast.LENGTH_SHORT).show()
-                        }
-                    } else {
-                        when (currentScreen) {
-                            "otp" -> {
-                                authViewModel.resetState()
-                                currentScreen = "login"
-                            }
-                            "aqua_rates" -> currentScreen = "dashboard"
-                            "fish_rates" -> currentScreen = "dashboard"
-                            "select_category" -> currentScreen = "dashboard"
-                            "edit_listing" -> {
-                                currentScreen = if (isEditMode) "my_listings" else "select_category"
-                            }
-                            "profile" -> currentScreen = "dashboard"
-                            "edit_profile" -> currentScreen = "profile"
-                            "about_app" -> currentScreen = "profile"
-                            "my_listings" -> currentScreen = "profile"
-                            "saved_items" -> currentScreen = "profile"
-                            "prawn_rates" -> currentScreen = "dashboard"
-                            "detailed_page" -> {
-                                if (listingBackStack.isNotEmpty()) {
-                                    val previous = listingBackStack.last()
-                                    listingBackStack = listingBackStack.dropLast(1)
-                                    selectedListingData = previous
-                                } else {
-                                    currentScreen = detailedPageSource
+                            when (currentScreen) {
+                                "otp" -> {
+                                    authViewModel.resetState()
+                                    currentScreen = "login"
                                 }
-                            }
-                            "chat" -> currentScreen = chatSourceScreen
-                            "chat_list" -> currentScreen = "profile"
-                            "admin_dashboard" -> currentScreen = "dashboard"
-                            "privacy_policy" -> {
-                                currentScreen =
-                                    if (authViewModel.authState.value is AuthState.Success) "profile" else "login"
-                            }
-                            "terms_conditions" -> {
-                                currentScreen =
-                                    if (authViewModel.authState.value is AuthState.Success) "profile" else "login"
-                            }
-                            "select_location" -> {
-                                currentScreen =
-                                    if (locationPickerSource == "listing") "edit_listing" else "dashboard"
-                            }
-                            "language_selection" -> {
-                                currentScreen = if (languageSelectionSource == "profile") {
-                                    "profile"
-                                } else {
-                                    finish()
-                                    "splash" // Unreachable but needed for type
+                                "aqua_rates" -> currentScreen = "dashboard"
+                                "fish_rates" -> currentScreen = "dashboard"
+                                "select_category" -> currentScreen = "dashboard"
+                                "edit_listing" -> {
+                                    currentScreen = if (isEditMode) "my_listings" else "select_category"
+                                }
+                                "profile" -> currentScreen = "dashboard"
+                                "edit_profile" -> currentScreen = "profile"
+                                "about_app" -> currentScreen = "profile"
+                                "my_listings" -> currentScreen = "profile"
+                                "saved_items" -> currentScreen = "profile"
+                                "prawn_rates" -> currentScreen = "dashboard"
+                                "detailed_page" -> {
+                                    if (listingBackStack.isNotEmpty()) {
+                                        val previous = listingBackStack.last()
+                                        listingBackStack = listingBackStack.dropLast(1)
+                                        selectedListingData = previous
+                                    } else {
+                                        currentScreen = detailedPageSource
+                                    }
+                                }
+                                "chat" -> currentScreen = chatSourceScreen
+                                "chat_list" -> currentScreen = "profile"
+                                "admin_dashboard" -> currentScreen = "dashboard"
+                                "privacy_policy" -> {
+                                    currentScreen =
+                                        if (authViewModel.authState.value is AuthState.Success) "profile" else "login"
+                                }
+                                "terms_conditions" -> {
+                                    currentScreen =
+                                        if (authViewModel.authState.value is AuthState.Success) "profile" else "login"
+                                }
+                                "select_location" -> {
+                                    currentScreen =
+                                        if (locationPickerSource == "listing") "edit_listing" else "dashboard"
+                                }
+                                "language_selection" -> {
+                                    currentScreen = if (languageSelectionSource == "profile") {
+                                        "profile"
+                                    } else {
+                                        finish()
+                                        "splash" // Unreachable but needed for type
+                                    }
                                 }
                             }
                         }
                     }
-                }
 
-                val pViewModel: PermissionViewModel = viewModel()
-                permissionViewModel = pViewModel
-                val pStates by pViewModel.permissionStates.collectAsState()
-                val visibleRationale by pViewModel.visiblePermissionRationale.collectAsState()
-                val settingsDialogType by pViewModel.showSettingsDialog.collectAsState()
-                val requestTrigger by pViewModel.requestPermissionTrigger.collectAsState()
+                    val pViewModel: PermissionViewModel = permissionViewModel
+                    val pStates by pViewModel.permissionStates.collectAsState()
+                    val visibleRationale by pViewModel.visiblePermissionRationale.collectAsState()
+                    val settingsDialogType by pViewModel.showSettingsDialog.collectAsState()
+                    val requestTrigger by pViewModel.requestPermissionTrigger.collectAsState()
 
-                val locationLauncher = rememberLauncherForActivityResult(
-                    ActivityResultContracts.RequestMultiplePermissions()
-                ) { pViewModel.handlePermissionResult(PermissionType.LOCATION, this@MainActivity) }
+                    val locationLauncher = rememberLauncherForActivityResult(
+                        ActivityResultContracts.RequestMultiplePermissions()
+                    ) { pViewModel.handlePermissionResult(PermissionType.LOCATION, this@MainActivity) }
 
-                val cameraLauncher = rememberLauncherForActivityResult(
-                    ActivityResultContracts.RequestPermission()
-                ) { pViewModel.handlePermissionResult(PermissionType.CAMERA, this@MainActivity) }
+                    val cameraLauncher = rememberLauncherForActivityResult(
+                        ActivityResultContracts.RequestPermission()
+                    ) { pViewModel.handlePermissionResult(PermissionType.CAMERA, this@MainActivity) }
 
-                val photosLauncher = rememberLauncherForActivityResult(
-                    ActivityResultContracts.RequestPermission()
-                ) { pViewModel.handlePermissionResult(PermissionType.PHOTOS, this@MainActivity) }
+                    val photosLauncher = rememberLauncherForActivityResult(
+                        ActivityResultContracts.RequestPermission()
+                    ) { pViewModel.handlePermissionResult(PermissionType.PHOTOS, this@MainActivity) }
 
-                val notificationsLauncher = rememberLauncherForActivityResult(
-                    ActivityResultContracts.RequestPermission()
-                ) { pViewModel.handlePermissionResult(PermissionType.NOTIFICATIONS, this@MainActivity) }
+                    val notificationsLauncher = rememberLauncherForActivityResult(
+                        ActivityResultContracts.RequestPermission()
+                    ) { pViewModel.handlePermissionResult(PermissionType.NOTIFICATIONS, this@MainActivity) }
 
-                // Observe trigger to launch actual system dialogs
-                LaunchedEffect(requestTrigger) {
-                    requestTrigger?.let { type ->
-                        when (type) {
-                            PermissionType.LOCATION -> locationLauncher.launch(PermissionHelper.getPermissionsForType(type).toTypedArray())
-                            PermissionType.CAMERA -> cameraLauncher.launch(PermissionHelper.getPermissionsForType(type).first())
-                            PermissionType.PHOTOS -> photosLauncher.launch(PermissionHelper.getPermissionsForType(type).first())
-                            PermissionType.NOTIFICATIONS -> notificationsLauncher.launch(PermissionHelper.getPermissionsForType(type).first())
+                    // Observe trigger to launch actual system dialogs
+                    LaunchedEffect(requestTrigger) {
+                        requestTrigger?.let { type ->
+                            when (type) {
+                                PermissionType.LOCATION -> locationLauncher.launch(PermissionHelper.getPermissionsForType(type).toTypedArray())
+                                PermissionType.CAMERA -> cameraLauncher.launch(PermissionHelper.getPermissionsForType(type).first())
+                                PermissionType.PHOTOS -> photosLauncher.launch(PermissionHelper.getPermissionsForType(type).first())
+                                PermissionType.NOTIFICATIONS -> notificationsLauncher.launch(PermissionHelper.getPermissionsForType(type).first())
+                            }
                         }
                     }
-                }
 
-                // Handle Home Screen specific permissions (Location and Notifications) only after logging in
-                LaunchedEffect(currentScreen, authState) {
-                    val isHomeScreen = currentScreen == "dashboard" || currentScreen == "admin_dashboard"
-                    val isLoggedIn = authState is AuthState.Success || authState is AuthState.RequireName
-                    
-                    if (isHomeScreen && isLoggedIn) {
-                        pViewModel.requestFeaturePermissions(
-                            permissions = listOf(PermissionType.LOCATION, PermissionType.NOTIFICATIONS),
-                            skipNagging = true,
-                            mustGrantAll = false
-                        ) {
-                            // Both handled (granted or denied). If location is granted, fetch it.
-                            if (PermissionHelper.getStatus(context, PermissionType.LOCATION) == PermissionStatus.GRANTED) {
+                    // Handle Home Screen specific permissions (Location and Notifications) only after logging in
+                    LaunchedEffect(currentScreen, authState) {
+                        val isHomeScreen = currentScreen == "dashboard" || currentScreen == "admin_dashboard"
+                        val isLoggedIn = authState is AuthState.Success || authState is AuthState.RequireName
+                        
+                        if (isHomeScreen && isLoggedIn) {
+                            pViewModel.requestFeaturePermissions(
+                                permissions = listOf(PermissionType.LOCATION, PermissionType.NOTIFICATIONS),
+                                skipNagging = true,
+                                mustGrantAll = false
+                            ) {
+                                // Both handled (granted or denied). If location is granted, fetch it.
+                                if (PermissionHelper.getStatus(localizedContext, PermissionType.LOCATION) == PermissionStatus.GRANTED) {
+                                    locationViewModel.fetchCurrentLocation()
+                                }
+                            }
+                        } else if (currentScreen == "select_location") {
+                            if (PermissionHelper.getStatus(localizedContext, PermissionType.LOCATION) == PermissionStatus.GRANTED) {
                                 locationViewModel.fetchCurrentLocation()
                             }
                         }
-                    } else if (currentScreen == "select_location") {
-                        if (PermissionHelper.getStatus(context, PermissionType.LOCATION) == PermissionStatus.GRANTED) {
-                            locationViewModel.fetchCurrentLocation()
+                    }
+
+                    LaunchedEffect(pStates[PermissionType.LOCATION]) {
+                        if (pStates[PermissionType.LOCATION] == PermissionStatus.DENIED) {
+                            locationViewModel.onPermissionDenied()
                         }
                     }
-                }
 
-                LaunchedEffect(pStates[PermissionType.LOCATION]) {
-                    if (pStates[PermissionType.LOCATION] == PermissionStatus.DENIED) {
-                        locationViewModel.onPermissionDenied()
-                    }
-                }
-
-                LaunchedEffect(pStates[PermissionType.LOCATION], currentScreen) {
-                    if (pStates[PermissionType.LOCATION] == PermissionStatus.GRANTED) {
-                        if (currentScreen == "dashboard" || currentScreen == "select_location" || currentScreen == "edit_listing") {
-                            locationViewModel.fetchCurrentLocation()
-                        }
-                    }
-                }
-
-                LaunchedEffect(isAdmin) {
-                    if (isAdmin) {
-                        FirebaseMessaging.getInstance().subscribeToTopic("admins")
-                            .addOnSuccessListener {
-                                android.util.Log.d(
-                                    "FCM",
-                                    "Subscribed to admins topic"
-                                )
-                            }
-                    } else {
-                        FirebaseMessaging.getInstance().unsubscribeFromTopic("admins")
-                    }
-                }
-
-                LaunchedEffect(authState) {
-                    when (val state = authState) {
-                        is AuthState.OtpSent -> {
-                            currentScreen = "otp"
-                        }
-
-                        is AuthState.Success -> {
-                            userName = state.userName
-                            mobileNumber = state.mobileNumber
-                            userId = state.userId
-                            joinedAt = state.joinedAt
-                            isAdmin = state.isAdmin
-
-                            // Subscribe to all required topics
-                            val messaging = FirebaseMessaging.getInstance()
-                            val topics = listOf("all_users", "all_listings", "user_$userId")
-                            topics.forEach { topic ->
-                                messaging.subscribeToTopic(topic)
-                                    .addOnSuccessListener { android.util.Log.d("FCM", "Subscribed to $topic") }
-                                    .addOnFailureListener { e -> android.util.Log.e("FCM", "Failed to subscribe to $topic", e) }
-                            }
-
-                            // Also ensure token is up to date in Firestore
-                            messaging.token.addOnSuccessListener { token ->
-                                FirebaseFirestore.getInstance().collection("users").document(userId)
-                                    .update("fcmToken", token)
-                            }
-
-                            if (currentScreen == "otp" || currentScreen == "splash" || currentScreen == "login") {
-                                currentScreen = if (isAdmin) "admin_dashboard" else "dashboard"
+                    LaunchedEffect(pStates[PermissionType.LOCATION], currentScreen) {
+                        if (pStates[PermissionType.LOCATION] == PermissionStatus.GRANTED) {
+                            if (currentScreen == "dashboard" || currentScreen == "select_location" || currentScreen == "edit_listing") {
+                                locationViewModel.fetchCurrentLocation()
                             }
                         }
+                    }
 
-                        is AuthState.RequireName -> {
-                            mobileNumber = state.phoneNumber
-                            isAdmin = state.isAdmin
-                            userId = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: ""
-                            
-                            // Also subscribe here just in case they are stuck on onboarding
-                            val uid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
-                            if (uid != null) {
+                    LaunchedEffect(isAdmin) {
+                        if (isAdmin) {
+                            FirebaseMessaging.getInstance().subscribeToTopic("admins")
+                                .addOnSuccessListener {
+                                    android.util.Log.d(
+                                        "FCM",
+                                        "Subscribed to admins topic"
+                                    )
+                                }
+                        } else {
+                            FirebaseMessaging.getInstance().unsubscribeFromTopic("admins")
+                        }
+                    }
+
+                    LaunchedEffect(authState) {
+                        when (val state = authState) {
+                            is AuthState.OtpSent -> {
+                                currentScreen = "otp"
+                            }
+
+                            is AuthState.Success -> {
+                                userName = state.userName
+                                mobileNumber = state.mobileNumber
+                                userId = state.userId
+                                joinedAt = state.joinedAt
+                                isAdmin = state.isAdmin
+
+                                // Subscribe to all required topics
                                 val messaging = FirebaseMessaging.getInstance()
-                                val topics = listOf("all_users", "all_listings", "user_$uid")
+                                val topics = listOf("all_users", "all_listings", "user_$userId")
                                 topics.forEach { topic ->
                                     messaging.subscribeToTopic(topic)
+                                        .addOnSuccessListener { android.util.Log.d("FCM", "Subscribed to $topic") }
+                                        .addOnFailureListener { e -> android.util.Log.e("FCM", "Failed to subscribe to $topic", e) }
+                                }
+
+                                // Also ensure token is up to date in Firestore
+                                messaging.token.addOnSuccessListener { token ->
+                                    FirebaseFirestore.getInstance().collection("users").document(userId)
+                                        .update("fcmToken", token)
+                                }
+
+                                if (currentScreen == "otp" || currentScreen == "splash" || currentScreen == "login") {
+                                    currentScreen = if (isAdmin) "admin_dashboard" else "dashboard"
                                 }
                             }
 
-                            currentScreen = "dashboard"
-                        }
+                            is AuthState.RequireName -> {
+                                mobileNumber = state.phoneNumber
+                                isAdmin = state.isAdmin
+                                userId = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: ""
+                                
+                                // Also subscribe here just in case they are stuck on onboarding
+                                val uid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+                                if (uid != null) {
+                                    val messaging = FirebaseMessaging.getInstance()
+                                    val topics = listOf("all_users", "all_listings", "user_$uid")
+                                    topics.forEach { topic ->
+                                        messaging.subscribeToTopic(topic)
+                                    }
+                                }
 
-                        is AuthState.Error -> {
-                            Toast.makeText(context, state.message, Toast.LENGTH_SHORT).show()
-                        }
-
-                        AuthState.Idle -> {
-                            if (currentScreen != "splash" && currentScreen != "login") {
-                                currentScreen = "login"
+                                currentScreen = "dashboard"
                             }
+
+                            is AuthState.Error -> {
+                                Toast.makeText(localizedContext, state.message, Toast.LENGTH_SHORT).show()
+                            }
+
+                            AuthState.Idle -> {
+                                if (currentScreen != "splash" && currentScreen != "login") {
+                                    currentScreen = "login"
+                                }
+                            }
+
+                            else -> {}
                         }
-
-                        else -> {}
                     }
-                }
 
-                Box(modifier = Modifier.fillMaxSize()) {
-                    val localizedContext = remember(selectedLanguageCode) {
-                        LocaleHelper.wrapContext(context, selectedLanguageCode)
-                    }
-                    
-                    CompositionLocalProvider(
-                        LocalContext provides localizedContext,
-                        LocalConfiguration provides localizedContext.resources.configuration,
-                        LocalActivityResultRegistryOwner provides this@MainActivity
-                    ) {
+                    Box(modifier = Modifier.fillMaxSize()) {
                         if (needsUpdate) {
                             ForceUpdateScreen(updateUrl = updateUrl)
                         } else {
@@ -675,7 +680,7 @@ class MainActivity : AppCompatActivity() {
 
                                 "language_selection" -> LanguageSelectionScreen(
                                     onLanguageSelected = {
-                                        selectedLanguageCode = LocaleHelper.getSelectedLanguage(context)
+                                        selectedLanguageCode = LocaleHelper.getSelectedLanguage(localizedContext)
                                         if (languageSelectionSource == "profile") {
                                             currentScreen = "profile"
                                         } else if (authState is AuthState.Success) {
