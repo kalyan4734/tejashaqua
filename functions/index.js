@@ -157,20 +157,24 @@ exports.getListingsByLocation = onCall({
         if (category && category !== "All") {
             listings = listings.filter(l => {
                 const lCat = (l.category || "").toUpperCase();
-                const lServiceType = l.serviceType || "";
-                const lBusSubCat = l.businessSubCategory || "";
+                const lServiceType = (l.serviceType || "").trim();
+                const lBusSubCat = (l.businessSubCategory || "").trim();
 
                 switch (category.toUpperCase()) {
                     case "VEHICLES":
                         return lCat === "VEHICLES" || (lCat === "SERVICES" &&
-                            (lServiceType === "Live Fish Vehicles" || lServiceType === "Bore Well" || lServiceType === "Earth Movers"));
+                            (lServiceType === "Live Fish Vehicles" || lServiceType === "లైవ్ ఫిష్ వెహికల్స్" ||
+                             lServiceType === "Bore Well" || lServiceType === "బోర్ వెల్" ||
+                             lServiceType === "Earth Movers" || lServiceType === "ఎర్త్ మూవర్స్"));
                     case "FEED":
-                        return lCat === "FEED" || (lCat === "BUSINESS" && lBusSubCat === "Feed");
+                        return lCat === "FEED" || (lCat === "BUSINESS" && (lBusSubCat === "Feed" || lBusSubCat === "మేత"));
                     case "BUSINESS":
-                        return lCat === "BUSINESS" && lBusSubCat !== "Feed";
+                        return lCat === "BUSINESS" && (lBusSubCat !== "Feed" && lBusSubCat !== "మేత");
                     case "SERVICES":
                         return lCat === "SERVICES" &&
-                            !(lServiceType === "Live Fish Vehicles" || lServiceType === "Bore Well" || lServiceType === "Earth Movers");
+                            !(lServiceType === "Live Fish Vehicles" || lServiceType === "లైవ్ ఫిష్ వెహికల్స్" ||
+                              lServiceType === "Bore Well" || lServiceType === "బోర్ వెల్" ||
+                              lServiceType === "Earth Movers" || lServiceType === "ఎర్త్ మూవర్స్");
                     default:
                         return lCat === category.toUpperCase();
                 }
@@ -182,28 +186,32 @@ exports.getListingsByLocation = onCall({
         if (lat && lng) {
             // Distance-based sorting
             listings.forEach(listing => {
-                const lLat = listing.lat || 0;
-                const lLng = listing.lng || 0;
+                const lLat = listing.lat;
+                const lLng = listing.lng;
                 const lLoc = (listing.location || "").toLowerCase();
 
-                if (lLat && lLng) {
-                    // Approximate distance for sorting purposes
+                // Check if coordinates exist and are not exactly 0 (invalid for India)
+                const hasCoords = typeof lLat === 'number' && typeof lLng === 'number' && lLat !== 0;
+
+                if (hasCoords) {
                     const dLat = lLat - lat;
                     const dLng = lLng - lng;
                     listing.distance = Math.sqrt(dLat * dLat + dLng * dLng);
-
-                    // Priority boost for exact village/location string match
-                    if (normalizedUserLocation && lLoc.includes(normalizedUserLocation)) {
-                        listing.distance = listing.distance * 0.5; // Make it seem "closer"
-                    }
                 } else {
-                    listing.distance = 999999;
+                    // Fallback distance for posts without coordinates (approx 500km)
+                    listing.distance = 5.0;
+                }
+
+                // PRIORITY: If the village/city name matches exactly, move it to the front
+                // This handles very close villages like Chataparru/Sriparru where distance is tiny
+                if (normalizedUserLocation && lLoc.includes(normalizedUserLocation)) {
+                    listing.distance = listing.distance * 0.001; // Drastic reduction to top
                 }
             });
 
             // Sort by distance first, then by timestamp (latest first) for items at same distance
             listings.sort((a, b) => {
-                if (Math.abs(a.distance - b.distance) < 0.001) { // Within ~100m
+                if (Math.abs(a.distance - b.distance) < 0.0001) {
                     return (b.timestamp || 0) - (a.timestamp || 0);
                 }
                 return a.distance - b.distance;

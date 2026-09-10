@@ -188,14 +188,14 @@ class LocationSearchViewModel(application: Application) : AndroidViewModel(appli
                 if (addresses != null && addresses.isNotEmpty()) {
                     val address = addresses[0]
                     
-                    // Localize locality
-                    val locality = address.locality ?: address.subAdminArea ?: wrappedContext.getString(R.string.unknown_location)
+                    // Localize locality - Prioritize specific village/area over larger city
+                    val locality = address.subLocality ?: address.locality ?: address.subAdminArea ?: wrappedContext.getString(R.string.unknown_location)
                     _currentLocationName.value = locality
                     
                     // Construct a localized sub-location if possible
-                    val subLoc = address.subLocality ?: address.thoroughfare ?: ""
+                    val district = address.locality ?: ""
                     val adminArea = address.adminArea ?: ""
-                    val displaySub = if (subLoc.isNotEmpty()) "$subLoc, $adminArea" else address.getAddressLine(0) ?: ""
+                    val displaySub = if (address.subLocality != null && district.isNotEmpty()) "$district, $adminArea" else if (adminArea.isNotEmpty()) adminArea else address.getAddressLine(0) ?: ""
                     
                     _currentSubLocation.value = displaySub
                     _currentLatLng.value = LatLng(latitude, longitude)

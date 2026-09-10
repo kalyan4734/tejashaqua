@@ -149,6 +149,8 @@
     <string name="confirm_location">Confirm Location</string>
     <string name="search_tab">Search</string>
     <string name="map_tab">Map</string>
+    <string name="use_current_location">Use Current Location</string>
+    <string name="current_location">Current Location</string>
     <string name="selected_location">Selected Location</string>
     <string name="unknown_location">Unknown Location</string>
     <string name="selected_point">Selected Point</string>

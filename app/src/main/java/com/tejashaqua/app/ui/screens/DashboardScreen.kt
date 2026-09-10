@@ -319,37 +319,35 @@ fun DashboardScreen(
                 val matchesCategory = when (selectedCategoryFilter) {
                     "All" -> true
                     "VEHICLES" -> {
-                        val serviceType = data["serviceType"]?.toString() ?: ""
-                        val fishVehiclesEn = "Live Fish Vehicles"
-                        val fishVehiclesTe = context.getString(R.string.service_live_fish_vehicles)
-                        val boreWellEn = "Bore Well"
-                        val boreWellTe = context.getString(R.string.service_bore_well)
-                        val earthMoversEn = "Earth Movers"
-                        val earthMoversTe = context.getString(R.string.service_earth_movers)
-
-                        category.uppercase() == "VEHICLES" || (category.uppercase() == "SERVICES" && (serviceType == fishVehiclesEn || serviceType == fishVehiclesTe || serviceType == boreWellEn || serviceType == boreWellTe || serviceType == earthMoversEn || serviceType == earthMoversTe))
+                        val serviceType = (data["serviceType"]?.toString() ?: "").lowercase().trim()
+                        category.uppercase() == "VEHICLES" || (category.uppercase() == "SERVICES" && 
+                            (serviceType.contains("live fish vehicle") || 
+                             serviceType.contains("లైవ్ ఫిష్ వెహికల్") ||
+                             serviceType.contains("bore well") ||
+                             serviceType.contains("బోర్ వెల్") ||
+                             serviceType.contains("earth mover") ||
+                             serviceType.contains("ఎర్త్ మూవర్")))
                     }
 
                     "FEED" -> {
-                        val businessSubCategory = data["businessSubCategory"]?.toString() ?: ""
-                        category.uppercase() == "FEED" || (category.uppercase() == "BUSINESS" && businessSubCategory == "Feed")
+                        val subCat = (data["businessSubCategory"]?.toString() ?: "").lowercase().trim()
+                        category.uppercase() == "FEED" || (category.uppercase() == "BUSINESS" && (subCat == "feed" || subCat == "మేత"))
                     }
 
                     "BUSINESS" -> {
-                        val businessSubCategory = data["businessSubCategory"]?.toString() ?: ""
-                        category.uppercase() == "BUSINESS" && businessSubCategory != "Feed"
+                        val subCat = (data["businessSubCategory"]?.toString() ?: "").lowercase().trim()
+                        category.uppercase() == "BUSINESS" && (subCat != "feed" && subCat != "మేత")
                     }
 
                     "SERVICES" -> {
-                        val serviceType = data["serviceType"]?.toString() ?: ""
-                        val fishVehiclesEn = "Live Fish Vehicles"
-                        val fishVehiclesTe = context.getString(R.string.service_live_fish_vehicles)
-                        val boreWellEn = "Bore Well"
-                        val boreWellTe = context.getString(R.string.service_bore_well)
-                        val earthMoversEn = "Earth Movers"
-                        val earthMoversTe = context.getString(R.string.service_earth_movers)
-
-                        category.uppercase() == "SERVICES" && (serviceType != fishVehiclesEn && serviceType != fishVehiclesTe && serviceType != boreWellEn && serviceType != boreWellTe && serviceType != earthMoversEn && serviceType != earthMoversTe)
+                        val serviceType = (data["serviceType"]?.toString() ?: "").lowercase().trim()
+                        category.uppercase() == "SERVICES" && 
+                            !(serviceType.contains("live fish vehicle") || 
+                              serviceType.contains("లైవ్ ఫిష్ వెహికల్") ||
+                              serviceType.contains("bore well") ||
+                              serviceType.contains("బోర్ వెల్") ||
+                              serviceType.contains("earth mover") ||
+                              serviceType.contains("ఎర్త్ మూవర్"))
                     }
 
                     else -> category.uppercase() == selectedCategoryFilter

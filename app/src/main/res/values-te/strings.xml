@@ -149,6 +149,8 @@
     <string name="confirm_location">స్థానాన్ని ధృవీకరించండి</string>
     <string name="search_tab">శోధన</string>
     <string name="map_tab">మ్యాప్</string>
+    <string name="use_current_location">ప్రస్తుత స్థానాన్ని ఉపయోగించండి</string>
+    <string name="current_location">ప్రస్తుత స్థానం</string>
     <string name="selected_location">ఎంచుకున్న స్థానం</string>
     <string name="unknown_location">తెలియని స్థానం</string>
     <string name="selected_point">ఎంచుకున్న పాయింట్</string>

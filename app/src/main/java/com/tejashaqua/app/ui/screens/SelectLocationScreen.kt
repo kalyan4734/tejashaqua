@@ -10,6 +10,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -30,6 +31,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.intl.LocaleList
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.style.TextOverflow
 import com.tejashaqua.app.R
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.android.gms.maps.model.CameraPosition
@@ -134,8 +136,11 @@ fun SelectLocationScreen(
                 }
                 if (addresses != null && addresses.isNotEmpty()) {
                     val address = addresses[0]
-                    val loc = address.locality ?: address.subAdminArea ?: context.getString(R.string.unknown_location)
-                    val sub = address.getAddressLine(0) ?: ""
+                    // Prioritize subLocality (Village/Area) over locality (City)
+                    val loc = address.subLocality ?: address.locality ?: address.subAdminArea ?: context.getString(R.string.unknown_location)
+                    val district = address.locality ?: ""
+                    val adminArea = address.adminArea ?: ""
+                    val sub = if (address.subLocality != null && district.isNotEmpty()) "$district, $adminArea" else if (adminArea.isNotEmpty()) adminArea else address.getAddressLine(0) ?: ""
                     selectedLocation = loc to sub
                 }
             } catch (e: Exception) {
@@ -357,6 +362,73 @@ fun SelectLocationScreen(
                         }
                     }
 
+                    // --- CURRENT LOCATION OPTION ---
+                    if (isGpsEnabled) {
+                        item {
+                            var isTriggeredByClick by remember { mutableStateOf(false) }
+
+                            LaunchedEffect(deviceLatLng, isFetchingLocation) {
+                                if (isTriggeredByClick && deviceLatLng != null && !isFetchingLocation) {
+                                    selectedLatLng = deviceLatLng
+                                    selectedLocation = currentLocationName to currentSubLocation
+                                    cameraPositionState.position = CameraPosition.fromLatLngZoom(deviceLatLng!!, 15f)
+                                    isTriggeredByClick = false
+                                }
+                            }
+
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        keyboardController?.hide()
+                                        isTriggeredByClick = true
+                                        locationViewModel.fetchCurrentLocation(force = true)
+                                    }
+                                    .background(if (deviceLatLng != null && selectedLatLng == deviceLatLng) Color(0xFFF0F7FF) else Color.White)
+                                    .padding(horizontal = 16.dp, vertical = 16.dp)
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    if (isFetchingLocation && isTriggeredByClick) {
+                                        CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.dp, color = AquaBlue)
+                                    } else {
+                                        Icon(
+                                            imageVector = Icons.Default.LocationOn,
+                                            contentDescription = null,
+                                            tint = AquaBlue,
+                                            modifier = Modifier.size(22.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(16.dp))
+                                    Column {
+                                        Text(
+                                            text = stringResource(R.string.use_current_location),
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 16.sp,
+                                            color = AquaBlue
+                                        )
+                                        if (isFetchingLocation && isTriggeredByClick) {
+                                            Text(
+                                                text = stringResource(R.string.fetching_location),
+                                                fontSize = 13.sp,
+                                                color = GrayText
+                                            )
+                                        } else if (deviceLatLng != null) {
+                                            Text(
+                                                text = "$currentLocationName, $currentSubLocation",
+                                                fontSize = 13.sp,
+                                                color = GrayText,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(12.dp))
+                                HorizontalDivider(color = Color(0xFFF0F0F0))
+                            }
+                        }
+                    }
+
                     items(searchResults) { prediction ->
                         val primaryText = prediction.getPrimaryText(null).toString()
                         val secondaryText = prediction.getSecondaryText(null).toString()
@@ -452,6 +524,43 @@ fun SelectLocationScreen(
                                     contentDescription = null, 
                                     tint = GrayText.copy(alpha = 0.7f),
                                     modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    // --- SNAP TO CURRENT LOCATION BUTTON ---
+                    if (isGpsEnabled) {
+                        var isFabTriggered by remember { mutableStateOf(false) }
+                        
+                        LaunchedEffect(deviceLatLng, isFetchingLocation) {
+                            if (isFabTriggered && deviceLatLng != null && !isFetchingLocation) {
+                                cameraPositionState.position = CameraPosition.fromLatLngZoom(deviceLatLng!!, 15f)
+                                updateLocationFromLatLng(deviceLatLng!!)
+                                isFabTriggered = false
+                            }
+                        }
+
+                        FloatingActionButton(
+                            onClick = {
+                                isFabTriggered = true
+                                locationViewModel.fetchCurrentLocation(force = true)
+                            },
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(bottom = 16.dp, end = 16.dp)
+                                .size(48.dp),
+                            containerColor = Color.White,
+                            contentColor = AquaBlue,
+                            shape = CircleShape
+                        ) {
+                            if (isFetchingLocation && isFabTriggered) {
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp, color = AquaBlue)
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.LocationOn,
+                                    contentDescription = stringResource(R.string.current_location),
+                                    modifier = Modifier.size(24.dp)
                                 )
                             }
                         }

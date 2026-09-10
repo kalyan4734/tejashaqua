@@ -689,24 +689,24 @@ fun DetailedPageScreen(
                             }
                         }
                         ListingCategory.SERVICES -> {
-                            val serviceTypeStr = listingData["serviceType"]?.toString() ?: ""
-                            val boreWell = stringResource(R.string.service_bore_well)
-                            val fishVehicles = stringResource(R.string.service_live_fish_vehicles)
-                            val nets = stringResource(R.string.service_nets)
+                            val serviceTypeStr = (listingData["serviceType"]?.toString() ?: "").lowercase().trim()
+                            val isBoreWell = serviceTypeStr.contains("bore well") || serviceTypeStr.contains("బోర్ వెల్")
+                            val isFishVehicle = serviceTypeStr.contains("live fish vehicle") || serviceTypeStr.contains("లైవ్ ఫిష్ వెహికల్")
+                            val isNets = serviceTypeStr.contains("nets") || serviceTypeStr.contains("వలలు")
 
-                            DetailRowItem(stringResource(R.string.service_type_label), serviceTypeStr.ifEmpty { stringResource(R.string.not_available_short) })
+                            DetailRowItem(stringResource(R.string.service_type_label), listingData["serviceType"]?.toString() ?: stringResource(R.string.not_available_short))
                             
                             when {
-                                serviceTypeStr == "Bore Well" || serviceTypeStr == boreWell -> {
+                                isBoreWell -> {
                                     DetailRowItem(stringResource(R.string.bore_type_label), listingData["boreWellType"]?.toString() ?: stringResource(R.string.not_available_short))
                                 }
-                                serviceTypeStr == "Live Fish Vehicles" || serviceTypeStr == fishVehicles -> {
+                                isFishVehicle -> {
                                     val capacity = listingData["vehicleCapacity"]?.toString() ?: stringResource(R.string.not_available_short)
                                     val unit = listingData["vehicleCapacityUnit"]?.toString() ?: ""
                                     DetailRowItem(stringResource(R.string.vehicle_name_label), listingData["vehicleName"]?.toString() ?: stringResource(R.string.not_available_short))
                                     DetailRowItem(stringResource(R.string.capacity_label), if (unit.isNotEmpty()) "$capacity $unit" else capacity)
                                 }
-                                serviceTypeStr == "Nets" || serviceTypeStr == nets -> {
+                                isNets -> {
                                     DetailRowItem(stringResource(R.string.net_type_label), listingData["netType"]?.toString() ?: stringResource(R.string.not_available_short))
                                 }
                             }
