@@ -1,5 +1,6 @@
 const {onCall} = require("firebase-functions/v2/https");
 const {onDocumentUpdated, onDocumentCreated} = require("firebase-functions/v2/firestore");
+const {onSchedule} = require("firebase-functions/v2/scheduler");
 const {defineSecret} = require("firebase-functions/params");
 const {setGlobalOptions} = require("firebase-functions/v2");
 const logger = require("firebase-functions/logger");
@@ -505,4 +506,95 @@ exports.onUserUpdated = onDocumentUpdated("users/{userId}", async (event) => {
         return batch.commit();
     }
     return null;
+});
+
+/**
+ * Sends a notification to all users immediately.
+ */
+exports.sendAdminNotification = onCall({
+    enforceAppCheck: false
+}, async (request) => {
+    const { title, body, imageUrl } = request.data;
+
+    if (!title || !body) {
+        return { success: false, message: "Title and body are required" };
+    }
+
+    const message = {
+        topic: "all_users",
+        notification: {
+            title: title,
+            body: body,
+        },
+        android: {
+            notification: {
+                imageUrl: imageUrl || undefined,
+                channelId: "general_notifications_v2"
+            }
+        },
+        data: {
+            title: title,
+            body: body,
+            imageUrl: imageUrl || ""
+        }
+    };
+
+    try {
+        await admin.messaging().send(message);
+        logger.info("Admin notification sent successfully");
+        return { success: true };
+    } catch (error) {
+        logger.error("Error sending admin notification:", error);
+        return { success: false, error: error.message };
+    }
+});
+
+/**
+ * Scheduled task that runs every minute to send pending notifications.
+ */
+exports.sendScheduledNotifications = onSchedule("every 1 minutes", async (event) => {
+    const now = admin.firestore.Timestamp.now();
+    const snapshot = await admin.firestore().collection("scheduled_notifications")
+        .where("status", "==", "pending")
+        .where("scheduledTime", "<=", now)
+        .get();
+
+    if (snapshot.empty) {
+        return null;
+    }
+
+    logger.info(`Found ${snapshot.size} scheduled notifications to send`);
+
+    const promises = snapshot.docs.map(async (doc) => {
+        const data = doc.data();
+        const message = {
+            topic: "all_users",
+            notification: {
+                title: data.title,
+                body: data.body,
+            },
+            android: {
+                notification: {
+                    imageUrl: data.imageUrl || undefined,
+                    channelId: "general_notifications_v2"
+                }
+            },
+            data: {
+                title: data.title,
+                body: data.body,
+                imageUrl: data.imageUrl || ""
+            }
+        };
+
+        try {
+            await admin.messaging().send(message);
+            await doc.ref.update({ status: "sent", sentAt: now });
+            logger.info(`Scheduled notification ${doc.id} sent successfully`);
+        } catch (error) {
+            logger.error(`Error sending scheduled notification ${doc.id}:`, error);
+            await doc.ref.update({ status: "failed", error: error.message });
+        }
+    });
+
+    return Promise.all(promises);
 });

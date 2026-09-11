@@ -8,10 +8,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -48,6 +51,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -455,7 +459,9 @@ fun DashboardScreen(
         }.thenByDescending { it.time })
     }
 
-    Scaffold(topBar = {
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        topBar = {
         if (selectedItem == 0 || selectedItem == 1) {
             Box(
                 modifier = Modifier
@@ -661,66 +667,104 @@ fun DashboardScreen(
             containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 8.dp
         ) {
             NavigationBarItem(
-                icon = { Icon(Icons.Default.Home, stringResource(R.string.home)) },
+                icon = {
+                    Icon(
+                        painter = painterResource(id = if (selectedItem == 0) R.drawable.home_selected else R.drawable.home),
+                        contentDescription = stringResource(R.string.home),
+                        modifier = Modifier.size(24.dp)
+                    )
+                },
                 selected = selectedItem == 0,
                 onClick = {
                     keyboardController?.hide()
                     selectedItem = 0
                 },
                 colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = AquaBlue, unselectedIconColor = GrayText
+                    selectedIconColor = AquaBlue,
+                    unselectedIconColor = GrayText,
+                    indicatorColor = Color.Transparent
                 )
             )
             NavigationBarItem(
-                icon = { Icon(Icons.Default.Search, stringResource(R.string.search_tab)) },
+                icon = {
+                    Icon(
+                        painter = painterResource(id = if (selectedItem == 1) R.drawable.shopping_bag_selected else R.drawable.iv_shopping),
+                        contentDescription = stringResource(R.string.search_tab),
+                        modifier = Modifier.size(24.dp)
+                    )
+                },
                 selected = selectedItem == 1,
                 onClick = {
                     keyboardController?.hide()
                     selectedItem = 1
                 },
                 colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = AquaBlue, unselectedIconColor = GrayText
+                    selectedIconColor = AquaBlue,
+                    unselectedIconColor = GrayText,
+                    indicatorColor = Color.Transparent
                 )
             )
-            FloatingActionButton(
-                onClick = {
-                    keyboardController?.hide()
-                    onAddClick()
-                },
-                containerColor = AquaBlue,
-                contentColor = Color.White,
-                shape = CircleShape,
+            Box(
                 modifier = Modifier
-                    .size(56.dp)
-                    .offset(y = (-10).dp)
+                    .weight(1f),
+                contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    Icons.Default.Add, stringResource(R.string.add), modifier = Modifier.size(30.dp)
-                )
+                FloatingActionButton(
+                    onClick = {
+                        keyboardController?.hide()
+                        onAddClick()
+                    },
+                    containerColor = AquaBlue,
+                    contentColor = Color.White,
+                    shape = CircleShape,
+                    modifier = Modifier
+                        .size(54.dp)
+                        .offset(y = (-12).dp),
+                    elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 4.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.add_post),
+                        contentDescription = stringResource(R.string.add),
+                        modifier = Modifier.size(54.dp),
+                        tint = Color.Unspecified
+                    )
+                }
             }
             NavigationBarItem(
                 icon = {
-                BadgedBox(
-                    badge = {
-                        if (totalUnreadCount > 0) {
-                            Badge(
-                                containerColor = Color.Red, contentColor = Color.White
-                            ) {
-                                Text(text = if (totalUnreadCount > 99) "99+" else totalUnreadCount.toString())
+                    BadgedBox(
+                        badge = {
+                            if (totalUnreadCount > 0) {
+                                Badge(
+                                    containerColor = Color.Red, contentColor = Color.White
+                                ) {
+                                    Text(text = if (totalUnreadCount > 99) "99+" else totalUnreadCount.toString())
+                                }
                             }
-                        }
-                    }) {
-                    Icon(Icons.AutoMirrored.Filled.Chat, stringResource(R.string.chats))
-                }
-            }, selected = selectedItem == 2, onClick = {
-                keyboardController?.hide()
-                selectedItem = 2
-            }, colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = AquaBlue, unselectedIconColor = GrayText
-            )
+                        }) {
+                        Icon(
+                            painter = painterResource(id = if (selectedItem == 2) R.drawable.message_selected else R.drawable.iv_conversation),
+                            contentDescription = stringResource(R.string.chats),
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }, selected = selectedItem == 2, onClick = {
+                    keyboardController?.hide()
+                    selectedItem = 2
+                }, colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = AquaBlue,
+                    unselectedIconColor = GrayText,
+                    indicatorColor = Color.Transparent
+                )
             )
             NavigationBarItem(
-                icon = { Icon(Icons.Default.Person, stringResource(R.string.profile)) },
+                icon = {
+                    Icon(
+                        painter = painterResource(id = if (selectedItem == 3) R.drawable.profile_selected else R.drawable.profile),
+                        contentDescription = stringResource(R.string.profile),
+                        modifier = Modifier.size(24.dp)
+                    )
+                },
                 selected = selectedItem == 3,
                 onClick = {
                     keyboardController?.hide()
@@ -728,7 +772,9 @@ fun DashboardScreen(
                     onProfileClick()
                 },
                 colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = AquaBlue, unselectedIconColor = GrayText
+                    selectedIconColor = AquaBlue,
+                    unselectedIconColor = GrayText,
+                    indicatorColor = Color.Transparent
                 )
             )
         }

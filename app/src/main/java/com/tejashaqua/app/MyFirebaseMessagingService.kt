@@ -66,6 +66,8 @@ MyFirebaseMessagingService : FirebaseMessagingService() {
     }
 
     private fun sendNotification(title: String, messageBody: String, data: Map<String, String> = emptyMap()) {
+        val imageUrl = data["imageUrl"] ?: data["image"]
+        
         val intent = Intent(this, MainActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
             data.forEach { (key, value) ->
@@ -93,6 +95,25 @@ MyFirebaseMessagingService : FirebaseMessagingService() {
             .setSound(defaultSoundUri)
             .setContentIntent(pendingIntent)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+
+        if (!imageUrl.isNullOrBlank()) {
+            try {
+                val url = java.net.URL(imageUrl)
+                val connection = url.openConnection() as java.net.HttpURLConnection
+                connection.doInput = true
+                connection.connect()
+                val input = connection.inputStream
+                val bitmap = android.graphics.BitmapFactory.decodeStream(input)
+                notificationBuilder.setLargeIcon(bitmap)
+                notificationBuilder.setStyle(
+                    NotificationCompat.BigPictureStyle()
+                        .bigPicture(bitmap)
+                        .bigLargeIcon(null as android.graphics.Bitmap?)
+                )
+            } catch (e: Exception) {
+                android.util.Log.e("FCM", "Error loading notification image", e)
+            }
+        }
 
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 

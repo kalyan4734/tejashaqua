@@ -325,6 +325,9 @@
     <string name="signing_in">Signing you in…</string>
     <string name="please_wait">Please wait…</string>
     <string name="admin_portal">Admin Portal</string>
+    <string name="stats">Stats</string>
+    <string name="users">Users</string>
+    <string name="reports">Reports</string>
     <string name="user_label">User</string>
     <string name="delete_listing">Delete Listing</string>
     <string name="no_listings_found">No listings found</string>

@@ -324,6 +324,9 @@
     <string name="signing_in">మిమ్మల్ని లాగిన్ చేస్తోంది…</string>
     <string name="please_wait">దయచేసి వేచి ఉండండి…</string>
     <string name="admin_portal">అడ్మిన్ పోర్టల్</string>
+    <string name="stats">గణాంకాలు</string>
+    <string name="users">వినియోగదారులు</string>
+    <string name="reports">నివేదికలు</string>
     <string name="user_label">వినియోగదారు</string>
     <string name="delete_listing">జాబితాను తొలగించండి</string>
     <string name="no_listings_found">జాబితాలేవీ కనుగొనబడలేదు</string>

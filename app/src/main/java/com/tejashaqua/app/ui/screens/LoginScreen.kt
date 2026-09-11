@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tejashaqua.app.ui.theme.AquaBlue
 import com.tejashaqua.app.ui.theme.GrayText
+import com.tejashaqua.app.ui.theme.Inter
 import com.tejashaqua.app.R
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -252,7 +253,7 @@ fun LoginScreen(
 
         Text(
             text = annotatedText,
-            style = TextStyle(fontSize = 12.sp),
+            style = TextStyle(fontSize = 12.sp, fontFamily = Inter),
             modifier = Modifier.padding(top = 4.dp)
         )
         

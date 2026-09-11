@@ -50,6 +50,7 @@ import com.google.firebase.firestore.Query
 import com.tejashaqua.app.R
 import com.tejashaqua.app.ui.theme.AquaBlue
 import com.tejashaqua.app.ui.theme.GrayText
+import com.tejashaqua.app.ui.theme.Inter
 import com.tejashaqua.app.utils.CurrencyUtils
 import com.tejashaqua.app.ui.components.LoadingOverlay
 
@@ -692,7 +693,8 @@ fun ChatBubble(message: ChatMessage, senderName: String, listingExists: Boolean 
                                 style = SpanStyle(
                                     color = if (message.isFromMe) Color(0xFFE1F5FE) else Color(0xFF1976D2),
                                     textDecoration = TextDecoration.Underline,
-                                    fontWeight = FontWeight.ExtraBold
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontFamily = Inter
                                 ),
                                 start = match.range.first,
                                 end = match.range.last + 1
@@ -707,7 +709,8 @@ fun ChatBubble(message: ChatMessage, senderName: String, listingExists: Boolean 
                         style = TextStyle(
                             color = contentColor,
                             fontSize = 12.sp,
-                            lineHeight = 20.sp
+                            lineHeight = 20.sp,
+                            fontFamily = Inter
                         ),
                         onClick = { offset ->
                             annotatedString.getStringAnnotations(tag = "phone", start = offset, end = offset)
@@ -726,7 +729,8 @@ fun ChatBubble(message: ChatMessage, senderName: String, listingExists: Boolean 
                         style = TextStyle(
                             color = contentColor,
                             fontSize = 12.sp,
-                            lineHeight = 20.sp
+                            lineHeight = 20.sp,
+                            fontFamily = Inter
                         )
                     )
                 }

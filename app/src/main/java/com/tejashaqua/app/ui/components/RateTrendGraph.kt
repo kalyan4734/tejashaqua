@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tejashaqua.app.ui.theme.AquaBlue
 import com.tejashaqua.app.ui.theme.GrayText
+import com.tejashaqua.app.ui.theme.Inter
 
 @Composable
 fun RateTrendGraph(
@@ -31,7 +32,8 @@ fun RateTrendGraph(
     val priceTextStyle = TextStyle(
         color = AquaBlue,
         fontSize = 12.sp,
-        fontWeight = FontWeight.Bold
+        fontWeight = FontWeight.Bold,
+        fontFamily = Inter
     )
 
     val maxValue = data.maxOrNull() ?: 0.0
