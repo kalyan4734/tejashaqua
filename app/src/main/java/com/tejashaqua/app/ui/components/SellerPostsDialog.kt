@@ -103,7 +103,15 @@ fun SellerPostsDialog(
                                     if (rateVal == naText) naText else {
                                         val formattedRate = CurrencyUtils.formatPrice(rateVal)
                                         val type = data["rateType"]?.toString() ?: "Paise"
-                                        if (type.contains("Paise", ignoreCase = true)) "$formattedRate Paise/Seed" else "₹$formattedRate/Seed"
+                                        val isPaise = type.contains("Paise", ignoreCase = true) || 
+                                                     type.contains("పైసలు") || 
+                                                     type.contains("paisa", ignoreCase = true)
+                                        
+                                        if (isPaise) {
+                                            stringResource(R.string.paise_per_seed_label, formattedRate, stringResource(R.string.unit_paise), stringResource(R.string.seed_suffix))
+                                        } else {
+                                            stringResource(R.string.rupees_per_seed_label, formattedRate, stringResource(R.string.seed_suffix))
+                                        }
                                     }
                                 }
                                 "FEED" -> "₹${CurrencyUtils.formatPrice(data["ratePerTon"] ?: naText)}/$tonText"

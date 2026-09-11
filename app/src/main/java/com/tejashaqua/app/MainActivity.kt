@@ -233,9 +233,15 @@ class MainActivity : AppCompatActivity() {
                         val sellerId = data["userId"]?.toString() ?: data["sellerId"]?.toString() ?: ""
                         
                         if (sellerId.isEmpty()) {
+                            if (source == "detailed_page") {
+                                selectedListingData?.let { current ->
+                                    listingBackStack = listingBackStack + current
+                                }
+                            } else {
+                                detailedPageSource = source
+                                listingBackStack = emptyList()
+                            }
                             selectedListingData = data
-                            detailedPageSource = source
-                            listingBackStack = emptyList()
                             currentScreen = "detailed_page"
                         } else {
                             isNavigatingToDetailedPage = true
@@ -251,21 +257,28 @@ class MainActivity : AppCompatActivity() {
                                     updatedData["sellerJoinedAt"] = joined
                                     if (lid.isNotEmpty()) updatedData["id"] = lid
                                     
-                                    selectedListingData = updatedData
-                                    detailedPageSource = source
-                                    // Only reset backstack if not coming from detailed page itself
-                                    if (source != "detailed_page") {
+                                    if (source == "detailed_page") {
+                                        selectedListingData?.let { current ->
+                                            listingBackStack = listingBackStack + current
+                                        }
+                                    } else {
+                                        detailedPageSource = source
                                         listingBackStack = emptyList()
                                     }
+                                    selectedListingData = updatedData
                                     currentScreen = "detailed_page"
                                 }
                                 .addOnFailureListener {
                                     isNavigatingToDetailedPage = false
-                                    selectedListingData = data
-                                    detailedPageSource = source
-                                    if (source != "detailed_page") {
+                                    if (source == "detailed_page") {
+                                        selectedListingData?.let { current ->
+                                            listingBackStack = listingBackStack + current
+                                        }
+                                    } else {
+                                        detailedPageSource = source
                                         listingBackStack = emptyList()
                                     }
+                                    selectedListingData = data
                                     currentScreen = "detailed_page"
                                 }
                         }
@@ -404,9 +417,36 @@ class MainActivity : AppCompatActivity() {
                             intentFlow.value = null
                             currentScreen = "aqua_rates"
                         } else if (type == "listing") {
+                            val listingId = intentToProcess.getStringExtra("listingId")
                             intentFlow.value = null
-                            currentScreen = "dashboard"
-                            dashboardTab = 0
+                            if (listingId != null) {
+                                isNavigatingToDetailedPage = true
+                                FirebaseFirestore.getInstance().collection("listings").document(listingId).get()
+                                    .addOnSuccessListener { doc ->
+                                        if (doc.exists()) {
+                                            val data = doc.data ?: run {
+                                                isNavigatingToDetailedPage = false
+                                                return@addOnSuccessListener
+                                            }
+                                            val updatedData = data.toMutableMap()
+                                            updatedData["id"] = doc.id
+                                            // navigateToDetailedPage handles its own loading states
+                                            navigateToDetailedPage(updatedData, "dashboard")
+                                        } else {
+                                            isNavigatingToDetailedPage = false
+                                            currentScreen = "dashboard"
+                                            dashboardTab = 0
+                                        }
+                                    }
+                                    .addOnFailureListener {
+                                        isNavigatingToDetailedPage = false
+                                        currentScreen = "dashboard"
+                                        dashboardTab = 0
+                                    }
+                            } else {
+                                currentScreen = "dashboard"
+                                dashboardTab = 0
+                            }
                         }
                     }
 
@@ -817,9 +857,6 @@ class MainActivity : AppCompatActivity() {
                                         currentScreen = "chat"
                                     },
                                     onItemClick = { newData ->
-                                        selectedListingData?.let { current ->
-                                            listingBackStack = listingBackStack + current
-                                        }
                                         navigateToDetailedPage(newData, "detailed_page")
                                     }
                                 )

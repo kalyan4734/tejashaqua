@@ -136,7 +136,8 @@ fun DashboardScreen(
     onNameSkip: () -> Unit,
     initialTab: Int = 0,
     onTabChange: (Int) -> Unit = {},
-    locationViewModel: LocationSearchViewModel = viewModel()
+    locationViewModel: LocationSearchViewModel = viewModel(),
+    marketplaceViewModel: com.tejashaqua.app.ui.viewmodel.MarketplaceViewModel = viewModel()
 ) {
     var selectedItem by remember { mutableIntStateOf(initialTab) }
 
@@ -149,8 +150,10 @@ fun DashboardScreen(
     LaunchedEffect(selectedItem) {
         onTabChange(selectedItem)
     }
-    var productSearchText by remember { mutableStateOf("") }
-    var selectedCategoryFilter by remember { mutableStateOf("All") }
+
+    val productSearchText by marketplaceViewModel.searchText.collectAsState()
+    val selectedCategoryFilter by marketplaceViewModel.selectedCategory.collectAsState()
+
     val context = LocalContext.current
     val currentLang = LocaleHelper.getSelectedLanguage(context) ?: "en"
 
@@ -190,70 +193,28 @@ fun DashboardScreen(
     var showNotificationsSheet by remember { mutableStateOf(false) }
     var tempName by remember { mutableStateOf("") }
 
-    // Marketplace State
+    // Marketplace State from ViewModel
     val db = remember { FirebaseFirestore.getInstance() }
-    var listings by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
+    val listings by marketplaceViewModel.listings.collectAsState()
+    val isLoadingListings by marketplaceViewModel.isLoading.collectAsState()
+    val isPaginating by marketplaceViewModel.isPaginating.collectAsState()
+    val isLastPage by marketplaceViewModel.isLastPage.collectAsState()
+
     var favoriteIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     var lastCheckedNotifications by remember { mutableLongStateOf(0L) }
     var unreadNotificationCount by remember { mutableIntStateOf(0) }
     var blockedUsers by remember { mutableStateOf<Set<String>>(emptySet()) }
-    var isLoadingListings by remember { mutableStateOf(true) }
-    var isLastPage by remember { mutableStateOf(false) }
-    var isPaginating by remember { mutableStateOf(false) }
-    var currentPage by remember { mutableIntStateOf(0) }
-    val functions = remember { FirebaseFunctions.getInstance("asia-south1") }
-
-    fun loadListings(isFirstPage: Boolean = false) {
-        if (isPaginating || (isLastPage && !isFirstPage)) return
-
-        val currentPos = userLatLng
-
-        if (isFirstPage) {
-            isLastPage = false
-            currentPage = 0
-        }
-
-        isPaginating = true
-
-        // Sorting via Cloud Functions (Distance if location exists, else Latest First)
-        val data = hashMapOf(
-            "lat" to currentPos?.latitude,
-            "lng" to currentPos?.longitude,
-            "locationName" to fetchedName,
-            "category" to selectedCategoryFilter,
-            "page" to if (isFirstPage) 0 else currentPage,
-            "pageSize" to 10
-        )
-
-        functions.getHttpsCallable("getListingsByLocation").call(data)
-            .addOnSuccessListener { result ->
-                val response = result.data as? Map<*, *>
-                val newItems =
-                    (response?.get("listings") as? List<*>)?.mapNotNull { it as? Map<String, Any> }
-                        ?: emptyList()
-
-                if (isFirstPage) {
-                    listings = newItems
-                    currentPage = 1
-                } else {
-                    listings = (listings + newItems).distinctBy { it["id"] }
-                    currentPage++
-                }
-
-                isLastPage = response?.get("isLastPage") as? Boolean ?: true
-                isPaginating = false
-                isLoadingListings = false
-            }.addOnFailureListener {
-                isPaginating = false
-                isLoadingListings = false
-            }
-    }
 
     // Logic to reload listings when location, category or fetching status changes
     LaunchedEffect(userLatLng, selectedCategoryFilter, isFetchingLocation) {
         if (!isFetchingLocation) {
-            isLoadingListings = true
-            loadListings(isFirstPage = true)
+            marketplaceViewModel.loadListings(
+                lat = userLatLng?.latitude,
+                lng = userLatLng?.longitude,
+                locationName = fetchedName,
+                category = selectedCategoryFilter,
+                isFirstPage = true
+            )
         }
     }
 
@@ -782,7 +743,7 @@ fun DashboardScreen(
                     item {
                         SearchHeader(
                             productSearchText = productSearchText,
-                            onProductSearchChange = { productSearchText = it })
+                            onProductSearchChange = { marketplaceViewModel.setSearchText(it) })
                     }
 
                     if (selectedItem == 0 && productSearchText.isBlank()) {
@@ -801,7 +762,7 @@ fun DashboardScreen(
                     item {
                         CategoryFilterRow(
                             selected = selectedCategoryFilter,
-                            onSelect = { selectedCategoryFilter = it })
+                            onSelect = { marketplaceViewModel.setSelectedCategory(it) })
                     }
 
                     // Marketplace Section flattened
@@ -880,7 +841,13 @@ fun DashboardScreen(
                             // Load more when reaching near the end
                             if (index >= chunkedListings.size - 2 && !isLastPage && !isPaginating) {
                                 SideEffect {
-                                    loadListings(isFirstPage = false)
+                                    marketplaceViewModel.loadListings(
+                                        lat = userLatLng?.latitude,
+                                        lng = userLatLng?.longitude,
+                                        locationName = fetchedName,
+                                        category = selectedCategoryFilter,
+                                        isFirstPage = false
+                                    )
                                 }
                             }
 
@@ -920,10 +887,15 @@ fun DashboardScreen(
                                                 val formattedRate =
                                                     CurrencyUtils.formatPrice(rateVal)
                                                 val type = data["rateType"]?.toString() ?: "Paise"
-                                                if (type.contains(
-                                                        "Paise", ignoreCase = true
-                                                    )
-                                                ) "$formattedRate Paise/Seed" else "₹$formattedRate/Seed"
+                                                val isPaise = type.contains("Paise", ignoreCase = true) || 
+                                                             type.contains("పైసలు") || 
+                                                             type.contains("paisa", ignoreCase = true)
+                                                
+                                                if (isPaise) {
+                                                    stringResource(R.string.paise_per_seed_label, formattedRate, stringResource(R.string.unit_paise), stringResource(R.string.seed_suffix))
+                                                } else {
+                                                    stringResource(R.string.rupees_per_seed_label, formattedRate, stringResource(R.string.seed_suffix))
+                                                }
                                             }
                                         }
 

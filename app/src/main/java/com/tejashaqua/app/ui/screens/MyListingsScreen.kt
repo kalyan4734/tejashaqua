@@ -55,7 +55,7 @@ fun MyListingsScreen(
     val auth = FirebaseAuth.getInstance()
     val db = FirebaseFirestore.getInstance()
     val currentUserId = auth.currentUser?.uid
-    
+
     var listings by remember { mutableStateOf<List<UserListing>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -127,7 +127,15 @@ fun MyListingsScreen(
                                     if (rateVal == naText) naText else {
                                         val formattedRate = CurrencyUtils.formatPrice(rateVal)
                                         val type = doc.getString("rateType") ?: "Paise"
-                                        if (type.contains("Paise", ignoreCase = true)) "$formattedRate Paise/Seed" else "₹$formattedRate/Seed"
+                                        val isPaise = type.contains("Paise", ignoreCase = true) || 
+                                                     type.contains("పైసలు") || 
+                                                     type.contains("paisa", ignoreCase = true)
+                                        
+                                        if (isPaise) {
+                                            context.getString(R.string.paise_per_seed_label, formattedRate, context.getString(R.string.unit_paise), context.getString(R.string.seed_suffix))
+                                        } else {
+                                            context.getString(R.string.rupees_per_seed_label, formattedRate, context.getString(R.string.seed_suffix))
+                                        }
                                     }
                                 }
                                 "FEED" -> "₹${CurrencyUtils.formatPrice(doc.get("ratePerTon")?.toString() ?: naText)}/$tonText"

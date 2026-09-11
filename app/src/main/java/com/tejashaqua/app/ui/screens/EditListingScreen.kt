@@ -916,7 +916,7 @@ private fun buildListingMap(
             data["sizeValue"] = sizeValue
             data["fishAge"] = fishAge
             data["quantity"] = quantity
-            data["unitType"] = unitType
+            data["unitType"] = "" // Clear unitType for Fish category as per requirement
         }
         ListingCategory.PRAWNS -> {
             data["prawnType"] = prawnType
@@ -1150,11 +1150,25 @@ fun PrawnFields(
         ListingTextField(label = stringResource(R.string.hatchery_name_label), value = hatcheryName, onValueChange = onHatcheryNameChange, isError = errors["hatcheryName"] == true, keyboardOptions = keyboardOptions, accentColor = accentColor)
 
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            val paiseKey = "Paise"
+            val rupeesKey = "Rupees"
+            val paiseLabel = stringResource(R.string.unit_paise)
+            val rupeesLabel = stringResource(R.string.unit_rupees)
+
             Box(modifier = Modifier.weight(1f)) {
                 ListingTextField(label = stringResource(R.string.rate_label), value = rateValue, onValueChange = onRateValueChange, isError = errors["rateValue"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number), accentColor = accentColor)
             }
             Box(modifier = Modifier.weight(1f)) {
-                ListingDropdown(label = stringResource(R.string.unit_label), value = rateType, options = listOf(stringResource(R.string.unit_paise), stringResource(R.string.unit_rupees)), onSelectionChange = onRateTypeChange, accentColor = accentColor)
+                ListingDropdown(
+                    label = stringResource(R.string.unit_label), 
+                    value = if (rateType == paiseKey) paiseLabel else if (rateType == rupeesKey) rupeesLabel else rateType, 
+                    options = listOf(paiseLabel, rupeesLabel), 
+                    onSelectionChange = {
+                        val selectedKey = if (it == paiseLabel) paiseKey else rupeesKey
+                        onRateTypeChange(selectedKey)
+                    }, 
+                    accentColor = accentColor
+                )
             }
         }
 
@@ -2100,7 +2114,19 @@ private fun generateDefaultDescription(
             if (title.isNotEmpty() && title != prawnType) parts.add(title)
             if (hatcheryName.isNotEmpty()) parts.add(context.getString(R.string.desc_hatchery_prefix, hatcheryName))
             if (quantity.isNotEmpty()) parts.add(context.getString(R.string.desc_quantity_prefix, "$quantity $unitType"))
-            if (rateValue.isNotEmpty()) parts.add(context.getString(R.string.desc_rate_prefix, "$rateValue per $rateType"))
+            if (rateValue.isNotEmpty()) {
+                val formattedRate = CurrencyUtils.formatPrice(rateValue)
+                val isPaise = rateType.contains("Paise", ignoreCase = true) || 
+                             rateType.contains("పైసలు") || 
+                             rateType.contains("paisa", ignoreCase = true)
+                
+                val localizedRate = if (isPaise) {
+                    context.getString(R.string.paise_per_seed_label, formattedRate, context.getString(R.string.unit_paise), context.getString(R.string.seed_suffix))
+                } else {
+                    context.getString(R.string.rupees_per_seed_label, formattedRate, context.getString(R.string.seed_suffix))
+                }
+                parts.add(localizedRate)
+            }
         }
         ListingCategory.EQUIPMENTS -> {
             if (equipmentType.isNotEmpty()) parts.add(equipmentType)

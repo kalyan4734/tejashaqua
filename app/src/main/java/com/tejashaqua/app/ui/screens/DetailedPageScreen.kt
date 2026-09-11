@@ -121,7 +121,15 @@ fun DetailedPageScreen(
                 if (rateVal == naText) naText else {
                     val formattedRate = CurrencyUtils.formatPrice(rateVal)
                     val type = listingData["rateType"]?.toString() ?: "Paise"
-                    if (type.contains("Paise", ignoreCase = true)) "$formattedRate ${context.getString(R.string.unit_paise)}/Seed" else "₹$formattedRate/Seed"
+                    val isPaise = type.contains("Paise", ignoreCase = true) || 
+                                 type.contains("పైసలు") || 
+                                 type.contains("paisa", ignoreCase = true)
+                    
+                    if (isPaise) {
+                        context.getString(R.string.paise_per_seed_label, formattedRate, context.getString(R.string.unit_paise), context.getString(R.string.seed_suffix))
+                    } else {
+                        context.getString(R.string.rupees_per_seed_label, formattedRate, context.getString(R.string.seed_suffix))
+                    }
                 }
             }
             "FEED" -> "₹${CurrencyUtils.formatPrice(listingData["ratePerTon"] ?: naText)}/$tonText"
@@ -650,7 +658,10 @@ fun DetailedPageScreen(
                             DetailRowItem(stringResource(R.string.fish_type_label), listingData["fishType"]?.toString() ?: stringResource(R.string.not_available_short))
                             DetailRowItem(stringResource(R.string.size_label), "${listingData["sizeValue"]?.toString() ?: ""} ${listingData["sizeType"]?.toString() ?: ""}")
                             DetailRowItem(stringResource(R.string.fish_age_label), stringResource(R.string.months_suffix, listingData["fishAge"]?.toString() ?: ""))
-                            DetailRowItem(stringResource(R.string.quantity_label), "${CurrencyUtils.formatPrice(listingData["quantity"])} ${listingData["unitType"]?.toString() ?: ""}")
+                            val quantityVal = CurrencyUtils.formatPrice(listingData["quantity"])
+                            val unitVal = listingData["unitType"]?.toString() ?: ""
+                            val displayQuantity = if (unitVal.isBlank()) quantityVal else "$quantityVal $unitVal"
+                            DetailRowItem(stringResource(R.string.quantity_label), displayQuantity)
                             DetailRowItem(stringResource(R.string.price_label), priceLabel)
                         }
                         ListingCategory.PRAWNS -> {
@@ -871,7 +882,15 @@ fun DetailedPageScreen(
                                         if (rateVal == naText) naText else {
                                             val formattedRate = CurrencyUtils.formatPrice(rateVal)
                                             val type = data["rateType"]?.toString() ?: "Paise"
-                                            if (type.contains("Paise", ignoreCase = true)) "$formattedRate Paise/Seed" else "₹$formattedRate/Seed"
+                                            val isPaise = type.contains("Paise", ignoreCase = true) || 
+                                                         type.contains("పైసలు") || 
+                                                         type.contains("paisa", ignoreCase = true)
+                                            
+                                            if (isPaise) {
+                                                stringResource(R.string.paise_per_seed_label, formattedRate, stringResource(R.string.unit_paise), stringResource(R.string.seed_suffix))
+                                            } else {
+                                                stringResource(R.string.rupees_per_seed_label, formattedRate, stringResource(R.string.seed_suffix))
+                                            }
                                         }
                                     }
                                     "FEED" -> "₹${CurrencyUtils.formatPrice(data["ratePerTon"] ?: naText)}/$tonText"

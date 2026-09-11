@@ -141,7 +141,15 @@ fun ChatScreen(
             if (rateVal == naText) naText else {
                 val type = listingDetails["rateType"]?.toString() ?: "Paise"
                 val formattedRate = CurrencyUtils.formatPrice(rateVal)
-                if (type.contains("Paise", ignoreCase = true)) "$formattedRate Paise/Seed" else "₹$formattedRate/Seed"
+                val isPaise = type.contains("Paise", ignoreCase = true) || 
+                             type.contains("పైసలు") || 
+                             type.contains("paisa", ignoreCase = true)
+                
+                if (isPaise) {
+                    stringResource(R.string.paise_per_seed_label, formattedRate, stringResource(R.string.unit_paise), stringResource(R.string.seed_suffix))
+                } else {
+                    stringResource(R.string.rupees_per_seed_label, formattedRate, stringResource(R.string.seed_suffix))
+                }
             }
         }
         categoryStr.uppercase() == "FEED" || (listingDetails["businessSubCategory"] == "Feed") -> {
