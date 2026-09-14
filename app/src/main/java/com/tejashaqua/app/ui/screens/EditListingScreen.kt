@@ -270,6 +270,11 @@ fun EditListingScreen(
                 if (feedName.isBlank()) errors["feedName"] = true
                 if (ratePerTon.isBlank()) errors["ratePerTon"] = true
             }
+            ListingCategory.MEDICINE -> {
+                if (businessType.isBlank()) errors["businessType"] = true
+                if (medicineName.isBlank()) errors["medicineName"] = true
+                if (ratePerTon.isBlank()) errors["ratePerTon"] = true
+            }
             ListingCategory.BUSINESS -> {
                 if (businessSubCategory.isBlank()) errors["businessSubCategory"] = true
                 if (businessSubCategory == "Feed") {
@@ -318,6 +323,7 @@ fun EditListingScreen(
                     ListingCategory.EQUIPMENTS -> equipmentType
                     ListingCategory.VEHICLES -> vehicleName
                     ListingCategory.FEED -> feedName
+                    ListingCategory.MEDICINE -> medicineName
                     ListingCategory.BUSINESS -> if (businessSubCategory == "Feed") feedName else if (businessSubCategory == "Medicine") medicineName else businessType
                     ListingCategory.SERVICES -> selectedServiceType
                     ListingCategory.TANKS -> tankType
@@ -381,9 +387,15 @@ fun EditListingScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        listingId?.let { listingViewModel.deleteListing(it) }
-                        showDeleteDialog = false
-                        onDeleteClick()
+                        if (listingId != null) {
+                            listingViewModel.deleteListing(listingId) {
+                                showDeleteDialog = false
+                                onDeleteClick()
+                            }
+                        } else {
+                            showDeleteDialog = false
+                            onDeleteClick()
+                        }
                     }
                 ) {
                     Text(stringResource(R.string.delete), color = Color.Red)
@@ -426,7 +438,7 @@ fun EditListingScreen(
                                 sizeValue = doc.getString("sizeValue") ?: ""
                                 fishAge = doc.getString("fishAge") ?: ""
                                 quantity = doc.getString("quantity") ?: ""
-                                unitType = doc.getString("unitType") ?: "Lakhs"
+                                unitType = doc.getString("unitType") ?: ""
                             }
                             ListingCategory.PRAWNS -> {
                                 prawnType = doc.getString("prawnType") ?: ""
@@ -434,7 +446,7 @@ fun EditListingScreen(
                                 rateType = doc.getString("rateType") ?: "Paise"
                                 rateValue = doc.getString("rateValue") ?: ""
                                 quantity = doc.getString("quantity") ?: ""
-                                unitType = doc.getString("unitType") ?: "Lakhs"
+                                unitType = doc.getString("unitType") ?: ""
                             }
                             ListingCategory.EQUIPMENTS -> {
                                 equipmentType = doc.getString("equipmentType") ?: ""
@@ -448,6 +460,11 @@ fun EditListingScreen(
                             ListingCategory.FEED -> {
                                 businessType = doc.getString("businessType") ?: ""
                                 feedName = doc.getString("feedName") ?: ""
+                                ratePerTon = doc.getString("ratePerTon") ?: ""
+                            }
+                            ListingCategory.MEDICINE -> {
+                                businessType = doc.getString("businessType") ?: ""
+                                medicineName = doc.getString("medicineName") ?: ""
                                 ratePerTon = doc.getString("ratePerTon") ?: ""
                             }
                             ListingCategory.BUSINESS -> {
@@ -510,6 +527,7 @@ fun EditListingScreen(
             ListingCategory.EQUIPMENTS -> stringResource(R.string.cat_equipments)
             ListingCategory.VEHICLES -> stringResource(R.string.cat_vehicles)
             ListingCategory.FEED -> stringResource(R.string.cat_feed)
+            ListingCategory.MEDICINE -> stringResource(R.string.cat_medicine)
             ListingCategory.BUSINESS -> stringResource(R.string.cat_business)
             ListingCategory.SERVICES -> stringResource(R.string.cat_services)
             ListingCategory.TANKS -> stringResource(R.string.cat_tanks)
@@ -524,6 +542,7 @@ fun EditListingScreen(
             ListingCategory.EQUIPMENTS -> Color(0xFF1976D2)
             ListingCategory.VEHICLES -> Color(0xFF1976D2)
             ListingCategory.FEED -> Color(0xFFE65100)
+            ListingCategory.MEDICINE -> Color(0xFFD81B60)
             ListingCategory.SERVICES -> Color(0xFFF57C00)
             ListingCategory.TANKS -> Color(0xFF388E3C)
             ListingCategory.BUSINESS -> Color(0xFFB71C1C)
@@ -683,6 +702,16 @@ fun EditListingScreen(
                             keyboardOptions = keyboardOptionsBase,
                             accentColor = categoryColor,
                             isEditMode = isEditMode
+                        )
+                        ListingCategory.MEDICINE -> FeedFields(
+                            businessType, { businessType = it },
+                            feedName = medicineName, onFeedNameChange = { medicineName = it },
+                            ratePerTon, { ratePerTon = it },
+                            errors = fieldErrors,
+                            keyboardOptions = keyboardOptionsBase,
+                            accentColor = categoryColor,
+                            isEditMode = isEditMode,
+                            isMedicine = true
                         )
                         ListingCategory.BUSINESS -> BusinessFields(
                             businessSubCategory, { businessSubCategory = it },
@@ -916,7 +945,7 @@ private fun buildListingMap(
             data["sizeValue"] = sizeValue
             data["fishAge"] = fishAge
             data["quantity"] = quantity
-            data["unitType"] = "" // Clear unitType for Fish category as per requirement
+            data["unitType"] = ""
         }
         ListingCategory.PRAWNS -> {
             data["prawnType"] = prawnType
@@ -938,6 +967,11 @@ private fun buildListingMap(
         ListingCategory.FEED -> {
             data["businessType"] = businessType
             data["feedName"] = feedName
+            data["ratePerTon"] = ratePerTon
+        }
+        ListingCategory.MEDICINE -> {
+            data["businessType"] = businessType
+            data["medicineName"] = medicineName
             data["ratePerTon"] = ratePerTon
         }
         ListingCategory.BUSINESS -> {
@@ -1492,15 +1526,51 @@ fun FeedFields(
     errors: Map<String, Boolean> = emptyMap(),
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     accentColor: Color = AquaBlue,
-    isEditMode: Boolean = false
+    isEditMode: Boolean = false,
+    isMedicine: Boolean = false
 ) {
     val context = LocalContext.current
     val currentLang = LocaleHelper.getSelectedLanguage(context) ?: "en"
 
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        ListingDropdown(label = stringResource(R.string.business_type_label), value = businessType, options = listOf(stringResource(R.string.biz_fish_feed), stringResource(R.string.biz_prawn_feed)), onSelectionChange = onBusinessTypeChange, isError = errors["businessType"] == true, enabled = !isEditMode, accentColor = accentColor)
-        ListingDropdown(label = stringResource(R.string.feed_name_label), value = feedName, options = listOf("Godrej", "CP", "Avanti"), onSelectionChange = onFeedNameChange, isError = errors["feedName"] == true, enabled = !isEditMode, accentColor = accentColor)
-        ListingTextField(label = stringResource(R.string.rate_per_ton_label), value = ratePerTon, onValueChange = onRatePerTonChange, isError = errors["ratePerTon"] == true, keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number), accentColor = accentColor)
+        ListingDropdown(
+            label = stringResource(R.string.business_type_label), 
+            value = businessType, 
+            options = if (isMedicine) listOf("General Medicine", "Probiotics", "Minerals") else listOf(stringResource(R.string.biz_fish_feed), stringResource(R.string.biz_prawn_feed)), 
+            onSelectionChange = onBusinessTypeChange, 
+            isError = errors["businessType"] == true, 
+            enabled = !isEditMode, 
+            accentColor = accentColor
+        )
+        
+        if (isMedicine) {
+            ListingTextField(
+                label = stringResource(R.string.medicine_name_label), 
+                value = feedName, 
+                onValueChange = onFeedNameChange, 
+                isError = errors["medicineName"] == true, 
+                accentColor = accentColor
+            )
+        } else {
+            ListingDropdown(
+                label = stringResource(R.string.feed_name_label), 
+                value = feedName, 
+                options = listOf("Godrej", "CP", "Avanti"), 
+                onSelectionChange = onFeedNameChange, 
+                isError = errors["feedName"] == true, 
+                enabled = !isEditMode, 
+                accentColor = accentColor
+            )
+        }
+        
+        ListingTextField(
+            label = stringResource(R.string.rate_per_ton_label), 
+            value = ratePerTon, 
+            onValueChange = onRatePerTonChange, 
+            isError = errors["ratePerTon"] == true, 
+            keyboardOptions = keyboardOptions.copy(keyboardType = KeyboardType.Number), 
+            accentColor = accentColor
+        )
     }
 }
 
@@ -2142,6 +2212,11 @@ private fun generateDefaultDescription(
         ListingCategory.FEED -> {
             if (feedName.isNotEmpty()) parts.add(feedName)
             if (title.isNotEmpty() && title != feedName) parts.add(title)
+            if (ratePerTon.isNotEmpty()) parts.add(context.getString(R.string.desc_rate_prefix, "$ratePerTon/ton"))
+        }
+        ListingCategory.MEDICINE -> {
+            if (medicineName.isNotEmpty()) parts.add(medicineName)
+            if (title.isNotEmpty() && title != medicineName) parts.add(title)
             if (ratePerTon.isNotEmpty()) parts.add(context.getString(R.string.desc_rate_prefix, "$ratePerTon/ton"))
         }
         ListingCategory.BUSINESS -> {

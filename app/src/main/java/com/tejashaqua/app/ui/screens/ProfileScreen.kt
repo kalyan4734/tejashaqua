@@ -50,6 +50,7 @@ fun ProfileScreen(
     onLogoutClick: () -> Unit,
     onChangeLanguageClick: () -> Unit,
     onRateUsClick: () -> Unit = {},
+    onShareAppClick: () -> Unit = {},
     isAdmin: Boolean = false,
     onAdminClick: () -> Unit = {},
     initialShowMobileNumber: Boolean = false,
@@ -297,6 +298,8 @@ fun ProfileScreen(
                         ProfileMenuItem(Icons.Default.Assignment, stringResource(R.string.terms_conditions), Color(0xFF9C27B0), onClick = onTermsClick)
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = Color(0xFFF0F0F0))
                         ProfileMenuItem(Icons.Default.Language, stringResource(R.string.change_language), Color(0xFFE91E63), onClick = onChangeLanguageClick)
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = Color(0xFFF0F0F0))
+                        ProfileMenuItem(Icons.Default.Share, stringResource(R.string.share_app), Color(0xFF4DB6AC), onClick = onShareAppClick)
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = Color(0xFFF0F0F0))
                         ProfileMenuItem(Icons.Default.Star, stringResource(R.string.rate_us), Color(0xFFFF9800), onClick = onRateUsClick)
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = Color(0xFFF0F0F0))

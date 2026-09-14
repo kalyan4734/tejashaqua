@@ -59,6 +59,7 @@ fun SelectLocationScreen(
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     var selectedLocation by remember { mutableStateOf<Pair<String, String>?>(null) }
     var selectedLatLng by remember { mutableStateOf<LatLng?>(null) }
+    var hasUserSelected by remember { mutableStateOf(false) }
     
     val searchResults by locationViewModel.searchResults.collectAsState()
     val deviceLatLng by locationViewModel.currentLatLng.collectAsState()
@@ -114,18 +115,39 @@ fun SelectLocationScreen(
         locationViewModel.fetchCurrentLocation()
     }
 
-    LaunchedEffect(deviceLatLng) {
-        deviceLatLng?.let { latLng ->
-            if (selectedLatLng == null) {
-                selectedLatLng = latLng
+    var isTriggeredByClick by remember { mutableStateOf(false) }
+    var isFabTriggered by remember { mutableStateOf(false) }
+
+    LaunchedEffect(deviceLatLng, isFetchingLocation) {
+        if (!isFetchingLocation && deviceLatLng != null) {
+            if (isTriggeredByClick || isFabTriggered) {
+                selectedLatLng = deviceLatLng
                 selectedLocation = currentLocationName to currentSubLocation
-                cameraPositionState.position = CameraPosition.fromLatLngZoom(latLng, 15f)
+                cameraPositionState.position = CameraPosition.fromLatLngZoom(deviceLatLng!!, 15f)
+                hasUserSelected = true
+                
+                android.widget.Toast.makeText(
+                    context, 
+                    context.getString(R.string.current_location_fetched), 
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
+                
+                isTriggeredByClick = false
+                isFabTriggered = false
+            } else if (selectedLatLng == null) {
+                // Initial auto-detection (don't set hasUserSelected yet as per requirement)
+                selectedLatLng = deviceLatLng
+                selectedLocation = currentLocationName to currentSubLocation
+                cameraPositionState.position = CameraPosition.fromLatLngZoom(deviceLatLng!!, 15f)
             }
         }
     }
 
-    fun updateLocationFromLatLng(latLng: LatLng) {
+    fun updateLocationFromLatLng(latLng: LatLng, isManual: Boolean = false) {
         selectedLatLng = latLng
+        if (isManual) {
+            hasUserSelected = true
+        }
         coroutineScope.launch {
             try {
                 val lang = LocaleHelper.getSelectedLanguage(context) ?: "en"
@@ -214,7 +236,7 @@ fun SelectLocationScreen(
                         .height(56.dp),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = AquaBlue),
-                    enabled = selectedLocation != null && selectedLatLng != null && !isFetchingPlaceDetails
+                    enabled = hasUserSelected && selectedLocation != null && selectedLatLng != null && !isFetchingPlaceDetails
                 ) {
                     if (isFetchingPlaceDetails) {
                         CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
@@ -365,16 +387,7 @@ fun SelectLocationScreen(
                     // --- CURRENT LOCATION OPTION ---
                     if (isGpsEnabled) {
                         item {
-                            var isTriggeredByClick by remember { mutableStateOf(false) }
-
-                            LaunchedEffect(deviceLatLng, isFetchingLocation) {
-                                if (isTriggeredByClick && deviceLatLng != null && !isFetchingLocation) {
-                                    selectedLatLng = deviceLatLng
-                                    selectedLocation = currentLocationName to currentSubLocation
-                                    cameraPositionState.position = CameraPosition.fromLatLngZoom(deviceLatLng!!, 15f)
-                                    isTriggeredByClick = false
-                                }
-                            }
+                            val isItemActive = isTriggeredByClick || (deviceLatLng != null && selectedLatLng == deviceLatLng)
 
                             Column(
                                 modifier = Modifier
@@ -384,7 +397,7 @@ fun SelectLocationScreen(
                                         isTriggeredByClick = true
                                         locationViewModel.fetchCurrentLocation(force = true)
                                     }
-                                    .background(if (deviceLatLng != null && selectedLatLng == deviceLatLng) Color(0xFFF0F7FF) else Color.White)
+                                    .background(if (isItemActive) AquaBlue.copy(alpha = 0.08f) else Color.White)
                                     .padding(horizontal = 16.dp, vertical = 16.dp)
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -394,7 +407,7 @@ fun SelectLocationScreen(
                                         Icon(
                                             imageVector = Icons.Default.LocationOn,
                                             contentDescription = null,
-                                            tint = AquaBlue,
+                                            tint = if (isItemActive) AquaBlue else Color(0xFF00639B),
                                             modifier = Modifier.size(22.dp)
                                         )
                                     }
@@ -404,7 +417,7 @@ fun SelectLocationScreen(
                                             text = stringResource(R.string.use_current_location),
                                             fontWeight = FontWeight.Bold,
                                             fontSize = 16.sp,
-                                            color = AquaBlue
+                                            color = if (isItemActive) AquaBlue else Color.Black
                                         )
                                         if (isFetchingLocation && isTriggeredByClick) {
                                             Text(
@@ -441,6 +454,7 @@ fun SelectLocationScreen(
                             onClick = {
                                 selectedLocation = primaryText to secondaryText
                                 keyboardController?.hide()
+                                hasUserSelected = true
                                 // Fetch LatLng for the selected place
                                 locationViewModel.getPlaceLatLng(prediction.placeId) { latLng ->
                                     selectedLatLng = latLng
@@ -469,7 +483,7 @@ fun SelectLocationScreen(
                         cameraPositionState = cameraPositionState,
                         properties = MapProperties(isMyLocationEnabled = hasLocationPermission),
                         onMapClick = { latLng ->
-                            updateLocationFromLatLng(latLng)
+                            updateLocationFromLatLng(latLng, isManual = true)
                         }
                     ) {
                         selectedLatLng?.let {
@@ -531,16 +545,6 @@ fun SelectLocationScreen(
 
                     // --- SNAP TO CURRENT LOCATION BUTTON ---
                     if (isGpsEnabled) {
-                        var isFabTriggered by remember { mutableStateOf(false) }
-                        
-                        LaunchedEffect(deviceLatLng, isFetchingLocation) {
-                            if (isFabTriggered && deviceLatLng != null && !isFetchingLocation) {
-                                cameraPositionState.position = CameraPosition.fromLatLngZoom(deviceLatLng!!, 15f)
-                                updateLocationFromLatLng(deviceLatLng!!)
-                                isFabTriggered = false
-                            }
-                        }
-
                         FloatingActionButton(
                             onClick = {
                                 isFabTriggered = true
@@ -582,7 +586,7 @@ fun LocationSearchItem(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() }
-            .background(if (isSelected) Color(0xFFF0F7FF) else Color.White)
+            .background(if (isSelected) AquaBlue.copy(alpha = 0.08f) else Color.White)
             .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {

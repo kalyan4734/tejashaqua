@@ -3,7 +3,9 @@ package com.tejashaqua.app.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.FavoriteBorder
@@ -30,7 +32,8 @@ import com.tejashaqua.app.utils.CurrencyUtils
 @Composable
 fun SavedItemsScreen(
     onBackClick: () -> Unit,
-    onItemClick: (Map<String, Any>) -> Unit
+    onItemClick: (Map<String, Any>) -> Unit,
+    listState: LazyListState = rememberLazyListState()
 ) {
     val auth = FirebaseAuth.getInstance()
     val db = FirebaseFirestore.getInstance()
@@ -84,6 +87,7 @@ fun SavedItemsScreen(
                 }
             } else {
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -103,6 +107,7 @@ fun SavedItemsScreen(
                             "EQUIPMENTS" -> stringResource(R.string.cat_equipments)
                             "VEHICLES" -> stringResource(R.string.cat_vehicles)
                             "FEED" -> stringResource(R.string.cat_feed)
+                            "MEDICINE" -> stringResource(R.string.cat_medicine)
                             "SERVICES" -> stringResource(R.string.cat_services)
                             "TANKS" -> stringResource(R.string.cat_tanks)
                             "BUSINESS" -> stringResource(R.string.cat_business)
@@ -164,6 +169,7 @@ fun SavedItemsScreen(
                                 onItemClick(data)
                             },
                             rawCategory = categoryStr,
+                            viewCount = 0, // Don't show in Saved Items list
                             modifier = Modifier.fillMaxWidth()
                         )
                     }

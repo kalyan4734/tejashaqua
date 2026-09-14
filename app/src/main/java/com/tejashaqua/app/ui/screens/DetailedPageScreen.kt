@@ -2,8 +2,6 @@ package com.tejashaqua.app.ui.screens
 
 import androidx.compose.foundation.gestures.*
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.graphicsLayer
@@ -39,7 +37,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.core.net.toUri
 import coil.compose.AsyncImage
-import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
@@ -97,7 +94,33 @@ fun DetailedPageScreen(
     val acreText = stringResource(R.string.unit_acre)
     val currentLang = LocaleHelper.getSelectedLanguage(context) ?: "en"
 
-    val title = listingData["title"]?.toString() ?: stringResource(R.string.no_title)
+    val listingId = listingData["id"]?.toString() ?: ""
+    val db = remember { FirebaseFirestore.getInstance() }
+    
+    // Observe live listing data for view counts and other updates
+    var liveListingData by remember(listingId) { mutableStateOf(listingData) }
+    
+    // Increment view count and listen for updates
+    LaunchedEffect(listingId) {
+        if (listingId.isNotEmpty()) {
+            val docRef = db.collection("listings").document(listingId)
+            
+            // Increment ONLY if not viewed in this session to prevent duplicates
+            if (!com.tejashaqua.app.utils.AppStateTracker.viewedListingIds.contains(listingId)) {
+                docRef.update("viewCount", com.google.firebase.firestore.FieldValue.increment(1))
+                com.tejashaqua.app.utils.AppStateTracker.viewedListingIds.add(listingId)
+            }
+            
+            // Listen for changes
+            docRef.addSnapshotListener { snapshot, _ ->
+                if (snapshot != null && snapshot.exists()) {
+                    liveListingData = snapshot.data ?: listingData
+                }
+            }
+        }
+    }
+
+    val title = liveListingData["title"]?.toString() ?: stringResource(R.string.no_title)
     val categoryStr = listingData["category"]?.toString() ?: "Other"
     val displayCategory = remember(categoryStr, currentLang) {
         when(categoryStr.uppercase()) {
@@ -106,6 +129,7 @@ fun DetailedPageScreen(
             "EQUIPMENTS" -> context.getString(R.string.cat_equipments)
             "VEHICLES" -> context.getString(R.string.cat_vehicles)
             "FEED" -> context.getString(R.string.cat_feed)
+            "MEDICINE" -> context.getString(R.string.cat_medicine)
             "SERVICES" -> context.getString(R.string.cat_services)
             "TANKS" -> context.getString(R.string.cat_tanks)
             "BUSINESS" -> context.getString(R.string.cat_business)
@@ -114,13 +138,13 @@ fun DetailedPageScreen(
         }
     }
     
-    val priceLabel = remember(listingData, currentLang) {
+    val priceLabel = remember(liveListingData, currentLang) {
         when (categoryStr.uppercase()) {
             "PRAWNS" -> {
-                val rateVal = listingData["rateValue"]?.toString()?.takeIf { it.isNotBlank() } ?: naText
+                val rateVal = liveListingData["rateValue"]?.toString()?.takeIf { it.isNotBlank() } ?: naText
                 if (rateVal == naText) naText else {
                     val formattedRate = CurrencyUtils.formatPrice(rateVal)
-                    val type = listingData["rateType"]?.toString() ?: "Paise"
+                    val type = liveListingData["rateType"]?.toString() ?: "Paise"
                     val isPaise = type.contains("Paise", ignoreCase = true) || 
                                  type.contains("పైసలు") || 
                                  type.contains("paisa", ignoreCase = true)
@@ -132,38 +156,38 @@ fun DetailedPageScreen(
                     }
                 }
             }
-            "FEED" -> "₹${CurrencyUtils.formatPrice(listingData["ratePerTon"] ?: naText)}/$tonText"
+            "FEED" -> "₹${CurrencyUtils.formatPrice(liveListingData["ratePerTon"] ?: naText)}/$tonText"
             "BUSINESS" -> {
-                if (listingData["businessSubCategory"] == "Feed") {
-                    "₹${CurrencyUtils.formatPrice(listingData["ratePerTon"]?.toString()?.takeIf { it.isNotBlank() } ?: naText)}/$tonText"
+                if (liveListingData["businessSubCategory"] == "Feed") {
+                    "₹${CurrencyUtils.formatPrice(liveListingData["ratePerTon"]?.toString()?.takeIf { it.isNotBlank() } ?: naText)}/$tonText"
                 } else {
-                    val displayVal = listingData["price"]?.toString()?.takeIf { it.isNotBlank() }
-                        ?: listingData["rateValue"]?.toString()?.takeIf { it.isNotBlank() }
-                        ?: listingData["ratePerTon"]?.toString()?.takeIf { it.isNotBlank() }
+                    val displayVal = liveListingData["price"]?.toString()?.takeIf { it.isNotBlank() }
+                        ?: liveListingData["rateValue"]?.toString()?.takeIf { it.isNotBlank() }
+                        ?: liveListingData["ratePerTon"]?.toString()?.takeIf { it.isNotBlank() }
                         ?: naText
                     "₹${CurrencyUtils.formatPrice(displayVal)}"
                 }
             }
-            "JOBS" -> "₹${CurrencyUtils.formatPrice(listingData["salary"] ?: naText)}"
-            "TANKS" -> "₹${CurrencyUtils.formatPrice(listingData["estPricePerAcre"] ?: naText)}/$acreText"
-            else -> "₹${CurrencyUtils.formatPrice(listingData["price"] ?: listingData["rateValue"] ?: naText)}"
+            "JOBS" -> "₹${CurrencyUtils.formatPrice(liveListingData["salary"] ?: naText)}"
+            "TANKS" -> "₹${CurrencyUtils.formatPrice(liveListingData["estPricePerAcre"] ?: naText)}/$acreText"
+            else -> "₹${CurrencyUtils.formatPrice(liveListingData["price"] ?: liveListingData["rateValue"] ?: naText)}"
         }
     }
-    val category = try { ListingCategory.valueOf(categoryStr.uppercase()) } catch (e: Exception) { null }
-    val fullLocation = listingData["location"]?.toString() ?: stringResource(R.string.unknown_location)
+    val category = try { ListingCategory.valueOf(categoryStr.uppercase()) } catch (_: Exception) { null }
+    val fullLocation = liveListingData["location"]?.toString() ?: stringResource(R.string.unknown_location)
     // Use the first part of the address (Locality) as the main location
     val location = fullLocation.split(",").firstOrNull()?.trim() ?: fullLocation
     
     var localizedLocation by remember(fullLocation, currentLang) { mutableStateOf(location) }
 
-    LaunchedEffect(listingData["lat"], listingData["lng"], currentLang) {
-        val latVal = (listingData["lat"] as? Number)?.toDouble()
-        val lngVal = (listingData["lng"] as? Number)?.toDouble()
+    LaunchedEffect(liveListingData["lat"], liveListingData["lng"], currentLang) {
+        val latVal = (liveListingData["lat"] as? Number)?.toDouble()
+        val lngVal = (liveListingData["lng"] as? Number)?.toDouble()
         if (latVal != null && lngVal != null) {
             withContext(kotlinx.coroutines.Dispatchers.IO) {
                 try {
-                    val locale = java.util.Locale.forLanguageTag(currentLang)
-                    val geocoder = android.location.Geocoder(context, locale)
+                    val locale = Locale.forLanguageTag(currentLang)
+                    val geocoder = Geocoder(context, locale)
                     val addresses = geocoder.getFromLocation(latVal, lngVal, 1)
                     if (!addresses.isNullOrEmpty()) {
                         val address = addresses[0]
@@ -176,17 +200,18 @@ fun DetailedPageScreen(
             }
         }
     }
-    val description = listingData["description"]?.toString() ?: stringResource(R.string.no_description)
-    val posterName = listingData["posterName"]?.toString() ?: stringResource(R.string.user_label)
-    val images = (listingData["images"] as? List<*>) ?: emptyList<String>()
-    val timestamp = (listingData["timestamp"] as? Long) ?: System.currentTimeMillis()
-    val listingUserId = listingData["userId"]?.toString() ?: listingData["posterId"]?.toString() ?: ""
+    val description = liveListingData["description"]?.toString() ?: stringResource(R.string.no_description)
+    val posterName = liveListingData["posterName"]?.toString() ?: stringResource(R.string.user_label)
+    val images = (liveListingData["images"] as? List<*>) ?: emptyList<String>()
+    val timestamp = (liveListingData["timestamp"] as? Long) ?: System.currentTimeMillis()
+    val viewCount = (liveListingData["viewCount"] as? Number)?.toInt() ?: 0
+    val listingUserId = liveListingData["userId"]?.toString() ?: liveListingData["posterId"]?.toString() ?: ""
     val isOwnListing = currentUserId.isNotEmpty() && listingUserId.isNotEmpty() && currentUserId == listingUserId
-    val listingId = listingData["id"]?.toString() ?: ""
+    val listingIdForMap = liveListingData["id"]?.toString() ?: ""
 
     // --- MAP STATE OPTIMIZATION (Hoisted for scroll performance) ---
-    var lat by remember(listingId) { mutableStateOf((listingData["lat"] as? Number)?.toDouble()) }
-    var lng by remember(listingId) { mutableStateOf((listingData["lng"] as? Number)?.toDouble()) }
+    var lat by remember(listingIdForMap) { mutableStateOf((liveListingData["lat"] as? Number)?.toDouble()) }
+    var lng by remember(listingIdForMap) { mutableStateOf((liveListingData["lng"] as? Number)?.toDouble()) }
     
     val finalLat = lat ?: 17.0005
     val finalLng = lng ?: 81.7729
@@ -234,13 +259,12 @@ fun DetailedPageScreen(
     // -------------------------------------------------------------
     
     // Pass from Home Page to avoid flicker for Joined Date and Privacy Toggle
-    var sellerJoinedAt by remember(listingId) { 
-        mutableLongStateOf((listingData["sellerJoinedAt"] as? Number)?.toLong() ?: 0L) 
+    var sellerJoinedAt by remember(listingIdForMap) { 
+        mutableLongStateOf((liveListingData["sellerJoinedAt"] as? Number)?.toLong() ?: 0L) 
     }
-    var sellerShowMobile by remember(listingId) { 
-        mutableStateOf(listingData["sellerShowMobile"] as? Boolean ?: false) 
+    var sellerShowMobile by remember(listingIdForMap) { 
+        mutableStateOf(liveListingData["sellerShowMobile"] as? Boolean ?: false)
     }
-    val db = remember { FirebaseFirestore.getInstance() }
     
     var showSellerPostsDialog by remember { mutableStateOf(false) }
     var sellerListings by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
@@ -286,22 +310,11 @@ fun DetailedPageScreen(
     }
 
     key(listingId) {
-        var isFavorited by remember { mutableStateOf(false) }
         var favoriteIds by remember { mutableStateOf<Set<String>>(emptySet()) }
         val listState = rememberLazyListState()
 
         LaunchedEffect(listingId) {
             listState.scrollToItem(0)
-        }
-
-        LaunchedEffect(listingId, currentUserId) {
-            if (currentUserId.isNotEmpty() && listingId.isNotEmpty()) {
-                db.collection("users").document(currentUserId)
-                    .collection("favorites").document(listingId)
-                    .addSnapshotListener { snapshot, _ ->
-                        isFavorited = snapshot != null && snapshot.exists()
-                    }
-            }
         }
 
         LaunchedEffect(currentUserId) {
@@ -369,16 +382,6 @@ fun DetailedPageScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { 
-                        keyboardController?.hide()
-                        toggleFavorite(listingData, isFavorited) 
-                    }) {
-                        Icon(
-                            if (isFavorited) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                            contentDescription = stringResource(R.string.saved_items),
-                            tint = if (isFavorited) Color.Red else Color.White
-                        )
-                    }
                     if (!isOwnListing) {
                         IconButton(onClick = { showMenu = true }) {
                             Icon(Icons.Default.MoreVert, contentDescription = "Menu", tint = Color.White)
@@ -585,7 +588,80 @@ fun DetailedPageScreen(
                                 }
                             }
                         }
+
+                        // Share and Favorite icons overlaid on the image (OLX style)
+                        val isFavorited = favoriteIds.contains(listingId)
+                        Row(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            IconButton(
+                                onClick = {
+                                    val shareIntent = android.content.Intent().apply {
+                                        action = android.content.Intent.ACTION_SEND
+                                        putExtra(
+                                            android.content.Intent.EXTRA_TEXT,
+                                            context.getString(
+                                                R.string.share_listing_template,
+                                                displayCategory,
+                                                title,
+                                                priceLabel,
+                                                localizedLocation,
+                                                listingId
+                                            )
+                                        )
+                                        type = "text/plain"
+                                    }
+                                    val chooser = android.content.Intent.createChooser(shareIntent, context.getString(R.string.share_listing))
+                                    chooser.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    context.startActivity(chooser)
+                                },
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .background(Color.White.copy(alpha = 0.7f), CircleShape)
+                            ) {
+                                Icon(Icons.Default.Share, contentDescription = stringResource(R.string.share_listing), tint = AquaBlue, modifier = Modifier.size(20.dp))
+                            }
+
+                            IconButton(
+                                onClick = { 
+                                    keyboardController?.hide()
+                                    toggleFavorite(listingData, isFavorited) 
+                                },
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .background(Color.White.copy(alpha = 0.7f), CircleShape)
+                            ) {
+                                Icon(
+                                    if (isFavorited) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                    contentDescription = stringResource(R.string.saved_items),
+                                    tint = if (isFavorited) Color.Red else Color.Gray,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+
+                        // Page indicator
+                        if (images.size > 1) {
+                            Surface(
+                                modifier = Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .padding(bottom = 16.dp),
+                                color = Color.Black.copy(alpha = 0.5f),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Text(
+                                    text = "${pagerState.currentPage + 1}/${images.size}",
+                                    color = Color.White,
+                                    fontSize = 12.sp,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
                     } else if (categoryStr.uppercase() == "JOBS") {
+
                         Box(modifier = Modifier.fillMaxSize().background(Color(0xFFF3E5F5)), contentAlignment = Alignment.Center) {
                             Icon(
                                 imageVector = Icons.Default.Person,
@@ -624,6 +700,16 @@ fun DetailedPageScreen(
                     
                     Text(text = priceLabel, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = AquaBlue)
                     
+                    if (viewCount > 0) {
+                        Text(
+                            text = "🔥 $viewCount ${stringResource(R.string.people_viewed_this)}",
+                            fontSize = 12.sp,
+                            color = Color(0xFFE65100),
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
+
                     Spacer(modifier = Modifier.height(12.dp))
                     
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -659,9 +745,7 @@ fun DetailedPageScreen(
                             DetailRowItem(stringResource(R.string.size_label), "${listingData["sizeValue"]?.toString() ?: ""} ${listingData["sizeType"]?.toString() ?: ""}")
                             DetailRowItem(stringResource(R.string.fish_age_label), stringResource(R.string.months_suffix, listingData["fishAge"]?.toString() ?: ""))
                             val quantityVal = CurrencyUtils.formatPrice(listingData["quantity"])
-                            val unitVal = listingData["unitType"]?.toString() ?: ""
-                            val displayQuantity = if (unitVal.isBlank()) quantityVal else "$quantityVal $unitVal"
-                            DetailRowItem(stringResource(R.string.quantity_label), displayQuantity)
+                            DetailRowItem(stringResource(R.string.quantity_label), quantityVal)
                             DetailRowItem(stringResource(R.string.price_label), priceLabel)
                         }
                         ListingCategory.PRAWNS -> {
@@ -869,6 +953,7 @@ fun DetailedPageScreen(
                                     "EQUIPMENTS" -> stringResource(R.string.cat_equipments)
                                     "VEHICLES" -> stringResource(R.string.cat_vehicles)
                                     "FEED" -> stringResource(R.string.cat_feed)
+                                    "MEDICINE" -> stringResource(R.string.cat_medicine)
                                     "SERVICES" -> stringResource(R.string.cat_services)
                                     "TANKS" -> stringResource(R.string.cat_tanks)
                                     "BUSINESS" -> stringResource(R.string.cat_business)
@@ -917,6 +1002,7 @@ fun DetailedPageScreen(
                                     onFavoriteClick = { toggleFavorite(data, isSimFav) },
                                     onClick = { onItemClick(data) },
                                     rawCategory = categoryStrSim,
+                                    viewCount = 0, // Only show for the main listing
                                     modifier = Modifier.width(160.dp)
                                 )
                             }

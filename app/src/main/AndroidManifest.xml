@@ -42,6 +42,13 @@
             android:name="com.google.android.geo.API_KEY"
             android:value="@string/google_maps_key" />
 
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_launcher_foreground" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/aqua_blue" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -65,8 +72,30 @@
             </intent-filter>
 
             <intent-filter>
-                <action android:name="OPEN_RATES" />
+                <action android:name="android.intent.action.OPEN_RATES" />
                 <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+
+            <!-- Deep Linking -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="http" />
+                <data android:scheme="https" />
+                <data android:host="tejashaqua.com" />
+                <data android:host="tejashaquaapp.web.app" />
+                <data android:host="tejashaquaapp.firebaseapp.com" />
+                <data android:pathPrefix="/listing" />
+            </intent-filter>
+
+            <!-- Custom Scheme Deep Linking -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="tejashaqua" />
+                <data android:host="listing" />
             </intent-filter>
         </activity>
 

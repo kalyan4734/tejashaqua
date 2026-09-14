@@ -7,10 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.*
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -53,7 +50,8 @@ fun MarketItem(
     onPosterClick: (() -> Unit)? = null,
     rawCategory: String = "",
     lat: Double? = null,
-    lng: Double? = null
+    lng: Double? = null,
+    viewCount: Int = 0
 ) {
     val context = LocalContext.current
     val currentLang = LocaleHelper.getSelectedLanguage(context) ?: "en"
@@ -78,7 +76,7 @@ fun MarketItem(
                         val newLoc = address.locality ?: address.subAdminArea ?: shortLocation
                         localizedLocation = newLoc
                     }
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     // Fallback to original short location
                 }
             }
@@ -101,13 +99,14 @@ fun MarketItem(
     }
 
     val categoryColor = remember(category, rawCategory) {
-        val cat = (if (rawCategory.isNotEmpty()) rawCategory else category).uppercase()
+        val cat = rawCategory.ifEmpty { category }.uppercase()
         when {
             cat.contains("FISH") -> Color(0xFF009688)
             cat.contains("PRAWN") -> Color(0xFF3F51B5)
             cat.contains("EQUIPMENT") -> Color(0xFF1976D2)
             cat.contains("VEHICLE") -> Color(0xFF1976D2)
             cat.contains("FEED") -> Color(0xFFE65100)
+            cat.contains("MEDICINE") -> Color(0xFFD81B60)
             cat.contains("SERVICE") -> Color(0xFFF57C00)
             cat.contains("TANK") -> Color(0xFF388E3C)
             cat.contains("BUSINESS") -> Color(0xFFB71C1C)
@@ -117,13 +116,14 @@ fun MarketItem(
     }
 
     val categoryBgColor = remember(category, rawCategory) {
-        val cat = (if (rawCategory.isNotEmpty()) rawCategory else category).uppercase()
+        val cat = rawCategory.ifEmpty { category }.uppercase()
         when {
             cat.contains("FISH") -> Color(0xFFFFF3E0)
             cat.contains("PRAWN") -> Color(0xFFE0F2F1)
             cat.contains("EQUIPMENT") -> Color(0xFFE1F5FE)
             cat.contains("VEHICLE") -> Color(0xFFE1F5FE)
             cat.contains("FEED") -> Color(0xFFFFF3E0)
+            cat.contains("MEDICINE") -> Color(0xFFFCE4EC)
             cat.contains("SERVICE") -> Color(0xFFFFFDE7)
             cat.contains("TANK") -> Color(0xFFE8F5E9)
             cat.contains("BUSINESS") -> Color(0xFFFFEBEE)
@@ -182,6 +182,17 @@ fun MarketItem(
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(title, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(price, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp, color = Color.Black)
+                
+                if (viewCount > 0) {
+                    Text(
+                        text = "🔥 $viewCount ${stringResource(R.string.people_viewed_this)}",
+                        fontSize = 10.sp,
+                        color = Color(0xFFE65100),
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(vertical = 2.dp)
+                    )
+                }
+
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.LocationOn, null, tint = GrayText, modifier = Modifier.size(10.dp))
                     Text(displayLocation, color = GrayText, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))

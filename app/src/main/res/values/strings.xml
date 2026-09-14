@@ -140,6 +140,7 @@
     <string name="back">Back</string>
     <string name="prawn_type_label">Type of Prawn</string>
     <string name="equipment_type_label">Equipment Type</string>
+    <string name="medicine_name_label">Medicine Name</string>
     <string name="feed_name_label">Feed Name</string>
     <string name="business_type_label">Business Type</string>
     <string name="job_type_label">Job Type</string>
@@ -155,6 +156,7 @@
     <string name="unknown_location">Unknown Location</string>
     <string name="selected_point">Selected Point</string>
     <string name="view_all_prices">View All Prices</string>
+    <string name="current_location_fetched">Current location fetched. Click confirm to continue.</string>
     <!-- Categories -->
     <string name="cat_fish">Fish</string>
     <string name="cat_fish_seed">Fish Seed</string>
@@ -162,11 +164,14 @@
     <string name="cat_equipments">Equipments</string>
     <string name="cat_vehicles">Vehicles</string>
     <string name="cat_feed">Feed</string>
+    <string name="feed_desc">Fish &amp; prawn feed, growth promoters</string>
+    <string name="cat_medicine">Medicine</string>
     <string name="cat_services">Services</string>
     <string name="cat_tanks">Tanks</string>
     <string name="cat_jobs">Jobs</string>
     <string name="cat_business">Business</string>
-    <string name="business_desc">Feed, Medicine, etc.</string>
+    <string name="medicine_desc">Aqua medicines, probiotics &amp; supplements</string>
+    <string name="business_desc">General aqua business</string>
     <!-- Select Category -->
     <string name="select_category_title">What are you selling?</string>
     <string name="select_category_desc">Select a category to start listing your product or service.</string>
@@ -316,6 +321,7 @@
     <string name="no_title">No Title</string>
     <string name="not_available_short">N/A</string>
     <string name="coming_soon">Coming Soon</string>
+    <string name="people_viewed_this">people viewed this listing</string>
     <string name="loading_marketplace">Loading marketplace…</string>
     <string name="version_label">Version %s</string>
     <string name="contact_us">Contact Us</string>
@@ -345,7 +351,6 @@
     <string name="responds_in_label">Responds in %s</string>
     <string name="business_category">Business Category</string>
     <string name="type_label">Type</string>
-    <string name="medicine_name_label">Medicine Name</string>
     <string name="category_label">Category</string>
     <string name="months_suffix">%s Months</string>
     <string name="acres_suffix">%s Acres</string>
@@ -474,6 +479,10 @@ These terms shall be governed by and construed in accordance with the laws of In
     <string name="ad_posted_success">Ad Posted Successfully!</string>
     <string name="ad_posted_desc">Your listing \'%s\' is now live.</string>
     <string name="otp_verify_failed">Verification failed. Please try again.</string>
+    <string name="share_listing">Share Listing</string>
+    <string name="share_listing_template">I\'ve found this on Tejash Aqua. What do you think?\n\n%2$s (%1$s)\nPrice: %3$s\nLocation: %4$s\n\nView Details: https://tejashaquaapp.web.app/listing/%5$s\n\nFor the best experience, download the Tejash Aqua App: https://play.google.com/store/apps/details?id=com.tejashaqua.app</string>
+    <string name="share_app">Share App</string>
+    <string name="share_app_message">Check out Tejash Aqua - the best app for Aqua farmers! Download now: https://play.google.com/store/apps/details?id=com.tejashaqua.app</string>
     <string name="waiting_for_otp">Waiting for OTP…</string>
     <string name="google_maps_key" translatable="false">AIzaSyD5VUXOhcaF840JnM5YaUMIH1cx2Qdj4QM</string>
 </resources>

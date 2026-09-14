@@ -4,7 +4,9 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -26,6 +28,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import coil.compose.AsyncImage
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.tejashaqua.app.ui.theme.AquaBlue
@@ -43,27 +46,30 @@ data class UserListing(
     val unit: String = "",
     val location: String = "",
     val timestamp: Long = 0L,
-    val imageUrl: String? = null
+    val imageUrl: String? = null,
+    val viewCount: Int = 0
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MyListingsScreen(
     onBackClick: () -> Unit,
-    onEditClick: (String, String) -> Unit // Pass ID and Category
+    onEditClick: (String, String) -> Unit, // Pass ID and Category
+    marketplaceViewModel: com.tejashaqua.app.ui.viewmodel.MarketplaceViewModel = viewModel(),
+    listingViewModel: com.tejashaqua.app.ui.viewmodel.ListingViewModel = viewModel(),
+    listState: LazyListState = rememberLazyListState()
 ) {
     val auth = FirebaseAuth.getInstance()
-    val db = FirebaseFirestore.getInstance()
     val currentUserId = auth.currentUser?.uid
 
-    var listings by remember { mutableStateOf<List<UserListing>>(emptyList()) }
-    var isLoading by remember { mutableStateOf(true) }
+    val listingsRaw by marketplaceViewModel.myListings.collectAsState()
+    val isLoading by marketplaceViewModel.isLoadingMyListings.collectAsState()
     val keyboardController = LocalSoftwareKeyboardController.current
     
     var showDeleteDialog by remember { mutableStateOf(false) }
-    var listingToDelete by remember { mutableStateOf<UserListing?>(null) }
+    var listingIdToDelete by remember { mutableStateOf<String?>(null) }
 
-    if (showDeleteDialog && listingToDelete != null) {
+    if (showDeleteDialog && listingIdToDelete != null) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
             title = { Text(stringResource(R.string.delete_listing)) },
@@ -72,9 +78,12 @@ fun MyListingsScreen(
                 TextButton(
                     onClick = {
                         keyboardController?.hide()
-                        db.collection("listings").document(listingToDelete!!.id).delete()
-                        showDeleteDialog = false
-                        listingToDelete = null
+                        listingViewModel.deleteListing(listingIdToDelete!!) {
+                            showDeleteDialog = false
+                            listingIdToDelete = null
+                            // Force refresh dashboard after deletion using current parameters
+                            marketplaceViewModel.refreshCurrent()
+                        }
                     }
                 ) {
                     Text(stringResource(R.string.delete), color = Color.Red)
@@ -92,84 +101,81 @@ fun MyListingsScreen(
     }
 
     val context = androidx.compose.ui.platform.LocalContext.current
+    
     LaunchedEffect(currentUserId) {
         if (currentUserId != null) {
-            db.collection("listings")
-                .whereEqualTo("userId", currentUserId)
-                .addSnapshotListener { snapshot, error ->
-                    if (error != null) {
-                        android.util.Log.e("MyListings", "Error fetching listings", error)
-                        isLoading = false
-                        return@addSnapshotListener
-                    }
-                    if (snapshot != null) {
-                        listings = snapshot.documents.map { doc ->
-                            val fullLocation = doc.getString("location") ?: ""
-                            val categoryStr = doc.getString("category") ?: "Other"
-                            val displayCategory = when(categoryStr.uppercase()) {
-                                "FISH" -> context.getString(R.string.cat_fish_seed)
-                                "PRAWNS" -> context.getString(R.string.cat_prawns)
-                                "EQUIPMENTS" -> context.getString(R.string.cat_equipments)
-                                "VEHICLES" -> context.getString(R.string.cat_vehicles)
-                                "FEED" -> context.getString(R.string.cat_feed)
-                                "SERVICES" -> context.getString(R.string.cat_services)
-                                "TANKS" -> context.getString(R.string.cat_tanks)
-                                "BUSINESS" -> context.getString(R.string.cat_business)
-                                "JOBS" -> context.getString(R.string.cat_jobs)
-                                else -> categoryStr
-                            }
-                            val naText = context.getString(R.string.not_available_short)
-                            val tonText = context.getString(R.string.unit_ton)
-                            val acreText = context.getString(R.string.unit_acre)
-                            val priceLabel = when (categoryStr.uppercase()) {
-                                "PRAWNS" -> {
-                                    val rateVal = doc.get("rateValue")?.toString()?.takeIf { it.isNotBlank() } ?: naText
-                                    if (rateVal == naText) naText else {
-                                        val formattedRate = CurrencyUtils.formatPrice(rateVal)
-                                        val type = doc.getString("rateType") ?: "Paise"
-                                        val isPaise = type.contains("Paise", ignoreCase = true) || 
-                                                     type.contains("పైసలు") || 
-                                                     type.contains("paisa", ignoreCase = true)
-                                        
-                                        if (isPaise) {
-                                            context.getString(R.string.paise_per_seed_label, formattedRate, context.getString(R.string.unit_paise), context.getString(R.string.seed_suffix))
-                                        } else {
-                                            context.getString(R.string.rupees_per_seed_label, formattedRate, context.getString(R.string.seed_suffix))
-                                        }
-                                    }
-                                }
-                                "FEED" -> "₹${CurrencyUtils.formatPrice(doc.get("ratePerTon")?.toString() ?: naText)}/$tonText"
-                                "BUSINESS" -> {
-                                    if (doc.getString("businessSubCategory") == "Feed") {
-                                        "₹${CurrencyUtils.formatPrice(doc.get("ratePerTon")?.toString()?.takeIf { it.isNotBlank() } ?: naText)}/$tonText"
-                                    } else {
-                                        val displayVal = doc.get("price")?.toString()?.takeIf { it.isNotBlank() }
-                                            ?: doc.get("rateValue")?.toString()?.takeIf { it.isNotBlank() }
-                                            ?: doc.get("ratePerTon")?.toString()?.takeIf { it.isNotBlank() }
-                                            ?: naText
-                                        "₹${CurrencyUtils.formatPrice(displayVal)}"
-                                    }
-                                }
-                                "JOBS" -> "₹${CurrencyUtils.formatPrice(doc.get("salary")?.toString() ?: naText)}"
-                                "TANKS" -> "₹${CurrencyUtils.formatPrice(doc.get("estPricePerAcre")?.toString() ?: naText)}/$acreText"
-                                else -> "₹${CurrencyUtils.formatPrice(doc.get("price")?.toString() ?: doc.get("rateValue")?.toString() ?: naText)}"
-                            }
+            marketplaceViewModel.startMyListingsListener(currentUserId)
+        }
+    }
 
-                            UserListing(
-                                id = doc.id,
-                                title = doc.getString("title")?.takeIf { it.isNotBlank() } ?: context.getString(R.string.no_title),
-                                category = displayCategory,
-                                rawCategory = categoryStr,
-                                price = priceLabel,
-                                unit = "", // Unit is now included in priceLabel
-                                location = fullLocation.split(",").firstOrNull()?.trim() ?: fullLocation,
-                                timestamp = doc.getLong("timestamp") ?: 0L,
-                                imageUrl = (doc.get("images") as? List<*>)?.filterIsInstance<String>()?.firstOrNull()
-                            )
+    val currentLang = com.tejashaqua.app.utils.LocaleHelper.getSelectedLanguage(context) ?: "en"
+    val listings = remember(listingsRaw, currentLang) {
+        listingsRaw.map { data ->
+            val id = data["id"]?.toString() ?: ""
+            val fullLocation = data["location"]?.toString() ?: ""
+            val categoryStr = data["category"]?.toString() ?: "Other"
+            val displayCategory = when(categoryStr.uppercase()) {
+                "FISH" -> context.getString(R.string.cat_fish_seed)
+                "PRAWNS" -> context.getString(R.string.cat_prawns)
+                "EQUIPMENTS" -> context.getString(R.string.cat_equipments)
+                "VEHICLES" -> context.getString(R.string.cat_vehicles)
+                "FEED" -> context.getString(R.string.cat_feed)
+                "MEDICINE" -> context.getString(R.string.cat_medicine)
+                "SERVICES" -> context.getString(R.string.cat_services)
+                "TANKS" -> context.getString(R.string.cat_tanks)
+                "BUSINESS" -> context.getString(R.string.cat_business)
+                "JOBS" -> context.getString(R.string.cat_jobs)
+                else -> categoryStr
+            }
+            val naText = context.getString(R.string.not_available_short)
+            val tonText = context.getString(R.string.unit_ton)
+            val acreText = context.getString(R.string.unit_acre)
+            val priceLabel = when (categoryStr.uppercase()) {
+                "PRAWNS" -> {
+                    val rateVal = data["rateValue"]?.toString()?.takeIf { it.isNotBlank() } ?: naText
+                    if (rateVal == naText) naText else {
+                        val formattedRate = CurrencyUtils.formatPrice(rateVal)
+                        val type = data["rateType"]?.toString() ?: "Paise"
+                        val isPaise = type.contains("Paise", ignoreCase = true) || 
+                                     type.contains("పైసలు") || 
+                                     type.contains("paisa", ignoreCase = true)
+                        
+                        if (isPaise) {
+                            context.getString(R.string.paise_per_seed_label, formattedRate, context.getString(R.string.unit_paise), context.getString(R.string.seed_suffix))
+                        } else {
+                            context.getString(R.string.rupees_per_seed_label, formattedRate, context.getString(R.string.seed_suffix))
                         }
                     }
-                    isLoading = false
                 }
+                "FEED" -> "₹${CurrencyUtils.formatPrice(data["ratePerTon"] ?: naText)}/$tonText"
+                "BUSINESS" -> {
+                    if (data["businessSubCategory"] == "Feed") {
+                        "₹${CurrencyUtils.formatPrice(data["ratePerTon"]?.toString()?.takeIf { it.isNotBlank() } ?: naText)}/$tonText"
+                    } else {
+                        val displayVal = data["price"]?.toString()?.takeIf { it.isNotBlank() }
+                            ?: data["rateValue"]?.toString()?.takeIf { it.isNotBlank() }
+                            ?: data["ratePerTon"]?.toString()?.takeIf { it.isNotBlank() }
+                            ?: naText
+                        "₹${CurrencyUtils.formatPrice(displayVal)}"
+                    }
+                }
+                "JOBS" -> "₹${CurrencyUtils.formatPrice(data["salary"] ?: naText)}"
+                "TANKS" -> "₹${CurrencyUtils.formatPrice(data["estPricePerAcre"] ?: naText)}/$acreText"
+                else -> "₹${CurrencyUtils.formatPrice(data["price"] ?: data["rateValue"] ?: naText)}"
+            }
+
+            UserListing(
+                id = id,
+                title = data["title"]?.toString()?.takeIf { it.isNotBlank() } ?: context.getString(R.string.no_title),
+                category = displayCategory,
+                rawCategory = categoryStr,
+                price = priceLabel,
+                unit = "", 
+                location = fullLocation.split(",").firstOrNull()?.trim() ?: fullLocation,
+                timestamp = (data["timestamp"] as? Number)?.toLong() ?: 0L,
+                imageUrl = (data["images"] as? List<*>)?.filterIsInstance<String>()?.firstOrNull(),
+                viewCount = (data["viewCount"] as? Number)?.toInt() ?: 0
+            )
         }
     }
 
@@ -189,16 +195,16 @@ fun MyListingsScreen(
             )
         }
     ) { innerPadding ->
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
             if (listings.isEmpty() && !isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(stringResource(R.string.no_listings_found), color = GrayText)
                 }
             } else {
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(innerPadding)
                         .background(MaterialTheme.colorScheme.background),
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -212,7 +218,7 @@ fun MyListingsScreen(
                             },
                             onDeleteClick = {
                                 keyboardController?.hide()
-                                listingToDelete = listing
+                                listingIdToDelete = listing.id
                                 showDeleteDialog = true
                             }
                         )
@@ -270,6 +276,17 @@ fun ListingCard(
                     }
                     Text(text = listing.title, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1, color = Color.Black)
                     Text(text = listing.price, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, color = Color.Black)
+                    
+                    if (listing.viewCount > 0) {
+                        Text(
+                            text = "🔥 ${listing.viewCount} ${stringResource(R.string.people_viewed_this)}",
+                            fontSize = 11.sp,
+                            color = Color(0xFFE65100),
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(vertical = 2.dp)
+                        )
+                    }
+
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Outlined.LocationOn, contentDescription = null, tint = GrayText, modifier = Modifier.size(14.dp))
                         val context = androidx.compose.ui.platform.LocalContext.current

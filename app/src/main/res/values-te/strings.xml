@@ -155,6 +155,7 @@
     <string name="unknown_location">తెలియని స్థానం</string>
     <string name="selected_point">ఎంచుకున్న పాయింట్</string>
     <string name="view_all_prices">అన్ని ధరలను చూడండి</string>
+    <string name="current_location_fetched">ప్రస్తుత స్థానం పొందబడింది. కొనసాగడానికి స్థానాన్ని ధృవీకరించండి.</string>
     <!-- Categories -->
     <string name="cat_fish">చేపలు</string>
     <string name="cat_fish_seed">చేప పిల్లలు</string>
@@ -162,11 +163,14 @@
     <string name="cat_equipments">పరికరాలు</string>
     <string name="cat_vehicles">వాహనాలు</string>
     <string name="cat_feed">మేత</string>
+    <string name="feed_desc">చేపలు &amp; రొయ్యల మేత, ఎదుగుదల ప్రమోటర్లు</string>
+    <string name="cat_medicine">మెడిసిన్</string>
     <string name="cat_services">సేవలు</string>
     <string name="cat_tanks">ట్యాంకులు</string>
     <string name="cat_jobs">ఉద్యోగాలు</string>
     <string name="cat_business">వ్యాపారం</string>
-    <string name="business_desc">ఫీడ్, మెడిసిన్ మొదలైనవి</string>
+    <string name="medicine_desc">ఆక్వా మందులు, ప్రోబయోటిక్స్ &amp; సప్లిమెంట్స్</string>
+    <string name="business_desc">సాధారణ ఆక్వా వ్యాపారం</string>
     <!-- Select Category -->
     <string name="select_category_title">మీరు ఏమి విక్రయిస్తున్నారు?</string>
     <string name="select_category_desc">మీ ఉత్పత్తి లేదా సేవను జాబితా చేయడం ప్రారంభించడానికి ఒక వర్గాన్ని ఎంచుకోండి.</string>
@@ -315,6 +319,7 @@
     <string name="no_title">టైటిల్ లేదు</string>
     <string name="not_available_short">సమాచారం లేదు</string>
     <string name="coming_soon">త్వరలో వస్తుంది</string>
+    <string name="people_viewed_this">మంది ఈ ప్రకటనను చూశారు</string>
     <string name="loading_marketplace">మార్కెట్‌ప్లేస్‌ను లోడ్ చేస్తోంది…</string>
     <string name="version_label">వెర్షన్ %s</string>
     <string name="contact_us">మమ్మల్ని సంప్రదించండి</string>
@@ -473,5 +478,9 @@
     <string name="ad_posted_success">ప్రకటన విజయవంతంగా పోస్ట్ చేయబడింది!</string>
     <string name="ad_posted_desc">మీ ప్రకటన \'%s\' ఇప్పుడు లైవ్‌లో ఉంది.</string>
     <string name="otp_verify_failed">ధృవీకరణ విఫలమైంది. దయచేసి మళ్లీ ప్రయత్నించండి.</string>
+    <string name="share_listing">లిస్టింగ్‌ను షేర్ చేయండి</string>
+    <string name="share_listing_template">నేను ఇది తేజశ్ ఆక్వాలో కనుగొన్నాను. మీకు ఏమనిపిస్తుంది?\n\n%2$s (%1$s)\nధర: %3$s\nస్థానం: %4$s\n\nవివరాలు చూడండి: https://tejashaquaapp.web.app/listing/%5$s\n\nమంచి అనుభవం కోసం, తేజశ్ ఆక్వా యాప్‌ను డౌన్‌లోడ్ చేయండి: https://play.google.com/store/apps/details?id=com.tejashaqua.app</string>
+    <string name="share_app">యాప్‌ను షేర్ చేయండి</string>
+    <string name="share_app_message">తేజశ్ ఆక్వా యాప్‌ను చూడండి - ఆక్వా రైతులకు ఉత్తమ యాప్! ఇప్పుడే డౌన్‌లోడ్ చేసుకోండి: https://play.google.com/store/apps/details?id=com.tejashaqua.app</string>
     <string name="waiting_for_otp">OTP కోసం వేచి ఉంది…</string>
 </resources>

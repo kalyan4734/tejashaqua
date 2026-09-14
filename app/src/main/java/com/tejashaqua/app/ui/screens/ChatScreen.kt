@@ -107,18 +107,21 @@ fun ChatScreen(
     val title = remember(listingDetails, currentLang) {
         val cat = listingDetails["category"]?.toString()?.uppercase() ?: ""
         val subCat = listingDetails["businessSubCategory"]?.toString() ?: ""
+        val medName = listingDetails["medicineName"]?.toString() ?: ""
+        val feedName = listingDetails["feedName"]?.toString() ?: ""
         
         listingDetails["title"]?.toString()?.takeIf { it.isNotBlank() }
             ?: listingDetails["listingTitle"]?.toString()?.takeIf { it.isNotBlank() }
             ?: when {
-                cat == "BUSINESS" && subCat == "Medicine" -> listingDetails["medicineName"]?.toString()
-                cat == "BUSINESS" && subCat == "Feed" -> listingDetails["feedName"]?.toString()
-                cat == "FEED" -> listingDetails["feedName"]?.toString()
-                cat == "TANKS" -> {
+                (cat == "BUSINESS" || cat == "BIZ") && subCat.equals("Medicine", ignoreCase = true) -> medName
+                (cat == "BUSINESS" || cat == "BIZ") && subCat.equals("Feed", ignoreCase = true) -> feedName
+                cat == "MEDICINE" -> medName.ifBlank { listingDetails["title"]?.toString() }
+                cat == "FEED" -> feedName.ifBlank { listingDetails["title"]?.toString() }
+                cat == "TANKS" || cat == "TANK" || cat == "POND" -> {
                     val acres = listingDetails["tankAcres"]?.toString() ?: ""
                     if (acres.isNotBlank()) "$acres Acres Tank" else null
                 }
-                cat == "JOBS" -> listingDetails["jobType"]?.toString()
+                cat == "JOBS" || cat == "JOB" -> listingDetails["jobType"]?.toString()
                 else -> null
             } ?: context.getString(R.string.no_title)
     }

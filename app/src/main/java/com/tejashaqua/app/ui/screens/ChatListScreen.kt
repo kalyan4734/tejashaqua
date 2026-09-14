@@ -5,7 +5,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -30,6 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.google.firebase.firestore.FirebaseFirestore
 import com.tejashaqua.app.R
@@ -44,16 +47,25 @@ import java.util.*
 fun ChatListScreen(
     currentUserId: String,
     onBackClick: () -> Unit,
-    onChatClick: (Map<String, Any>) -> Unit
+    onChatClick: (Map<String, Any>) -> Unit,
+    chatViewModel: com.tejashaqua.app.ui.viewmodel.ChatViewModel = viewModel(),
+    listState: LazyListState = rememberLazyListState()
 ) {
     var searchText by remember { mutableStateOf("") }
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     val db = FirebaseFirestore.getInstance()
-    var chats by remember { mutableStateOf(listOf<ChatListItemData>()) }
-    var isLoading by remember { mutableStateOf(true) }
+    
+    val chats by chatViewModel.chats.collectAsState()
+    val isLoading by chatViewModel.isLoading.collectAsState()
+    val listingStatusMap = chatViewModel.listingStatusMap
+
     val keyboardController = LocalSoftwareKeyboardController.current
     val context = LocalContext.current
     var blockedUsers by remember { mutableStateOf<Set<String>>(emptySet()) }
+
+    LaunchedEffect(currentUserId) {
+        chatViewModel.startChatsListener(currentUserId)
+    }
 
     LaunchedEffect(currentUserId) {
         if (currentUserId.isNotEmpty()) {
@@ -72,105 +84,6 @@ fun ChatListScreen(
         imeAction = ImeAction.Search,
         hintLocales = if (currentLang == "te") LocaleList("te") else null
     )
-
-    DisposableEffect(currentUserId) {
-        if (currentUserId.isEmpty()) return@DisposableEffect onDispose {}
-        
-        val registration = db.collection("chats")
-            .whereArrayContains("participants", currentUserId)
-            .addSnapshotListener { snapshot, e ->
-                isLoading = false
-                if (e != null || snapshot == null) return@addSnapshotListener
-                
-                val chatList = snapshot.documents.mapNotNull { doc ->
-                    val data = doc.data ?: return@mapNotNull null
-                    val sellerId = data["sellerId"]?.toString() ?: ""
-                    val buyerId = data["buyerId"]?.toString() ?: ""
-                    val isBuying = if (sellerId.isNotEmpty()) sellerId != currentUserId else buyerId == currentUserId
-                    
-                    val unreadCounts = data["unreadCounts"] as? Map<*, *>
-                    val unreadCount = (unreadCounts?.get(currentUserId) as? Number)?.toInt() ?: 
-                                     (data["unreadCounts.$currentUserId"] as? Number)?.toInt() ?: 0
-
-                    val listingId = data["listingId"]?.toString() ?: ""
-
-                    ChatListItemData(
-                        chatId = doc.id,
-                        name = if (isBuying) data["sellerName"]?.toString() ?: "Seller" else data["buyerName"]?.toString() ?: "Buyer",
-                        otherUserId = if (isBuying) data["sellerId"]?.toString() ?: "" else data["buyerId"]?.toString() ?: "",
-                        type = if (isBuying) "Buying" else "Selling",
-                        listingId = listingId,
-                        listingInfo = data["listingTitle"]?.toString() ?: "Listing",
-                        lastMessage = data["lastMessage"]?.toString() ?: "",
-                        time = when (val ts = data["lastMessageTimestamp"]) {
-                            is com.google.firebase.Timestamp -> ts.toDate().time
-                            is Number -> ts.toLong()
-                            else -> 0L
-                        },
-                        unreadCount = unreadCount,
-                        listingImage = data["listingImage"]?.toString(),
-                        fullData = data + mapOf("id" to listingId)
-                    )
-                }.sortedByDescending { it.time }
-                
-                chats = chatList
-            }
-            
-        onDispose {
-            registration.remove()
-        }
-    }
-
-    val listingStatusMap = remember { mutableStateMapOf<String, Boolean>() }
-
-    LaunchedEffect(chats) {
-        val uniqueListingIds = chats.map { it.listingId }
-            .filter { it.isNotEmpty() && !listingStatusMap.containsKey(it) }
-            .distinct()
-            
-        if (uniqueListingIds.isNotEmpty()) {
-            uniqueListingIds.chunked(10).forEach { chunk ->
-                db.collection("listings")
-                    .whereIn(com.google.firebase.firestore.FieldPath.documentId(), chunk)
-                    .get()
-                    .addOnSuccessListener { snapshot ->
-                        val foundIds = snapshot.documents.map { it.id }.toSet()
-                        chunk.forEach { id ->
-                            val exists = foundIds.contains(id)
-                            listingStatusMap[id] = exists
-                            
-                            // Cleanup logic for inactive chats
-                            if (!exists) {
-                                val associatedChats = chats.filter { it.listingId == id }
-                                associatedChats.forEach { chatItem ->
-                                    val inactiveSince = chatItem.fullData["inactiveSince"]
-                                    if (inactiveSince == null) {
-                                        // Tag as inactive
-                                        db.collection("chats").document(chatItem.chatId)
-                                            .update("inactiveSince", com.google.firebase.firestore.FieldValue.serverTimestamp())
-                                    } else {
-                                        // Check if 7 days passed
-                                        val inactiveTime = when (inactiveSince) {
-                                            is com.google.firebase.Timestamp -> inactiveSince.toDate().time
-                                            is Number -> inactiveSince.toLong()
-                                            else -> 0L
-                                        }
-                                        
-                                        if (inactiveTime > 0) {
-                                            val sevenDaysInMillis = 7 * 24 * 60 * 60 * 1000L
-                                            if (System.currentTimeMillis() - inactiveTime > sevenDaysInMillis) {
-                                                // Delete chat
-                                                db.collection("chats").document(chatItem.chatId).delete()
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-            }
-        }
-    }
 
     val filteredChats = chats.filter {
         val otherUserId = it.fullData["userId"]?.toString() ?: ""
@@ -264,11 +177,14 @@ fun ChatListScreen(
                 }
 
                 if (sortedChats.isEmpty() && !isLoading) {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                         Text(stringResource(R.string.no_chats), color = GrayText)
                     }
                 } else {
-                    LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier.weight(1f).fillMaxWidth()
+                    ) {
                         items(sortedChats) { chat ->
                             ChatListItem(
                                 chat = chat, 

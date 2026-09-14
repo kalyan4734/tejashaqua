@@ -21,9 +21,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -96,6 +99,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.intl.LocaleList
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -122,6 +126,7 @@ import com.tejashaqua.app.utils.LocaleHelper
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.compose.foundation.Image
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -141,7 +146,9 @@ fun DashboardScreen(
     initialTab: Int = 0,
     onTabChange: (Int) -> Unit = {},
     locationViewModel: LocationSearchViewModel = viewModel(),
-    marketplaceViewModel: com.tejashaqua.app.ui.viewmodel.MarketplaceViewModel = viewModel()
+    marketplaceViewModel: com.tejashaqua.app.ui.viewmodel.MarketplaceViewModel = viewModel(),
+    chatViewModel: com.tejashaqua.app.ui.viewmodel.ChatViewModel = viewModel(),
+    marketplaceListState: LazyListState = rememberLazyListState()
 ) {
     var selectedItem by remember { mutableIntStateOf(initialTab) }
 
@@ -203,14 +210,22 @@ fun DashboardScreen(
     val isLoadingListings by marketplaceViewModel.isLoading.collectAsState()
     val isPaginating by marketplaceViewModel.isPaginating.collectAsState()
     val isLastPage by marketplaceViewModel.isLastPage.collectAsState()
+    val loadingCategory by marketplaceViewModel.loadingCategory.collectAsState()
+
+    val isScrollInProgress = marketplaceListState.isScrollInProgress
+    LaunchedEffect(isScrollInProgress) {
+        if (isScrollInProgress) {
+            keyboardController?.hide()
+        }
+    }
 
     var favoriteIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     var lastCheckedNotifications by remember { mutableLongStateOf(0L) }
     var unreadNotificationCount by remember { mutableIntStateOf(0) }
-    var blockedUsers by remember { mutableStateOf<Set<String>>(emptySet()) }
+    val blockedUsers by marketplaceViewModel.blockedUsers.collectAsState()
 
     // Logic to reload listings when location, category or fetching status changes
-    LaunchedEffect(userLatLng, selectedCategoryFilter, isFetchingLocation) {
+    LaunchedEffect(userLatLng, selectedCategoryFilter, fetchedName, isFetchingLocation) {
         if (!isFetchingLocation) {
             marketplaceViewModel.loadListings(
                 lat = userLatLng?.latitude,
@@ -225,11 +240,10 @@ fun DashboardScreen(
     // Real-time listener for badge count and user updates
     LaunchedEffect(currentUserId) {
         if (currentUserId.isNotEmpty()) {
+            marketplaceViewModel.startUserMetadataListener(currentUserId)
+            
             db.collection("users").document(currentUserId).addSnapshotListener { snapshot, _ ->
                 if (snapshot != null && snapshot.exists()) {
-                    val blocked = snapshot.get("blockedUsers") as? List<*>
-                    blockedUsers = blocked?.mapNotNull { it?.toString() }?.toSet() ?: emptySet()
-
                     lastCheckedNotifications = snapshot.getLong("lastCheckedNotifications") ?: 0L
                 }
             }
@@ -285,9 +299,9 @@ fun DashboardScreen(
                     "All" -> true
                     "VEHICLES" -> {
                         val serviceType = (data["serviceType"]?.toString() ?: "").lowercase().trim()
-                        category.uppercase() == "VEHICLES" || (category.uppercase() == "SERVICES" && 
-                            (serviceType.contains("live fish vehicle") || 
-                             serviceType.contains("లైవ్ ఫిష్ వెహికల్") ||
+                        category.uppercase() == "VEHICLES" || category.uppercase() == "VEHICLE" || (category.uppercase() == "SERVICES" && 
+                            (serviceType.contains("vehicle") || 
+                             serviceType.contains("వెహికల్") ||
                              serviceType.contains("bore well") ||
                              serviceType.contains("బోర్ వెల్") ||
                              serviceType.contains("earth mover") ||
@@ -299,21 +313,31 @@ fun DashboardScreen(
                         category.uppercase() == "FEED" || (category.uppercase() == "BUSINESS" && (subCat == "feed" || subCat == "మేత"))
                     }
 
+                    "MEDICINE" -> {
+                        val subCat = (data["businessSubCategory"]?.toString() ?: "").lowercase().trim()
+                        category.uppercase() == "MEDICINE" || (category.uppercase() == "BUSINESS" && (subCat == "medicine" || subCat == "మెడిసిన్" || subCat == "మందులు"))
+                    }
+
                     "BUSINESS" -> {
                         val subCat = (data["businessSubCategory"]?.toString() ?: "").lowercase().trim()
-                        category.uppercase() == "BUSINESS" && (subCat != "feed" && subCat != "మేత")
+                        (category.uppercase() == "BUSINESS" || category.uppercase() == "BIZ") && 
+                        (subCat != "feed" && subCat != "మేత" && subCat != "medicine" && subCat != "మెడిసిన్" && subCat != "మందులు")
                     }
 
                     "SERVICES" -> {
                         val serviceType = (data["serviceType"]?.toString() ?: "").lowercase().trim()
                         category.uppercase() == "SERVICES" && 
-                            !(serviceType.contains("live fish vehicle") || 
-                              serviceType.contains("లైవ్ ఫిష్ వెహికల్") ||
+                            !(serviceType.contains("vehicle") || 
+                              serviceType.contains("వెహికల్") ||
                               serviceType.contains("bore well") ||
                               serviceType.contains("బోర్ వెల్") ||
                               serviceType.contains("earth mover") ||
                               serviceType.contains("ఎర్త్ మూవర్"))
                     }
+
+                    "PRAWNS" -> category.uppercase() == "PRAWNS" || category.uppercase() == "PRAWN" || category.uppercase() == "HATCHERY"
+                    "FISH" -> category.uppercase() == "FISH" || category.uppercase() == "SEED"
+                    "TANKS" -> category.uppercase() == "TANKS" || category.uppercase() == "TANK" || category.uppercase() == "POND" || category.uppercase() == "LAND"
 
                     else -> category.uppercase() == selectedCategoryFilter
                 }
@@ -326,119 +350,20 @@ fun DashboardScreen(
         filteredListings.chunked(2)
     }
 
-    val selectedSellerPosts = remember(selectedSellerId, listings) {
-        if (selectedSellerId.isEmpty()) emptyList()
-        else listings.filter { item -> item["userId"]?.toString() == selectedSellerId }
-    }
-
-    // Chat State
-    var chats by remember { mutableStateOf(listOf<ChatListItemData>()) }
-    var isLoadingChats by remember { mutableStateOf(true) }
+    // Chat State from ViewModel
+    val chats by chatViewModel.chats.collectAsState()
+    val isLoadingChats by chatViewModel.isLoading.collectAsState()
     var chatSearchText by remember { mutableStateOf("") }
     var chatSelectedTabIndex by remember { mutableIntStateOf(0) }
 
-    val totalUnreadCount by remember {
-        derivedStateOf { chats.sumOf { it.unreadCount } }
-    }
-
     LaunchedEffect(currentUserId) {
-        if (currentUserId.isEmpty()) {
-            isLoadingChats = false
-            return@LaunchedEffect
-        }
-
-        db.collection("chats").whereArrayContains("participants", currentUserId)
-            .addSnapshotListener { snapshot, e ->
-                isLoadingChats = false
-                if (e != null || snapshot == null) return@addSnapshotListener
-
-                chats = snapshot.documents.mapNotNull { doc ->
-                    val data = doc.data ?: return@mapNotNull null
-                    val sellerId = data["sellerId"]?.toString() ?: ""
-                    val buyerId = data["buyerId"]?.toString() ?: ""
-                    val isBuying =
-                        if (sellerId.isNotEmpty()) sellerId != currentUserId else buyerId == currentUserId
-
-                    val unreadCounts = data["unreadCounts"] as? Map<*, *>
-                    val unreadCount = (unreadCounts?.get(currentUserId) as? Number)?.toInt()
-                        ?: (data["unreadCounts.$currentUserId"] as? Number)?.toInt() ?: 0
-
-                    val lid = data["listingId"]?.toString() ?: ""
-
-                    ChatListItemData(
-                        chatId = doc.id,
-                        name = if (isBuying) data["sellerName"]?.toString()
-                            ?: context.getString(R.string.seller_label) else data["buyerName"]?.toString()
-                            ?: context.getString(R.string.buyer_label),
-                        otherUserId = if (isBuying) data["sellerId"]?.toString()
-                            ?: "" else data["buyerId"]?.toString() ?: "",
-                        type = if (isBuying) "Buying" else "Selling",
-                        listingId = lid,
-                        listingInfo = data["listingTitle"]?.toString() ?: "Listing",
-                        lastMessage = data["lastMessage"]?.toString() ?: "",
-                        time = when (val ts = data["lastMessageTimestamp"]) {
-                            is com.google.firebase.Timestamp -> ts.toDate().time
-                            is Number -> ts.toLong()
-                            else -> 0L
-                        },
-                        unreadCount = unreadCount,
-                        listingImage = data["listingImage"]?.toString(),
-                        fullData = data + mapOf("id" to lid)
-                    )
-                }.sortedByDescending { it.time }
-            }
+        chatViewModel.startChatsListener(currentUserId)
     }
 
-    val listingStatusMap = remember { mutableStateMapOf<String, Boolean>() }
+    val listingStatusMap = chatViewModel.listingStatusMap
 
-    LaunchedEffect(chats) {
-        val uniqueListingIds = chats.map { it.listingId }
-            .filter { it.isNotEmpty() && !listingStatusMap.containsKey(it) }.distinct()
-
-        if (uniqueListingIds.isNotEmpty()) {
-            uniqueListingIds.chunked(10).forEach { chunk ->
-                db.collection("listings")
-                    .whereIn(com.google.firebase.firestore.FieldPath.documentId(), chunk).get()
-                    .addOnSuccessListener { snapshot ->
-                        val foundIds = snapshot.documents.map { it.id }.toSet()
-                        chunk.forEach { id ->
-                            val exists = foundIds.contains(id)
-                            listingStatusMap[id] = exists
-
-                            // Cleanup logic for inactive chats
-                            if (!exists) {
-                                val associatedChats = chats.filter { it.listingId == id }
-                                associatedChats.forEach { chatItem ->
-                                    val inactiveSince = chatItem.fullData["inactiveSince"]
-                                    if (inactiveSince == null) {
-                                        // Tag as inactive
-                                        db.collection("chats").document(chatItem.chatId).update(
-                                            "inactiveSince",
-                                            com.google.firebase.firestore.FieldValue.serverTimestamp()
-                                        )
-                                    } else {
-                                        // Check if 7 days passed
-                                        val inactiveTime = when (inactiveSince) {
-                                            is com.google.firebase.Timestamp -> inactiveSince.toDate().time
-                                            is Number -> inactiveSince.toLong()
-                                            else -> 0L
-                                        }
-
-                                        if (inactiveTime > 0) {
-                                            val sevenDaysInMillis = 7 * 24 * 60 * 60 * 1000L
-                                            if (System.currentTimeMillis() - inactiveTime > sevenDaysInMillis) {
-                                                // Delete chat
-                                                db.collection("chats").document(chatItem.chatId)
-                                                    .delete()
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-            }
-        }
+    val totalUnreadCount by remember(chats) {
+        derivedStateOf { chats.sumOf { it.unreadCount } }
     }
 
     val filteredChats = remember(chats, chatSearchText, chatSelectedTabIndex) {
@@ -457,6 +382,11 @@ fun DashboardScreen(
         filteredChats.sortedWith(compareByDescending<ChatListItemData> {
             listingStatusMap[it.listingId] ?: true
         }.thenByDescending { it.time })
+    }
+
+    val selectedSellerPosts = remember(selectedSellerId, listings) {
+        if (selectedSellerId.isEmpty()) emptyList()
+        else listings.filter { item -> item["userId"]?.toString() == selectedSellerId }
     }
 
     Scaffold(
@@ -781,6 +711,7 @@ fun DashboardScreen(
     }) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding)) {
             LazyColumn(
+                state = marketplaceListState,
                 modifier = Modifier
                     .fillMaxSize()
                     .background(MaterialTheme.colorScheme.background)
@@ -833,40 +764,35 @@ fun DashboardScreen(
                         Spacer(modifier = Modifier.height(12.dp))
                     }
 
-                    if (isLoadingListings) {
-                        item {
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp)
-                                    .height(200.dp),
-                                shape = RoundedCornerShape(12.dp),
-                                colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5))
-                            ) {
-                                Box(
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        CircularProgressIndicator(
-                                            color = AquaBlue, modifier = Modifier.size(32.dp)
-                                        )
-                                        Spacer(modifier = Modifier.height(12.dp))
-                                        Text(
-                                            stringResource(R.string.loading_marketplace),
-                                            color = GrayText,
-                                            fontSize = 14.sp
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    } else if (filteredListings.isEmpty()) {
+                    val showInitialLoading = (isLoadingListings || isFetchingLocation || loadingCategory != null) && filteredListings.isEmpty()
+
+                    if (showInitialLoading) {
                         item {
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(150.dp),
+                                    .padding(vertical = 120.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    CircularProgressIndicator(
+                                        color = AquaBlue, modifier = Modifier.size(32.dp)
+                                    )
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    Text(
+                                        if (isFetchingLocation) stringResource(R.string.fetching_location) else stringResource(R.string.loading_marketplace),
+                                        color = GrayText,
+                                        fontSize = 14.sp
+                                    )
+                                }
+                            }
+                        }
+                    } else if (filteredListings.isEmpty() && !isLoadingListings && !isFetchingLocation) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 120.dp),
                                 contentAlignment = Alignment.Center
                             ) {
                                 val message =
@@ -879,7 +805,7 @@ fun DashboardScreen(
                     } else {
                         items(
                             count = chunkedListings.size, key = { index ->
-                                val row = chunkedListings[index]
+                                val row = if (index < chunkedListings.size) chunkedListings[index] else emptyList()
                                 row.joinToString("-") { it["id"]?.toString() ?: "" }
                             }) { index ->
                             val rowItems = chunkedListings[index]
@@ -1005,6 +931,7 @@ fun DashboardScreen(
                                         rawCategory = categoryStr,
                                         lat = (data["lat"] as? Number)?.toDouble(),
                                         lng = (data["lng"] as? Number)?.toDouble(),
+                                        viewCount = 0, // Don't show in Dashboard
                                         modifier = Modifier.weight(1f)
                                     )
                                 }
@@ -1037,9 +964,7 @@ fun DashboardScreen(
                     if (isLoadingChats) {
                         item {
                             Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(200.dp),
+                                modifier = Modifier.fillParentMaxSize(),
                                 contentAlignment = Alignment.Center
                             ) {
                                 CircularProgressIndicator(color = AquaBlue)
@@ -1048,9 +973,7 @@ fun DashboardScreen(
                     } else if (sortedChats.isEmpty()) {
                         item {
                             Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(200.dp),
+                                modifier = Modifier.fillParentMaxSize(),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(stringResource(R.string.no_chats), color = GrayText)
@@ -1382,6 +1305,7 @@ fun CategoryFilterRow(selected: String, onSelect: (String) -> Unit) {
         "EQUIPMENTS",
         "VEHICLES",
         "FEED",
+        "MEDICINE",
         "SERVICES",
         "TANKS",
         "BUSINESS",
@@ -1400,6 +1324,7 @@ fun CategoryFilterRow(selected: String, onSelect: (String) -> Unit) {
                 "EQUIPMENTS" -> stringResource(R.string.cat_equipments)
                 "VEHICLES" -> stringResource(R.string.cat_vehicles)
                 "FEED" -> stringResource(R.string.cat_feed)
+                "MEDICINE" -> stringResource(R.string.cat_medicine)
                 "SERVICES" -> stringResource(R.string.cat_services)
                 "TANKS" -> stringResource(R.string.cat_tanks)
                 "BUSINESS" -> stringResource(R.string.cat_business)
@@ -1413,6 +1338,7 @@ fun CategoryFilterRow(selected: String, onSelect: (String) -> Unit) {
                 "EQUIPMENTS" -> Color(0xFF1976D2)
                 "VEHICLES" -> Color(0xFF1976D2)
                 "FEED" -> Color(0xFFE65100)
+                "MEDICINE" -> Color(0xFFD81B60)
                 "SERVICES" -> Color(0xFFF57C00)
                 "TANKS" -> Color(0xFF388E3C)
                 "BUSINESS" -> Color(0xFFB71C1C)
@@ -1498,13 +1424,26 @@ fun SearchHeader(
 
 @Composable
 fun FooterSection() {
-    Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Image(
+            painter = painterResource(id = R.drawable.tejas_aqua_watermark_logo),
+            contentDescription = null,
+            modifier = Modifier.size(100.dp),
+            alpha = 0.12f // Increased transparency
+        )
+        Spacer(modifier = Modifier.height(12.dp))
         Text(
             stringResource(R.string.footer_text),
-            fontSize = 32.sp,
+            fontSize = 14.sp,
             fontWeight = FontWeight.Bold,
             color = Color(0xFFD1D9E6),
-            lineHeight = 39.sp
+            textAlign = TextAlign.Center,
+            lineHeight = 20.sp
         )
         Spacer(modifier = Modifier.height(24.dp))
     }

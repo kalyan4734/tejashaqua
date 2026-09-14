@@ -56,6 +56,7 @@ import java.util.Calendar
 import com.tejashaqua.app.utils.LocaleHelper
 import java.text.SimpleDateFormat
 import java.util.*
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -90,6 +91,8 @@ fun AdminDashboardScreen(onBackClick: () -> Unit) {
             DatePicker(state = datePickerState)
         }
     }
+
+    val isKeyboardOpen = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
 
     Scaffold(
         topBar = {
@@ -208,33 +211,35 @@ fun AdminDashboardScreen(onBackClick: () -> Unit) {
             }
         },
         bottomBar = {
-            NavigationBar(
-                containerColor = Color.White,
-                tonalElevation = 8.dp
-            ) {
-                val items = listOf(
-                    Triple(stringResource(R.string.stats), Icons.Default.Dashboard, 0),
-                    Triple("Rates", Icons.Default.SetMeal, 1),
-                    Triple("Admin", Icons.Default.ManageAccounts, 2)
-                )
-                
-                items.forEach { (label, icon, index) ->
-                    NavigationBarItem(
-                        selected = selectedMainTab == index,
-                        onClick = { 
-                            keyboardController?.hide()
-                            selectedMainTab = index 
-                        },
-                        label = { Text(label, fontSize = 11.sp, fontWeight = if (selectedMainTab == index) FontWeight.Bold else FontWeight.Normal) },
-                        icon = { Icon(icon, contentDescription = label) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = AquaBlue,
-                            selectedTextColor = AquaBlue,
-                            indicatorColor = Color.Transparent,
-                            unselectedIconColor = GrayText,
-                            unselectedTextColor = GrayText
-                        )
+            if (!isKeyboardOpen) {
+                NavigationBar(
+                    containerColor = Color.White,
+                    tonalElevation = 8.dp
+                ) {
+                    val items = listOf(
+                        Triple(stringResource(R.string.stats), Icons.Default.Dashboard, 0),
+                        Triple("Rates", Icons.Default.SetMeal, 1),
+                        Triple("Admin", Icons.Default.ManageAccounts, 2)
                     )
+                    
+                    items.forEach { (label, icon, index) ->
+                        NavigationBarItem(
+                            selected = selectedMainTab == index,
+                            onClick = { 
+                                keyboardController?.hide()
+                                selectedMainTab = index 
+                            },
+                            label = { Text(label, fontSize = 11.sp, fontWeight = if (selectedMainTab == index) FontWeight.Bold else FontWeight.Normal) },
+                            icon = { Icon(icon, contentDescription = label) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = AquaBlue,
+                                selectedTextColor = AquaBlue,
+                                indicatorColor = Color.Transparent,
+                                unselectedIconColor = GrayText,
+                                unselectedTextColor = GrayText
+                            )
+                        )
+                    }
                 }
             }
         }
@@ -246,28 +251,31 @@ fun AdminDashboardScreen(onBackClick: () -> Unit) {
                 .background(Color(0xFFF8F9FA))
                 .imePadding()
         ) {
-            AnimatedContent(
-                targetState = selectedMainTab,
-                transitionSpec = {
-                    if (targetState > initialState) {
-                        slideInHorizontally { it } + fadeIn() togetherWith slideOutHorizontally { -it } + fadeOut()
-                    } else {
-                        slideInHorizontally { -it } + fadeIn() togetherWith slideOutHorizontally { it } + fadeOut()
-                    }.using(SizeTransform(clip = false))
-                },
-                label = "tab_transition"
-            ) { targetTab ->
-                when (targetTab) {
-                    0 -> StatsAdmin()
-                    1 -> {
-                        if (selectedRatesSubTab == 0) FishRatesAdmin(selectedDate, onBackClick)
-                        else PrawnRatesAdmin(selectedDate, onBackClick)
-                    }
-                    2 -> {
-                        when (selectedAdminSubTab) {
-                            0 -> UsersAdmin()
-                            1 -> ReportsAdmin()
-                            else -> NotificationsAdmin()
+            Box(modifier = Modifier.weight(1f)) {
+                AnimatedContent(
+                    targetState = selectedMainTab,
+                    modifier = Modifier.fillMaxSize(),
+                    transitionSpec = {
+                        if (targetState > initialState) {
+                            slideInHorizontally { it } + fadeIn() togetherWith slideOutHorizontally { -it } + fadeOut()
+                        } else {
+                            slideInHorizontally { -it } + fadeIn() togetherWith slideOutHorizontally { it } + fadeOut()
+                        }.using(SizeTransform(clip = false))
+                    },
+                    label = "tab_transition"
+                ) { targetTab ->
+                    when (targetTab) {
+                        0 -> StatsAdmin()
+                        1 -> {
+                            if (selectedRatesSubTab == 0) FishRatesAdmin(selectedDate, onBackClick)
+                            else PrawnRatesAdmin(selectedDate, onBackClick)
+                        }
+                        2 -> {
+                            when (selectedAdminSubTab) {
+                                0 -> UsersAdmin()
+                                1 -> ReportsAdmin()
+                                else -> NotificationsAdmin()
+                            }
                         }
                     }
                 }
@@ -425,11 +433,6 @@ fun GrowthChart(
                             radius = 4.dp.toPx(),
                             center = offset
                         )
-                        
-                        // Date labels
-                        if (index % 2 == 0 || index == points.size - 1) {
-                            // Date labels drawn below chart
-                        }
                     }
                 }
                 
@@ -466,10 +469,8 @@ fun StatsAdmin() {
     var period by remember { mutableStateOf("Weekly") }
     var appDownloadsCount by remember { mutableIntStateOf(0) }
     
-    // Mock values for items not in Firestore
     val revenue = "₹0.00"
     val pendingApprovals = 0
-
     var growthData by remember { mutableStateOf<List<Pair<String, Int>>>(emptyList()) }
 
     LaunchedEffect(period) {
@@ -507,25 +508,25 @@ fun StatsAdmin() {
                     todayCount++
                 }
                 
-                // For growth chart
                 if (timestamp >= startTime) {
-                    val dateStr = sdf.format(Date(timestamp))
-                    growthMap[dateStr] = (growthMap[dateStr] ?: 0) + 1
+                    // Use a sortable key for growthMap: YYYYMMDD or YYYY-WW or similar
+                    val sortKey = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date(timestamp))
+                    val displayLabel = sdf.format(Date(timestamp))
+                    // Combine them to sort later
+                    growthMap[sortKey + "|" + displayLabel] = (growthMap[sortKey + "|" + displayLabel] ?: 0) + 1
                 }
             }
             categoryCounts = counts
             totalPosts = snapshot.size()
             listingsToday = todayCount
             
-            // Sort growth data
-            growthData = growthMap.toList().sortedBy { 
-                try { sdf.parse(it.first)?.time ?: 0L } catch(_: Exception) { 0L }
-            }
+            growthData = growthMap.toList()
+                .sortedBy { it.first.split("|")[0] }
+                .map { it.first.split("|")[1] to it.second }
             
             db.collection("users").get().addOnSuccessListener { userSnapshot ->
                 totalUsers = userSnapshot.size()
                 
-                // Count blocked users
                 val blockCounts = mutableMapOf<String, Int>()
                 userSnapshot.documents.forEach { doc ->
                     val blocked = doc.get("blockedUsers") as? List<*>
@@ -542,7 +543,6 @@ fun StatsAdmin() {
                     db.collection("chats").get().addOnSuccessListener { chatSnapshot ->
                         totalChats = chatSnapshot.size()
                         
-                        // Fetch download count from config
                         db.collection("app_config").document("version").get().addOnSuccessListener { configDoc ->
                             appDownloadsCount = configDoc.getLong("download_count")?.toInt() ?: totalUsers
                             isLoading = false
@@ -651,7 +651,6 @@ fun StatsAdmin() {
                         
                         Spacer(modifier = Modifier.height(24.dp))
                         
-                        // Legend
                         FlowRow(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.Center,
@@ -763,6 +762,7 @@ fun getCategoryName(category: ListingCategory): String = when (category) {
     ListingCategory.EQUIPMENTS -> stringResource(R.string.cat_equipments)
     ListingCategory.VEHICLES -> stringResource(R.string.cat_vehicles)
     ListingCategory.FEED -> stringResource(R.string.cat_feed)
+    ListingCategory.MEDICINE -> stringResource(R.string.cat_medicine)
     ListingCategory.SERVICES -> stringResource(R.string.cat_services)
     ListingCategory.TANKS -> stringResource(R.string.cat_tanks)
     ListingCategory.BUSINESS -> stringResource(R.string.cat_business)
@@ -775,18 +775,23 @@ fun getCategoryColor(category: ListingCategory): Color = when (category) {
     ListingCategory.EQUIPMENTS -> Color(0xFF1976D2)
     ListingCategory.VEHICLES -> Color(0xFF0288D1)
     ListingCategory.FEED -> Color(0xFFE65100)
+    ListingCategory.MEDICINE -> Color(0xFFD81B60)
     ListingCategory.SERVICES -> Color(0xFFF57C00)
     ListingCategory.TANKS -> Color(0xFF388E3C)
     ListingCategory.BUSINESS -> Color(0xFFB71C1C)
     ListingCategory.JOBS -> Color(0xFF673AB7)
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UsersAdmin() {
     val db = FirebaseFirestore.getInstance()
     var users by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var searchText by remember { mutableStateOf("") }
+    
+    var showDirectNotifySheet by remember { mutableStateOf(false) }
+    var selectedUserForNotify by remember { mutableStateOf<Map<String, Any>?>(null) }
 
     LaunchedEffect(Unit) {
         isLoading = true
@@ -870,7 +875,24 @@ fun UsersAdmin() {
                 }
                 
                 items(filteredUsers) { user ->
-                    UserAdminCard(user)
+                    UserAdminCard(user, onNotifyClick = {
+                        selectedUserForNotify = user
+                        showDirectNotifySheet = true
+                    })
+                }
+            }
+        }
+    }
+
+    if (showDirectNotifySheet && selectedUserForNotify != null) {
+        ModalBottomSheet(
+            onDismissRequest = { showDirectNotifySheet = false },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            containerColor = Color.White
+        ) {
+            Box(modifier = Modifier.padding(bottom = 32.dp)) {
+                NotificationsAdmin(targetUser = selectedUserForNotify) {
+                    showDirectNotifySheet = false
                 }
             }
         }
@@ -878,7 +900,7 @@ fun UsersAdmin() {
 }
 
 @Composable
-fun UserAdminCard(user: Map<String, Any>) {
+fun UserAdminCard(user: Map<String, Any>, onNotifyClick: () -> Unit = {}) {
     val name = user["name"]?.toString() ?: "No Name"
     val phone = user["phone"]?.toString() ?: "No Phone"
     val joinedAt = user["joinedAt"] as? Long ?: 0L
@@ -922,6 +944,10 @@ fun UserAdminCard(user: Map<String, Any>) {
                     Text(text = "Joined: $dateStr", fontSize = 11.sp, color = GrayText)
                 }
             }
+
+            IconButton(onClick = onNotifyClick) {
+                Icon(Icons.Default.NotificationsActive, contentDescription = "Notify", tint = AquaBlue)
+            }
         }
     }
 }
@@ -939,8 +965,6 @@ fun ReportsAdmin() {
 
     LaunchedEffect(Unit) {
         isLoading = true
-        
-        // Fetch all users first to map IDs to Names
         db.collection("users").get().addOnSuccessListener { snapshot ->
             val nameMap = mutableMapOf<String, String>()
             val blockCounts = mutableMapOf<String, Int>()
@@ -959,7 +983,6 @@ fun ReportsAdmin() {
             userNames = nameMap
             mostBlockedUsers = blockCounts.toList().sortedByDescending { it.second }.take(20)
             
-            // Fetch listing reports
             db.collection("reports")
                 .orderBy("timestamp", com.google.firebase.firestore.Query.Direction.DESCENDING)
                 .get()
@@ -971,7 +994,6 @@ fun ReportsAdmin() {
                     }
                 }
 
-            // Fetch user reports
             db.collection("user_reports")
                 .orderBy("timestamp", com.google.firebase.firestore.Query.Direction.DESCENDING)
                 .get()
@@ -1338,7 +1360,7 @@ fun FishRatesAdmin(selectedDate: Long, onBackClick: () -> Unit) {
             color = Color.White,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Box(modifier = Modifier.padding(16.dp).navigationBarsPadding()) {
+            Box(modifier = Modifier.padding(16.dp)) {
                 Button(
                     onClick = {
                         keyboardController?.hide()
@@ -1701,7 +1723,7 @@ fun PrawnRatesAdmin(selectedDate: Long, onBackClick: () -> Unit) {
             color = Color.White,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Box(modifier = Modifier.padding(16.dp).navigationBarsPadding()) {
+            Box(modifier = Modifier.padding(16.dp)) {
                 Button(
                     onClick = {
                         keyboardController?.hide()
@@ -1790,7 +1812,7 @@ fun PrawnRatesAdmin(selectedDate: Long, onBackClick: () -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NotificationsAdmin() {
+fun NotificationsAdmin(targetUser: Map<String, Any>? = null, onComplete: () -> Unit = {}) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     
@@ -1810,7 +1832,7 @@ fun NotificationsAdmin() {
     }
     
     val calendar = remember { Calendar.getInstance() }
-    var scheduledDateTime by remember { mutableStateOf(calendar.timeInMillis) }
+    var scheduledDateTime by remember { mutableLongStateOf(calendar.timeInMillis) }
     
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
@@ -1823,10 +1845,12 @@ fun NotificationsAdmin() {
     
     var isSending by remember { mutableStateOf(false) }
     var scheduledList by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
+    var notificationLogs by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
     
-    // Fetch scheduled notifications
     LaunchedEffect(Unit) {
-        FirebaseFirestore.getInstance().collection("scheduled_notifications")
+        val db = FirebaseFirestore.getInstance()
+        
+        db.collection("scheduled_notifications")
             .whereGreaterThan("scheduledTime", Timestamp.now())
             .addSnapshotListener { value, _ ->
                 value?.let { snapshot ->
@@ -1837,6 +1861,19 @@ fun NotificationsAdmin() {
                     }.sortedBy { (it["scheduledTime"] as? Timestamp)?.seconds ?: 0L }
                 }
             }
+
+        db.collection("notification_logs")
+            .orderBy("sentAt", com.google.firebase.firestore.Query.Direction.DESCENDING)
+            .limit(20)
+            .addSnapshotListener { value, _ ->
+                value?.let { snapshot ->
+                    notificationLogs = snapshot.documents.map { doc ->
+                        val data = doc.data?.toMutableMap() ?: mutableMapOf()
+                        data["id"] = doc.id
+                        data
+                    }
+                }
+            }
     }
 
     LazyColumn(
@@ -1844,7 +1881,20 @@ fun NotificationsAdmin() {
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            Text("Send Push Notification", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text(
+                if (targetUser != null) "Send Direct Message" else "Send Push Notification", 
+                style = MaterialTheme.typography.titleLarge, 
+                fontWeight = FontWeight.Bold
+            )
+            if (targetUser != null) {
+                Text(
+                    text = "To: ${targetUser["name"]} (${targetUser["phone"]})",
+                    color = AquaBlue,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
         }
         
         item {
@@ -1915,18 +1965,20 @@ fun NotificationsAdmin() {
             }
         }
         
-        item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(
-                    checked = isScheduled, 
-                    onCheckedChange = { isScheduled = it },
-                    colors = CheckboxDefaults.colors(checkedColor = AquaBlue)
-                )
-                Text("Schedule for later")
+        if (targetUser == null) {
+            item {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(
+                        checked = isScheduled, 
+                        onCheckedChange = { isScheduled = it },
+                        colors = CheckboxDefaults.colors(checkedColor = AquaBlue)
+                    )
+                    Text("Schedule for later")
+                }
             }
         }
         
-        if (isScheduled) {
+        if (isScheduled && targetUser == null) {
             item {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(
@@ -1978,7 +2030,6 @@ fun NotificationsAdmin() {
                         try {
                             var finalImageUrl = imageUrl
                             
-                            // Upload image if selected from device
                             if (selectedImageUri != null) {
                                 val storageRef = FirebaseStorage.getInstance().reference
                                     .child("notifications/${System.currentTimeMillis()}.jpg")
@@ -1986,8 +2037,18 @@ fun NotificationsAdmin() {
                                 finalImageUrl = storageRef.downloadUrl.await().toString()
                             }
 
-                            if (isScheduled) {
-                                // Save to Firestore for scheduling
+                            if (targetUser != null) {
+                                val functions = FirebaseFunctions.getInstance("asia-south1")
+                                val data = hashMapOf(
+                                    "userId" to (targetUser["id"] as String),
+                                    "title" to title,
+                                    "body" to body,
+                                    "imageUrl" to finalImageUrl
+                                )
+                                functions.getHttpsCallable("sendDirectNotification").call(data).await()
+                                Toast.makeText(context, "Direct message sent to ${targetUser["name"]}", Toast.LENGTH_SHORT).show()
+                                onComplete()
+                            } else if (isScheduled) {
                                 val data = hashMapOf(
                                     "title" to title,
                                     "body" to body,
@@ -1999,7 +2060,6 @@ fun NotificationsAdmin() {
                                 FirebaseFirestore.getInstance().collection("scheduled_notifications").add(data).await()
                                 Toast.makeText(context, "Notification scheduled", Toast.LENGTH_SHORT).show()
                             } else {
-                                // Trigger immediate send via Cloud Function
                                 val functions = FirebaseFunctions.getInstance("asia-south1")
                                 val data = hashMapOf(
                                     "title" to title,
@@ -2007,7 +2067,7 @@ fun NotificationsAdmin() {
                                     "imageUrl" to finalImageUrl
                                 )
                                 functions.getHttpsCallable("sendAdminNotification").call(data).await()
-                                Toast.makeText(context, "Notification sent", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Broadcast notification sent", Toast.LENGTH_SHORT).show()
                             }
                             title = ""
                             body = ""
@@ -2029,12 +2089,12 @@ fun NotificationsAdmin() {
                 if (isSending) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
                 } else {
-                    Text(if (isScheduled) "Schedule Notification" else "Send Now", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text(if (targetUser != null) "Send Message" else if (isScheduled) "Schedule Notification" else "Send Now", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 }
             }
         }
         
-        if (scheduledList.isNotEmpty()) {
+        if (targetUser == null && scheduledList.isNotEmpty()) {
             item {
                 HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
                 Text("Upcoming Scheduled Notifications", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
@@ -2044,6 +2104,17 @@ fun NotificationsAdmin() {
                 ScheduledNotificationCard(item) { id ->
                     FirebaseFirestore.getInstance().collection("scheduled_notifications").document(id).delete()
                 }
+            }
+        }
+
+        if (targetUser == null && notificationLogs.isNotEmpty()) {
+            item {
+                HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+                Text("Recent Notification Logs", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            }
+            
+            items(notificationLogs) { log ->
+                NotificationLogCard(log)
             }
         }
     }
@@ -2092,6 +2163,59 @@ fun NotificationsAdmin() {
                 }
             }
         )
+    }
+}
+
+@Composable
+fun NotificationLogCard(log: Map<String, Any>) {
+    val type = log["type"] as? String ?: ""
+    val title = log["title"] as? String ?: ""
+    val body = log["body"] as? String ?: ""
+    val targetName = log["targetUserName"] as? String ?: log["targetTopic"] as? String ?: "Everyone"
+    val sentAt = log["sentAt"] as? Timestamp
+    val sdf = SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault())
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, Color(0xFFEEEEEE))
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(
+                    color = if (type == "direct") Color(0xFFE3F2FD) else Color(0xFFE8F5E9),
+                    shape = RoundedCornerShape(4.dp)
+                ) {
+                    Text(
+                        text = type.uppercase(),
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (type == "direct") Color(0xFF1976D2) else Color(0xFF388E3C)
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "To: $targetName",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(title, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Text(body, fontSize = 13.sp, color = GrayText, maxLines = 2)
+            
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = sentAt?.let { sdf.format(it.toDate()) } ?: "",
+                fontSize = 11.sp,
+                color = Color.LightGray,
+                modifier = Modifier.align(Alignment.End)
+            )
+        }
     }
 }
 

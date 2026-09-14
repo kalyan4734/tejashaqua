@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.platform.LocalContext
 import com.google.firebase.Timestamp
 import com.tejashaqua.app.R
 import com.tejashaqua.app.ui.theme.AquaBlue
@@ -87,6 +88,7 @@ fun SellerPostsDialog(
                                 "EQUIPMENTS" -> stringResource(R.string.cat_equipments)
                                 "VEHICLES" -> stringResource(R.string.cat_vehicles)
                                 "FEED" -> stringResource(R.string.cat_feed)
+                                "MEDICINE" -> stringResource(R.string.cat_medicine)
                                 "SERVICES" -> stringResource(R.string.cat_services)
                                 "TANKS" -> stringResource(R.string.cat_tanks)
                                 "BUSINESS" -> stringResource(R.string.cat_business)
@@ -145,6 +147,7 @@ fun SellerPostsDialog(
                                     onItemClick(data) 
                                 },
                                 rawCategory = categoryStr,
+                                viewCount = 0, // Don't show in list view
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }

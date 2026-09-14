@@ -163,19 +163,29 @@ exports.getListingsByLocation = onCall({
 
                 switch (category.toUpperCase()) {
                     case "VEHICLES":
-                        return lCat === "VEHICLES" || (lCat === "SERVICES" &&
-                            (lServiceType === "Live Fish Vehicles" || lServiceType === "లైవ్ ఫిష్ వెహికల్స్" ||
-                             lServiceType === "Bore Well" || lServiceType === "బోర్ వెల్" ||
-                             lServiceType === "Earth Movers" || lServiceType === "ఎర్త్ మూవర్స్"));
+                        return lCat === "VEHICLES" || lCat === "VEHICLE" || (lCat === "SERVICES" &&
+                            (lServiceType.toLowerCase().includes("vehicle") || lServiceType.includes("వెహికల్") ||
+                             lServiceType.toLowerCase().includes("bore well") || lServiceType.includes("బోర్ వెల్") ||
+                             lServiceType.toLowerCase().includes("earth mover") || lServiceType.includes("ఎర్త్ మూవర్")));
                     case "FEED":
-                        return lCat === "FEED" || (lCat === "BUSINESS" && (lBusSubCat === "Feed" || lBusSubCat === "మేత"));
+                        return lCat === "FEED" || (lCat === "BUSINESS" && (lBusSubCat.toLowerCase() === "feed" || lBusSubCat === "మేత"));
+                    case "MEDICINE":
+                        return lCat === "MEDICINE" || (lCat === "BUSINESS" && (lBusSubCat.toLowerCase() === "medicine" || lBusSubCat === "మెడిసిన్" || lBusSubCat === "మందులు"));
                     case "BUSINESS":
-                        return lCat === "BUSINESS" && (lBusSubCat !== "Feed" && lBusSubCat !== "మేత");
+                        return (lCat === "BUSINESS" || lCat === "BIZ") &&
+                               (lBusSubCat.toLowerCase() !== "feed" && lBusSubCat !== "మేత" &&
+                                lBusSubCat.toLowerCase() !== "medicine" && lBusSubCat !== "మెడిసిన్" && lBusSubCat !== "మందులు");
                     case "SERVICES":
                         return lCat === "SERVICES" &&
-                            !(lServiceType === "Live Fish Vehicles" || lServiceType === "లైవ్ ఫిష్ వెహికల్స్" ||
-                              lServiceType === "Bore Well" || lServiceType === "బోర్ వెల్" ||
-                              lServiceType === "Earth Movers" || lServiceType === "ఎర్త్ మూవర్స్");
+                            !(lServiceType.toLowerCase().includes("vehicle") || lServiceType.includes("వెహికల్") ||
+                              lServiceType.toLowerCase().includes("bore well") || lServiceType.includes("బోర్ వెల్") ||
+                              lServiceType.toLowerCase().includes("earth mover") || lServiceType.includes("ఎర్త్ మూవర్"));
+                    case "PRAWNS":
+                        return lCat === "PRAWNS" || lCat === "PRAWN" || lCat === "HATCHERY";
+                    case "FISH":
+                        return lCat === "FISH" || lCat === "SEED";
+                    case "TANKS":
+                        return lCat === "TANKS" || lCat === "TANK" || lCat === "POND" || lCat === "LAND";
                     default:
                         return lCat === category.toUpperCase();
                 }
@@ -333,7 +343,7 @@ exports.onRateUpdated = onDocumentUpdated("aqua_rates/{type}", async (event) => 
                 priority: "high",
                 notification: {
                     sound: "default",
-                    channelId: "general_notifications",
+                    channelId: "general_notifications_v2",
                     clickAction: "OPEN_RATES"
                 }
             }
@@ -509,6 +519,70 @@ exports.onUserUpdated = onDocumentUpdated("users/{userId}", async (event) => {
 });
 
 /**
+ * Sends a notification to a specific user and logs it.
+ */
+exports.sendDirectNotification = onCall({
+    enforceAppCheck: false
+}, async (request) => {
+    const { userId, title, body, imageUrl } = request.data;
+
+    if (!userId || !title || !body) {
+        return { success: false, message: "UserID, title and body are required" };
+    }
+
+    try {
+        // 1. Get user's FCM token
+        const userDoc = await admin.firestore().collection("users").doc(userId).get();
+        const fcmToken = userDoc.data()?.fcmToken;
+
+        if (!fcmToken) {
+            return { success: false, message: "User does not have a valid FCM token" };
+        }
+
+        const message = {
+            token: fcmToken,
+            notification: {
+                title: title,
+                body: body,
+                image: imageUrl || undefined
+            },
+            android: {
+                notification: {
+                    image: imageUrl || undefined,
+                    channelId: "general_notifications_v2"
+                }
+            },
+            data: {
+                title: title,
+                body: body,
+                imageUrl: imageUrl || ""
+            }
+        };
+
+        // 2. Send the message
+        await admin.messaging().send(message);
+
+        // 3. Log the notification for admin visibility
+        await admin.firestore().collection("notification_logs").add({
+            type: "direct",
+            targetUserId: userId,
+            targetUserName: userDoc.data()?.name || "Unknown",
+            title: title,
+            body: body,
+            imageUrl: imageUrl || "",
+            sentAt: admin.firestore.FieldValue.serverTimestamp(),
+            status: "success"
+        });
+
+        logger.info(`Direct notification sent to ${userId}`);
+        return { success: true };
+    } catch (error) {
+        logger.error("Error sending direct notification:", error);
+        return { success: false, error: error.message };
+    }
+});
+
+/**
  * Sends a notification to all users immediately.
  */
 exports.sendAdminNotification = onCall({
@@ -525,10 +599,11 @@ exports.sendAdminNotification = onCall({
         notification: {
             title: title,
             body: body,
+            image: imageUrl || undefined
         },
         android: {
             notification: {
-                imageUrl: imageUrl || undefined,
+                image: imageUrl || undefined,
                 channelId: "general_notifications_v2"
             }
         },
@@ -541,6 +616,18 @@ exports.sendAdminNotification = onCall({
 
     try {
         await admin.messaging().send(message);
+
+        // Log broadcast for admin visibility
+        await admin.firestore().collection("notification_logs").add({
+            type: "broadcast",
+            targetTopic: "all_users",
+            title: title,
+            body: body,
+            imageUrl: imageUrl || "",
+            sentAt: admin.firestore.FieldValue.serverTimestamp(),
+            status: "success"
+        });
+
         logger.info("Admin notification sent successfully");
         return { success: true };
     } catch (error) {
@@ -572,10 +659,11 @@ exports.sendScheduledNotifications = onSchedule("every 1 minutes", async (event)
             notification: {
                 title: data.title,
                 body: data.body,
+                image: data.imageUrl || undefined
             },
             android: {
                 notification: {
-                    imageUrl: data.imageUrl || undefined,
+                    image: data.imageUrl || undefined,
                     channelId: "general_notifications_v2"
                 }
             },

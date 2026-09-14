@@ -32,7 +32,7 @@ android {
         applicationId = "com.tejashaqua.app"
         minSdk = 24
         targetSdk = 35
-        versionCode = 34
+        versionCode = 37
         versionName = "1.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

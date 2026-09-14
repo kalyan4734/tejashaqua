@@ -10,6 +10,12 @@ import androidx.core.content.FileProvider
 import java.io.File
 import java.io.InputStream
 import java.io.IOException
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.Rect
+import android.graphics.Typeface
+import androidx.compose.ui.graphics.toArgb
+import com.tejashaqua.app.ui.theme.AquaBlue
 
 object ImageUtils {
     fun createImageUri(context: Context): Uri? {
@@ -57,10 +63,74 @@ object ImageUtils {
                 bitmap.recycle()
                 bitmap = rotatedBitmap
             }
+            
+            if (bitmap != null) {
+                val watermarked = addWatermark(context, bitmap)
+                if (watermarked != bitmap) {
+                    bitmap.recycle()
+                    bitmap = watermarked
+                }
+            }
+            
             bitmap
         } catch (e: IOException) {
             e.printStackTrace()
             null
         }
+    }
+
+    fun addWatermark(context: Context, src: Bitmap): Bitmap {
+        val width = src.width
+        val height = src.height
+        val result = Bitmap.createBitmap(width, height, src.config ?: Bitmap.Config.ARGB_8888)
+        
+        val canvas = Canvas(result)
+        canvas.drawBitmap(src, 0f, 0f, null)
+
+        val text = "Tejash Aqua"
+
+        // 1. Logo at Bottom Right Corner
+        try {
+            val logo = BitmapFactory.decodeResource(context.resources, com.tejashaqua.app.R.drawable.tejas_aqua_watermark_logo)
+            
+            if (logo != null) {
+                // Logo size (approx 12% of image width)
+                val logoWidth = (width * 0.15f).toInt().coerceAtLeast(80)
+                val logoHeight = (logo.height * (logoWidth.toFloat() / logo.width)).toInt()
+                val scaledLogo = Bitmap.createScaledBitmap(logo, logoWidth, logoHeight, true)
+                
+                val paintLogo = Paint().apply {
+                    alpha = 120 // Increased transparency (Lower value = more transparent)
+                }
+
+                val margin = (width * 0.02f).coerceAtLeast(20f)
+                
+                // Draw only at Bottom Right
+                canvas.drawBitmap(
+                    scaledLogo, 
+                    width - logoWidth - margin, 
+                    height - logoHeight - margin, 
+                    paintLogo
+                )
+
+                scaledLogo.recycle()
+                logo.recycle()
+            }
+        } catch (_: Exception) {
+            // Fallback for bottom text if logo failsb
+            val paintBr = Paint().apply {
+                color = android.graphics.Color.WHITE
+                alpha = 140
+                textSize = (width * 0.04f).coerceAtLeast(35f)
+                typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+                isAntiAlias = true
+                setShadowLayer(5f, 2f, 2f, android.graphics.Color.BLACK)
+            }
+            val boundsBr = Rect()
+            paintBr.getTextBounds(text, 0, text.length, boundsBr)
+            canvas.drawText(text, width - boundsBr.width() - 40f, height - 40f, paintBr)
+        }
+        
+        return result
     }
 }

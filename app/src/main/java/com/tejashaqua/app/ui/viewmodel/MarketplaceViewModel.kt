@@ -21,6 +21,9 @@ class MarketplaceViewModel(application: Application) : AndroidViewModel(applicat
     private val _isLastPage = MutableStateFlow(false)
     val isLastPage: StateFlow<Boolean> = _isLastPage
 
+    private val _loadingCategory = MutableStateFlow<String?>(null)
+    val loadingCategory: StateFlow<String?> = _loadingCategory
+
     // Filter State
     private val _selectedCategory = MutableStateFlow("All")
     val selectedCategory: StateFlow<String> = _selectedCategory
@@ -42,11 +45,17 @@ class MarketplaceViewModel(application: Application) : AndroidViewModel(applicat
     private val _isLoadingSavedItems = MutableStateFlow(false)
     val isLoadingSavedItems: StateFlow<Boolean> = _isLoadingSavedItems
 
+    private val _blockedUsers = MutableStateFlow<Set<String>>(emptySet())
+    val blockedUsers: StateFlow<Set<String>> = _blockedUsers
+
     private var currentPage = 0
     private var lastParams: FetchParams? = null
+    private var latestRequestId = 0L
     
+    private var myListingsUserId: String? = null
     private var myListingsListener: com.google.firebase.firestore.ListenerRegistration? = null
     private var savedItemsListener: com.google.firebase.firestore.ListenerRegistration? = null
+    private var userMetadataListener: com.google.firebase.firestore.ListenerRegistration? = null
 
     data class FetchParams(
         val lat: Double?,
@@ -55,12 +64,33 @@ class MarketplaceViewModel(application: Application) : AndroidViewModel(applicat
         val category: String
     )
 
-    fun setSelectedCategory(category: String) {
-        _selectedCategory.value = category
+    fun startUserMetadataListener(userId: String) {
+        if (userId.isEmpty() || userMetadataListener != null) return
+        
+        userMetadataListener = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+            .collection("users").document(userId)
+            .addSnapshotListener { snapshot, _ ->
+                if (snapshot != null && snapshot.exists()) {
+                    val blocked = snapshot.get("blockedUsers") as? List<*>
+                    _blockedUsers.value = blocked?.mapNotNull { it?.toString() }?.toSet() ?: emptySet()
+                }
+            }
     }
 
     fun setSearchText(query: String) {
         _searchText.value = query
+    }
+
+    fun setSelectedCategory(category: String) {
+        if (_selectedCategory.value != category) {
+            _selectedCategory.value = category
+            // Clear listings immediately when category changes to avoid showing stale 
+            // data from the previous category while the new one is loading.
+            _listings.value = emptyList()
+            _isLastPage.value = false
+            currentPage = 0
+            _loadingCategory.value = category
+        }
     }
 
     fun loadListings(
@@ -68,28 +98,57 @@ class MarketplaceViewModel(application: Application) : AndroidViewModel(applicat
         lng: Double?,
         locationName: String,
         category: String,
-        isFirstPage: Boolean = false
+        isFirstPage: Boolean = false,
+        forceRefresh: Boolean = false
     ) {
         val currentParams = FetchParams(lat, lng, locationName, category)
         
         if (isFirstPage) {
             // Prevent redundant refreshes if params are identical and we already have data
-            if (currentParams == lastParams && _listings.value.isNotEmpty()) {
+            val isSameLocation = if (lat != null && lng != null && lastParams?.lat != null && lastParams?.lng != null) {
+                val distance = android.location.Location("").apply {
+                    latitude = lat
+                    longitude = lng
+                }.distanceTo(android.location.Location("").apply {
+                    latitude = lastParams?.lat!!
+                    longitude = lastParams?.lng!!
+                })
+                distance < 500 
+            } else {
+                lat == lastParams?.lat && lng == lastParams?.lng
+            }
+
+            val isSameCategory = category == lastParams?.category
+            val isSameName = if (isSameLocation && lat != null) true else locationName.trim().lowercase() == lastParams?.locationName?.trim()?.lowercase()
+
+            // If we are already loading something for the SAME params, skip.
+            if (!forceRefresh && _isLoading.value && isSameLocation && isSameCategory && isSameName) return
+
+            // If not currently loading, but params are identical and we have data, skip.
+            if (!forceRefresh && !_isLoading.value && isSameLocation && isSameCategory && isSameName && _listings.value.isNotEmpty()) {
                 return
             }
 
-            // Prevent overlapping loads for the same page
-            if (_isLoading.value) return
-            
             _isLoading.value = true
             _isLastPage.value = false
-            _listings.value = emptyList() // Clear old listings immediately for new filter
+            
+            // Ensure UI shows loading for this specific category
+            _loadingCategory.value = category
+            
+            if (forceRefresh || category != lastParams?.category) {
+                _listings.value = emptyList()
+            }
+
             currentPage = 0
             lastParams = currentParams
         } else {
             if (_isPaginating.value || _isLastPage.value || _isLoading.value) return
             _isPaginating.value = true
+            lastParams = currentParams
         }
+
+        val requestId = System.currentTimeMillis()
+        latestRequestId = requestId
 
         val data = hashMapOf(
             "lat" to lat,
@@ -102,30 +161,52 @@ class MarketplaceViewModel(application: Application) : AndroidViewModel(applicat
 
         functions.getHttpsCallable("getListingsByLocation").call(data)
             .addOnSuccessListener { result ->
-                val response = result.data as? Map<*, *>
-                val newItems = (response?.get("listings") as? List<*>)?.mapNotNull { it as? Map<String, Any> } ?: emptyList()
+                if (latestRequestId == requestId) {
+                    val response = result.data as? Map<*, *>
+                    val newItems = (response?.get("listings") as? List<*>)?.mapNotNull { it as? Map<String, Any> } ?: emptyList()
 
-                if (isFirstPage) {
-                    _listings.value = newItems
-                    currentPage = 1
-                } else {
-                    _listings.value = (_listings.value + newItems).distinctBy { it["id"] }
-                    currentPage++
+                    if (isFirstPage) {
+                        _listings.value = newItems
+                        currentPage = 1
+                        _loadingCategory.value = null
+                    } else {
+                        // Merge and ensure no duplicates
+                        val currentList = _listings.value
+                        _listings.value = (currentList + newItems).distinctBy { it["id"] }
+                        currentPage++
+                    }
+
+                    _isLastPage.value = response?.get("isLastPage") as? Boolean ?: true
+                    _isLoading.value = false
+                    _isPaginating.value = false
                 }
-
-                _isLastPage.value = response?.get("isLastPage") as? Boolean ?: true
-                _isLoading.value = false
-                _isPaginating.value = false
             }
             .addOnFailureListener {
-                _isLoading.value = false
-                _isPaginating.value = false
+                if (latestRequestId == requestId) {
+                    _isLoading.value = false
+                    _isPaginating.value = false
+                    _loadingCategory.value = null
+                }
             }
     }
 
+    fun refreshCurrent() {
+        val params = lastParams ?: return
+        loadListings(
+            lat = params.lat,
+            lng = params.lng,
+            locationName = params.locationName,
+            category = params.category,
+            isFirstPage = true,
+            forceRefresh = true
+        )
+    }
+
     fun startMyListingsListener(userId: String) {
-        if (myListingsListener != null) return
+        if (myListingsListener != null && myListingsUserId == userId) return
         
+        myListingsListener?.remove()
+        myListingsUserId = userId
         _isLoadingMyListings.value = true
         myListingsListener = com.google.firebase.firestore.FirebaseFirestore.getInstance()
             .collection("listings")
@@ -136,15 +217,18 @@ class MarketplaceViewModel(application: Application) : AndroidViewModel(applicat
                         val data = doc.data?.toMutableMap() ?: mutableMapOf()
                         data["id"] = doc.id
                         data
-                    }
+                    }.sortedByDescending { (it["timestamp"] as? Number)?.toLong() ?: 0L }
                 }
                 _isLoadingMyListings.value = false
             }
     }
 
+    private var savedItemsUserId: String? = null
     fun startSavedItemsListener(userId: String) {
-        if (savedItemsListener != null) return
+        if (savedItemsListener != null && savedItemsUserId == userId) return
         
+        savedItemsListener?.remove()
+        savedItemsUserId = userId
         _isLoadingSavedItems.value = true
         savedItemsListener = com.google.firebase.firestore.FirebaseFirestore.getInstance()
             .collection("users").document(userId)
@@ -155,7 +239,7 @@ class MarketplaceViewModel(application: Application) : AndroidViewModel(applicat
                         val data = doc.data?.toMutableMap() ?: mutableMapOf()
                         data["id"] = doc.id
                         data
-                    }
+                    }.sortedByDescending { (it["timestamp"] as? Number)?.toLong() ?: 0L }
                 }
                 _isLoadingSavedItems.value = false
             }
@@ -165,5 +249,6 @@ class MarketplaceViewModel(application: Application) : AndroidViewModel(applicat
         super.onCleared()
         myListingsListener?.remove()
         savedItemsListener?.remove()
+        userMetadataListener?.remove()
     }
 }

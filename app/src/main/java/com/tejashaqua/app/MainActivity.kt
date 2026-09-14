@@ -71,6 +71,7 @@ import com.tejashaqua.app.ui.viewmodel.LocationSearchViewModel
 import com.tejashaqua.app.utils.LocaleHelper
 import com.tejashaqua.app.utils.NetworkObserver
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material3.*
@@ -148,6 +149,10 @@ class MainActivity : AppCompatActivity() {
                 LocaleHelper.wrapContext(context, selectedLanguageCode)
             }
 
+            val marketplaceListState = rememberLazyListState()
+            val myListingsListState = rememberLazyListState()
+            val chatListState = rememberLazyListState()
+
             CompositionLocalProvider(
                 LocalContext provides localizedContext,
                 LocalConfiguration provides localizedContext.resources.configuration,
@@ -156,6 +161,8 @@ class MainActivity : AppCompatActivity() {
                 TejashAquaTheme {
                     val authViewModel: AuthViewModel = viewModel()
                     val locationViewModel: LocationSearchViewModel = viewModel()
+                    val marketplaceViewModel: com.tejashaqua.app.ui.viewmodel.MarketplaceViewModel = viewModel()
+                    val chatViewModel: com.tejashaqua.app.ui.viewmodel.ChatViewModel = viewModel()
                     val authState by authViewModel.authState.collectAsState()
                     val deviceLatLng by locationViewModel.currentLatLng.collectAsState()
                     
@@ -319,11 +326,63 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
 
+                    val onShareAppClick: () -> Unit = {
+                        val shareIntent = android.content.Intent().apply {
+                            action = android.content.Intent.ACTION_SEND
+                            putExtra(
+                                android.content.Intent.EXTRA_TEXT,
+                                localizedContext.getString(R.string.share_app_message)
+                            )
+                            type = "text/plain"
+                        }
+                        val chooser = android.content.Intent.createChooser(
+                            shareIntent,
+                            localizedContext.getString(R.string.share_app)
+                        )
+                        chooser.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                        localizedContext.startActivity(chooser)
+                    }
+
                     // Handle Notification Click Navigation
                     LaunchedEffect(currentIntent, userId) {
                         val intentToProcess = currentIntent
                         if (intentToProcess == null || userId.isEmpty()) return@LaunchedEffect
                         
+                        // Handle Deep Link
+                        val dataUri = intentToProcess.data
+                        if (dataUri != null) {
+                            val host = dataUri.host
+                            val path = dataUri.path
+                            val isWebLink = (host == "tejashaqua.com" || host == "tejashaquaapp.web.app" || host == "tejashaquaapp.firebaseapp.com") && path?.startsWith("/listing") == true
+                            val isCustomScheme = dataUri.scheme == "tejashaqua" && host == "listing"
+                            
+                            if (isWebLink || isCustomScheme) {
+                                val listingId = dataUri.lastPathSegment
+                                intentFlow.value = null // Consume intent
+                                if (listingId != null && listingId != "listing") {
+                                    isNavigatingToDetailedPage = true
+                                    FirebaseFirestore.getInstance().collection("listings").document(listingId).get()
+                                        .addOnSuccessListener { doc ->
+                                            if (doc.exists()) {
+                                                val data = doc.data?.toMutableMap() ?: mutableMapOf()
+                                                data["id"] = doc.id
+                                                navigateToDetailedPage(data, "dashboard")
+                                            } else {
+                                                isNavigatingToDetailedPage = false
+                                                Toast.makeText(localizedContext, localizedContext.getString(R.string.listing_deleted_title), Toast.LENGTH_SHORT).show()
+                                            }
+                                        }
+                                        .addOnFailureListener {
+                                            isNavigatingToDetailedPage = false
+                                            Toast.makeText(localizedContext, "Error loading link", Toast.LENGTH_SHORT).show()
+                                        }
+                                } else {
+                                    isNavigatingToDetailedPage = false
+                                }
+                                return@LaunchedEffect
+                            }
+                        }
+
                         val type = intentToProcess.getStringExtra("type") 
                             ?: if (intentToProcess.action == "OPEN_CHAT") "chat" 
                             else if (intentToProcess.action == "OPEN_RATES") "rates" 
@@ -834,7 +893,9 @@ class MainActivity : AppCompatActivity() {
                                 },
                                 initialTab = dashboardTab,
                                 onTabChange = { dashboardTab = it },
-                                locationViewModel = locationViewModel
+                                locationViewModel = locationViewModel,
+                                marketplaceViewModel = marketplaceViewModel,
+                                marketplaceListState = marketplaceListState
                             )
 
                             "detailed_page" -> selectedListingData?.let { data ->
@@ -915,7 +976,10 @@ class MainActivity : AppCompatActivity() {
                                     chatSourceScreen = "chat_list"
                                     shouldSendInitialChatMessage = false
                                     currentScreen = "chat"
-                                })
+                                },
+                                chatViewModel = chatViewModel,
+                                listState = chatListState
+                            )
 
                             "select_location" -> SelectLocationScreen(onBackClick = {
                                 currentScreen =
@@ -984,9 +1048,27 @@ class MainActivity : AppCompatActivity() {
                                             if (isEditMode) "my_listings" else "select_category"
                                     },
                                     onPostClick = { data ->
+                                        marketplaceViewModel.loadListings(
+                                            lat = deviceLatLng?.latitude,
+                                            lng = deviceLatLng?.longitude,
+                                            locationName = currentLocationName,
+                                            category = marketplaceViewModel.selectedCategory.value,
+                                            isFirstPage = true,
+                                            forceRefresh = true
+                                        )
                                         navigateToDetailedPage(data, "dashboard")
                                     },
-                                    onDeleteClick = { currentScreen = "dashboard" },
+                                    onDeleteClick = { 
+                                        marketplaceViewModel.loadListings(
+                                            lat = deviceLatLng?.latitude,
+                                            lng = deviceLatLng?.longitude,
+                                            locationName = currentLocationName,
+                                            category = marketplaceViewModel.selectedCategory.value,
+                                            isFirstPage = true,
+                                            forceRefresh = true
+                                        )
+                                        currentScreen = "dashboard" 
+                                    },
                                     onLocationChangeClick = {
                                         pViewModel.requestFeaturePermissions(listOf(PermissionType.LOCATION)) {
                                             locationViewModel.fetchCurrentLocation(force = true)
@@ -1043,6 +1125,7 @@ class MainActivity : AppCompatActivity() {
                                     currentScreen = "language_selection"
                                 },
                                 onRateUsClick = onRateUsClick,
+                                onShareAppClick = onShareAppClick,
                                 isAdmin = isAdmin,
                                 onAdminClick = { currentScreen = "admin_dashboard" },
                                 initialShowMobileNumber = showMobileNumber,
@@ -1057,7 +1140,7 @@ class MainActivity : AppCompatActivity() {
                                 currentScreen = "profile"
                             }, onItemClick = { data ->
                                 navigateToDetailedPage(data, "saved_items")
-                            })
+                            }, listState = marketplaceListState) // Reuse marketplace scroll for consistent feel or separate
 
                             "edit_profile" -> EditProfileScreen(
                                 currentName = userName,
@@ -1085,7 +1168,10 @@ class MainActivity : AppCompatActivity() {
                                         ListingCategory.FISH
                                     }
                                     currentScreen = "edit_listing"
-                                })
+                                },
+                                marketplaceViewModel = marketplaceViewModel,
+                                listState = myListingsListState
+                            )
 
                             "admin_dashboard" -> AdminDashboardScreen(
                                 onBackClick = { currentScreen = "dashboard" })

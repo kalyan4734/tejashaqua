@@ -112,39 +112,36 @@ class ListingViewModel(application: Application) : AndroidViewModel(application)
             val ref = storage.reference.child(fileName)
             
             try {
+                var bitmapToUpload: Bitmap? = null
+                
                 when (item) {
                     is Bitmap -> {
-                        val baos = ByteArrayOutputStream()
-                        item.compress(Bitmap.CompressFormat.JPEG, 100, baos)
-                        val data = baos.toByteArray()
-                        ref.putBytes(data).await()
+                        bitmapToUpload = ImageUtils.addWatermark(getApplication(), item)
                     }
                     is String -> { // Local URI string
                         val uri = item.toUri()
-                        val rotatedBitmap = ImageUtils.getCorrectlyOrientedBitmap(getApplication(), uri)
-                        if (rotatedBitmap != null) {
-                            val baos = ByteArrayOutputStream()
-                            rotatedBitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos)
-                            val data = baos.toByteArray()
-                            ref.putBytes(data).await()
-                            rotatedBitmap.recycle()
-                        } else {
-                            ref.putFile(uri).await()
-                        }
+                        bitmapToUpload = ImageUtils.getCorrectlyOrientedBitmap(getApplication(), uri)
                     }
                     is Uri -> {
-                        val rotatedBitmap = ImageUtils.getCorrectlyOrientedBitmap(getApplication(), item)
-                        if (rotatedBitmap != null) {
-                            val baos = ByteArrayOutputStream()
-                            rotatedBitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos)
-                            val data = baos.toByteArray()
-                            ref.putBytes(data).await()
-                            rotatedBitmap.recycle()
-                        } else {
-                            ref.putFile(item).await()
-                        }
+                        bitmapToUpload = ImageUtils.getCorrectlyOrientedBitmap(getApplication(), item)
                     }
                 }
+                
+                if (bitmapToUpload != null) {
+                    val baos = ByteArrayOutputStream()
+                    // Use slightly lower compression for better quality/size balance
+                    bitmapToUpload.compress(Bitmap.CompressFormat.JPEG, 85, baos)
+                    val data = baos.toByteArray()
+                    ref.putBytes(data).await()
+                    bitmapToUpload.recycle()
+                } else {
+                    // Fallback to direct upload if bitmap processing failed
+                    when (item) {
+                        is String -> ref.putFile(item.toUri()).await()
+                        is Uri -> ref.putFile(item).await()
+                    }
+                }
+
                 val url = ref.downloadUrl.await().toString()
                 urls.add(url)
             } catch (e: Exception) {
@@ -154,7 +151,7 @@ class ListingViewModel(application: Application) : AndroidViewModel(application)
         return urls
     }
 
-    fun deleteListing(listingId: String) {
+    fun deleteListing(listingId: String, onComplete: () -> Unit = {}) {
         viewModelScope.launch {
             try {
                 val doc = db.collection("listings").document(listingId).get().await()
@@ -169,8 +166,10 @@ class ListingViewModel(application: Application) : AndroidViewModel(application)
                     }
                     db.collection("listings").document(listingId).delete().await()
                 }
+                onComplete()
             } catch (e: Exception) {
                 e.printStackTrace()
+                onComplete() // Still callback so UI can proceed
             }
         }
     }
