@@ -93,8 +93,8 @@ MyFirebaseMessagingService : FirebaseMessagingService() {
         val defaultSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
         
         val notificationBuilder = NotificationCompat.Builder(this, channelId)
-            .setSmallIcon(R.drawable.app_logo) // Use foreground for silhouette
-            .setLargeIcon(BitmapFactory.decodeResource(resources, R.drawable.app_logo)) // Full app logo
+            .setSmallIcon(R.drawable.ic_stat_notification)
+            .setLargeIcon(BitmapFactory.decodeResource(resources, R.drawable.app_logo)) // Your full color logo
             .setContentTitle(title)
             .setContentText(messageBody)
             .setAutoCancel(true)
@@ -104,7 +104,10 @@ MyFirebaseMessagingService : FirebaseMessagingService() {
             .setContentIntent(pendingIntent)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
 
-        if (!imageUrl.isNullOrBlank()) {
+        // Only download images for personal chat notifications to save massive bandwidth/storage reads
+        // Broadcast listing notifications sent to thousands of users are the primary cause of quota issues.
+        val type = data["type"]
+        if (type == "chat" && !imageUrl.isNullOrBlank()) {
             val bitmap = downloadBitmap(imageUrl)
             if (bitmap != null) {
                 notificationBuilder.setLargeIcon(bitmap)

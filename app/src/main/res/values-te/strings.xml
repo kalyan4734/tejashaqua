@@ -87,7 +87,7 @@
     <string name="post_listing">జాబితాను పోస్ట్ చేయండి</string>
     <string name="description_label">వివరణ</string>
     <string name="location_label">స్థానం</string>
-    <string name="photos_label">ఫోటోలు (గరిష్టంగా 5)</string>
+    <string name="photos_label">ఫోటోలు (గరిష్టంగా 2)</string>
     <string name="change_btn">మార్చండి</string>
     <string name="delete_listing_title">జాబితాను తొలగించండి</string>
     <string name="delete_listing_confirm">మీరు ఖచ్చితంగా ఈ జాబితాను తొలగించాలనుకుంటున్నారా? ఈ చర్యను వెనక్కి తీసుకోలేము.</string>

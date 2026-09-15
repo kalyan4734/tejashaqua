@@ -195,6 +195,7 @@ fun ChatScreen(
     var initialMessageSent by remember { mutableStateOf(false) }
     var listingExists by remember { mutableStateOf(true) }
     var isAutoMessaging by remember { mutableStateOf(false) }
+    var isInitialLoadComplete by remember { mutableStateOf(false) }
 
     // Fetch full listing details if missing (e.g. when coming from ChatList)
     LaunchedEffect(listingId) {
@@ -297,7 +298,10 @@ fun ChatScreen(
             .collection("messages")
             .orderBy("timestamp", Query.Direction.ASCENDING)
             .addSnapshotListener { snapshot, e ->
-                if (e != null) return@addSnapshotListener
+                if (e != null) {
+                    isInitialLoadComplete = true
+                    return@addSnapshotListener
+                }
                 
                 if (snapshot != null) {
                     val messages = snapshot.documents.mapNotNull { doc ->
@@ -309,12 +313,13 @@ fun ChatScreen(
 
                     chatMessages.clear()
                     chatMessages.addAll(messages)
+                    isInitialLoadComplete = true
                 }
             }
     }
 
     // Dedicated effect to send the initial auto-message when location becomes available
-    LaunchedEffect(currentUserLocation, chatMessages.size, initialMessageSent, chatRoomId) {
+    LaunchedEffect(currentUserLocation, isInitialLoadComplete, initialMessageSent, chatRoomId) {
         val fetchingText = context.getString(R.string.fetching_location)
         val deniedText = context.getString(R.string.location_permission_denied)
         val failedText = context.getString(R.string.failed_get_location)
@@ -329,8 +334,9 @@ fun ChatScreen(
         // We only send the auto-message if:
         // 1. Navigation requested it (sendInitialMessage)
         // 2. We haven't sent it in this session (initialMessageSent)
-        // 3. The chat history is actually empty (verified from Firestore)
-        if (sendInitialMessage && !initialMessageSent && chatMessages.isEmpty() && currentUserId.isNotEmpty() && currentUserId != sellerUserId) {
+        // 3. The first fetch from Firestore is done (isInitialLoadComplete)
+        // 4. The chat history is actually empty (verified from Firestore)
+        if (sendInitialMessage && !initialMessageSent && isInitialLoadComplete && chatMessages.isEmpty() && currentUserId.isNotEmpty() && currentUserId != sellerUserId) {
             isAutoMessaging = true
             if (isValidLocation) {
                 initialMessageSent = true
@@ -414,7 +420,6 @@ fun ChatScreen(
                 modifier = Modifier
                     .background(Color.White)
                     .navigationBarsPadding()
-                    .imePadding()
             ) {
                 Row(
                     modifier = Modifier

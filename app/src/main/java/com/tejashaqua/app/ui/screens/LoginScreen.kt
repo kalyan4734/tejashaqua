@@ -61,7 +61,6 @@ fun LoginScreen(
             .background(Color.White)
             .statusBarsPadding()
             .navigationBarsPadding()
-            .imePadding()
             .verticalScroll(scrollState)
             .padding(24.dp),
         horizontalAlignment = Alignment.Start,

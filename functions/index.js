@@ -640,49 +640,72 @@ exports.sendAdminNotification = onCall({
  * Scheduled task that runs every minute to send pending notifications.
  */
 exports.sendScheduledNotifications = onSchedule("every 1 minutes", async (event) => {
+    const db = admin.firestore();
     const now = admin.firestore.Timestamp.now();
-    const snapshot = await admin.firestore().collection("scheduled_notifications")
-        .where("status", "==", "pending")
-        .where("scheduledTime", "<=", now)
-        .get();
 
-    if (snapshot.empty) {
+    try {
+        const snapshot = await db.collection("scheduled_notifications")
+            .where("status", "==", "pending")
+            .where("scheduledTime", "<=", now)
+            .get();
+
+        if (snapshot.empty) {
+            logger.info("No pending scheduled notifications to send.");
+            return null;
+        }
+
+        logger.info(`Found ${snapshot.size} scheduled notifications to process.`);
+
+        const results = await Promise.all(snapshot.docs.map(async (doc) => {
+            const data = doc.data();
+            const notificationId = doc.id;
+
+            const message = {
+                topic: "all_users",
+                notification: {
+                    title: data.title,
+                    body: data.body,
+                    image: data.imageUrl || undefined
+                },
+                android: {
+                    priority: "high",
+                    notification: {
+                        image: data.imageUrl || undefined,
+                        channelId: "general_notifications_v2",
+                        clickAction: "OPEN_LISTING"
+                    }
+                },
+                data: {
+                    type: "announcement",
+                    title: data.title,
+                    body: data.body,
+                    imageUrl: data.imageUrl || ""
+                }
+            };
+
+            try {
+                // Update status to "sending" first to prevent double-processing
+                await doc.ref.update({ status: "sending" });
+
+                await admin.messaging().send(message);
+
+                await doc.ref.update({
+                    status: "sent",
+                    sentAt: admin.firestore.FieldValue.serverTimestamp()
+                });
+
+                logger.info(`Successfully sent scheduled notification: ${notificationId}`);
+                return { id: notificationId, success: true };
+            } catch (error) {
+                logger.error(`Failed to send notification ${notificationId}:`, error);
+                await doc.ref.update({ status: "failed", error: error.message });
+                return { id: notificationId, success: false, error: error.message };
+            }
+        }));
+
+        return results;
+    } catch (err) {
+        logger.error("Error in sendScheduledNotifications cron:", err);
         return null;
     }
-
-    logger.info(`Found ${snapshot.size} scheduled notifications to send`);
-
-    const promises = snapshot.docs.map(async (doc) => {
-        const data = doc.data();
-        const message = {
-            topic: "all_users",
-            notification: {
-                title: data.title,
-                body: data.body,
-                image: data.imageUrl || undefined
-            },
-            android: {
-                notification: {
-                    image: data.imageUrl || undefined,
-                    channelId: "general_notifications_v2"
-                }
-            },
-            data: {
-                title: data.title,
-                body: data.body,
-                imageUrl: data.imageUrl || ""
-            }
-        };
-
-        try {
-            await admin.messaging().send(message);
-            await doc.ref.update({ status: "sent", sentAt: now });
-            logger.info(`Scheduled notification ${doc.id} sent successfully`);
-        } catch (error) {
-            logger.error(`Error sending scheduled notification ${doc.id}:`, error);
-            await doc.ref.update({ status: "failed", error: error.message });
-        }
-    });
-
-    return Promise.all(promises);
 });

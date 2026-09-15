@@ -75,6 +75,37 @@ class ListingViewModel(application: Application) : AndroidViewModel(application)
                     throw Exception("Failed to upload photos. Please check your network.")
                 }
 
+                // Handle orphaned images during update
+                if (existingListingId != null) {
+                    val oldDoc = db.collection("listings").document(existingListingId).get().await()
+                    if (oldDoc.exists()) {
+                        val oldImages = (oldDoc["images"] as? List<*>)?.mapNotNull { it?.toString() } ?: emptyList()
+                        val removedImages = oldImages.filter { !existingUrls.contains(it) }
+                        
+                        // Delete images that were removed during editing
+                        removedImages.forEach { imageUrl ->
+                            if (imageUrl.contains("firebasestorage.googleapis.com")) {
+                                try {
+                                    val ref = storage.getReferenceFromUrl(imageUrl)
+                                    val path = ref.path
+                                    ref.delete().await()
+                                    
+                                    // Also try to delete thumbnail
+                                    try {
+                                        val lastDotIndex = path.lastIndexOf(".")
+                                        if (lastDotIndex != -1) {
+                                            val thumbPath = path.substring(0, lastDotIndex) + "_400x400" + path.substring(lastDotIndex)
+                                            storage.reference.child(thumbPath).delete().await()
+                                        }
+                                    } catch (_: Exception) {}
+                                } catch (e: Exception) {
+                                    android.util.Log.e("ListingVM", "Failed to delete orphaned image: $imageUrl", e)
+                                }
+                            }
+                        }
+                    }
+                }
+
                 val finalUrls = existingUrls + uploadedUrls
                 
                 val listingId = existingListingId ?: db.collection("listings").document().id
@@ -129,8 +160,8 @@ class ListingViewModel(application: Application) : AndroidViewModel(application)
                 
                 if (bitmapToUpload != null) {
                     val baos = ByteArrayOutputStream()
-                    // Use slightly lower compression for better quality/size balance
-                    bitmapToUpload.compress(Bitmap.CompressFormat.JPEG, 85, baos)
+                    // Reduced quality to 75% for significant storage savings without visible loss
+                    bitmapToUpload.compress(Bitmap.CompressFormat.JPEG, 75, baos)
                     val data = baos.toByteArray()
                     ref.putBytes(data).await()
                     bitmapToUpload.recycle()
@@ -158,17 +189,36 @@ class ListingViewModel(application: Application) : AndroidViewModel(application)
                 if (doc.exists()) {
                     val images = doc["images"] as? List<*>
                     images?.forEach { imageUrl ->
-                        try {
-                            storage.getReferenceFromUrl(imageUrl.toString()).delete().await()
-                        } catch (e: Exception) {
-                            e.printStackTrace()
+                        val urlStr = imageUrl.toString()
+                        if (urlStr.contains("firebasestorage.googleapis.com")) {
+                            try {
+                                val originalRef = storage.getReferenceFromUrl(urlStr)
+                                val path = originalRef.path
+                                
+                                // 1. Delete original image
+                                originalRef.delete().await()
+                                
+                                // 2. Attempt to delete thumbnail if the extension is enabled
+                                // Suffix is usually _400x400 as per our configuration
+                                try {
+                                    val lastDotIndex = path.lastIndexOf(".")
+                                    if (lastDotIndex != -1) {
+                                        val thumbPath = path.substring(0, lastDotIndex) + "_400x400" + path.substring(lastDotIndex)
+                                        storage.reference.child(thumbPath).delete().await()
+                                    }
+                                } catch (_: Exception) {
+                                    // Thumbnail might not exist, ignore
+                                }
+                            } catch (e: Exception) {
+                                android.util.Log.e("ListingVM", "Failed to delete storage file: $urlStr", e)
+                            }
                         }
                     }
                     db.collection("listings").document(listingId).delete().await()
                 }
                 onComplete()
             } catch (e: Exception) {
-                e.printStackTrace()
+                android.util.Log.e("ListingVM", "Error deleting listing: $listingId", e)
                 onComplete() // Still callback so UI can proceed
             }
         }

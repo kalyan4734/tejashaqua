@@ -150,14 +150,14 @@ fun EditListingScreen(
     }
 
     val galleryLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickMultipleVisualMedia(5)
+        contract = ActivityResultContracts.PickMultipleVisualMedia(2)
     ) { uris ->
-        val remainingSlots = 5 - selectedPhotos.size
+        val remainingSlots = 2 - selectedPhotos.size
         if (remainingSlots > 0 && uris.isNotEmpty()) {
             val toAdd = uris.take(remainingSlots).map { it.toString() }
             selectedPhotos += toAdd
             if (uris.size > remainingSlots) {
-                Toast.makeText(context, "Only 5 photos allowed. Added $remainingSlots photos.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Only 2 photos allowed. Added $remainingSlots photos.", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -570,7 +570,7 @@ fun EditListingScreen(
                 Surface(
                     tonalElevation = 8.dp,
                     color = MaterialTheme.colorScheme.surface,
-                    modifier = Modifier.navigationBarsPadding().imePadding()
+                    modifier = Modifier.navigationBarsPadding()
                 ) {
                     val onActionClick = {
                         keyboardController?.hide()
@@ -861,7 +861,7 @@ fun PhotoSection(
                     }
                 }
             }
-            if (photos.size < 5) {
+            if (photos.size < 2) {
                 Box(
                     modifier = Modifier
                         .size(100.dp)

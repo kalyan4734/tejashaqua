@@ -249,7 +249,6 @@ fun AdminDashboardScreen(onBackClick: () -> Unit) {
                 .padding(innerPadding)
                 .fillMaxSize()
                 .background(Color(0xFFF8F9FA))
-                .imePadding()
         ) {
             Box(modifier = Modifier.weight(1f)) {
                 AnimatedContent(
@@ -1176,6 +1175,34 @@ fun ReportCard(report: Map<String, Any>, isUserReport: Boolean, userNames: Map<S
                 color = GrayText
             )
             
+            if (!isUserReport && targetId != null) {
+                Spacer(modifier = Modifier.height(12.dp))
+                val listingViewModel: com.tejashaqua.app.ui.viewmodel.ListingViewModel = viewModel()
+                var isDeleting by remember { mutableStateOf(false) }
+                
+                Button(
+                    onClick = {
+                        isDeleting = true
+                        listingViewModel.deleteListing(targetId) {
+                            onDelete(id) // Delete the report too after listing is gone
+                            isDeleting = false
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth().height(40.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F)),
+                    enabled = !isDeleting
+                ) {
+                    if (isDeleting) {
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp))
+                    } else {
+                        Icon(Icons.Default.DeleteForever, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("DELETE REPORTED LISTING", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = dateStr,
