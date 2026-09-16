@@ -17,6 +17,7 @@
     <string name="enter_otp">Enter OTP</string>
     <string name="sent_to">Sent to +91 %s</string>
     <string name="enter_6_digit_code">Enter 6-digit code</string>
+    <string name="waiting_for_otp">Waiting for OTP…</string>
     <string name="resend_otp_in">Resend OTP in %d Sec</string>
     <string name="resend_otp">Resend OTP</string>
     <string name="verify_continue">Verify &amp; Continue</string>
@@ -483,6 +484,22 @@ These terms shall be governed by and construed in accordance with the laws of In
     <string name="share_listing_template">I\'ve found this on Tejash Aqua. What do you think?\n\n%2$s (%1$s)\nPrice: %3$s\nLocation: %4$s\n\nView Details: https://tejashaquaapp.web.app/listing/%5$s\n\nFor the best experience, download the Tejash Aqua App: https://play.google.com/store/apps/details?id=com.tejashaqua.app</string>
     <string name="share_app">Share App</string>
     <string name="share_app_message">Check out Tejash Aqua - the best app for Aqua farmers! Download now: https://play.google.com/store/apps/details?id=com.tejashaqua.app</string>
-    <string name="waiting_for_otp">Waiting for OTP…</string>
+    <string name="price_under_500">Under ₹500</string>
+    <string name="price_500_5k">₹500 - ₹5K</string>
+    <string name="price_5k_50k">₹5K - ₹50K</string>
+    <string name="price_50k_plus">₹50K+</string>
+    <string name="sort_newest">Newest First</string>
+    <string name="sort_price_low_high">Price: Low to High</string>
+    <string name="sort_price_high_low">Price: High to Low</string>
+    <string name="sort_nearest">Nearest First</string>
+    <string name="sort_most_viewed">Most Viewed</string>
+    <string name="location_radius">Location Radius</string>
+    <string name="within_km">Within %d KM</string>
+    <string name="anywhere">Anywhere</string>
+    <string name="clear_all">Clear All</string>
+    <string name="apply_filters">Apply Filters</string>
+    <string name="filters_title">Filters</string>
+    <string name="categories_label">Categories</string>
+    <string name="price_range_label">Price Range</string>
     <string name="google_maps_key" translatable="false">AIzaSyD5VUXOhcaF840JnM5YaUMIH1cx2Qdj4QM</string>
 </resources>

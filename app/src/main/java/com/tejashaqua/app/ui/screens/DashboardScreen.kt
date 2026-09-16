@@ -43,6 +43,7 @@ import androidx.compose.material.icons.filled.PersonOutline
 import androidx.compose.material.icons.filled.PostAdd
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
@@ -139,6 +140,7 @@ fun DashboardScreen(
     onFishRatesClick: () -> Unit,
     onItemClick: (Map<String, Any>) -> Unit,
     onChatListClick: (Map<String, Any>) -> Unit,
+    onFilterClick: () -> Unit,
     onLocationFetched: (String, String) -> Unit,
     showNameSheetInitial: Boolean,
     onNameSave: (String) -> Unit,
@@ -224,8 +226,12 @@ fun DashboardScreen(
     var unreadNotificationCount by remember { mutableIntStateOf(0) }
     val blockedUsers by marketplaceViewModel.blockedUsers.collectAsState()
 
+    val radiusKm by marketplaceViewModel.radiusKm.collectAsState()
+    val priceRange by marketplaceViewModel.priceRange.collectAsState()
+    val sortBy by marketplaceViewModel.sortBy.collectAsState()
+
     // Logic to reload listings when location, category or fetching status changes
-    LaunchedEffect(userLatLng, selectedCategoryFilter, fetchedName, isFetchingLocation) {
+    LaunchedEffect(userLatLng, selectedCategoryFilter, fetchedName, isFetchingLocation, radiusKm, priceRange, sortBy) {
         if (!isFetchingLocation) {
             marketplaceViewModel.loadListings(
                 lat = userLatLng?.latitude,
@@ -739,7 +745,9 @@ fun DashboardScreen(
                     item {
                         CategoryFilterRow(
                             selected = selectedCategoryFilter,
-                            onSelect = { marketplaceViewModel.setSelectedCategory(it) })
+                            onSelect = { marketplaceViewModel.setSelectedCategory(it) },
+                            onFilterClick = onFilterClick
+                        )
                     }
 
                     // Marketplace Section flattened
@@ -1297,7 +1305,7 @@ fun DashboardScreen(
 }
 
 @Composable
-fun CategoryFilterRow(selected: String, onSelect: (String) -> Unit) {
+fun CategoryFilterRow(selected: String, onSelect: (String) -> Unit, onFilterClick: () -> Unit = {}) {
     val categories = listOf(
         "All",
         "FISH",
@@ -1312,47 +1320,64 @@ fun CategoryFilterRow(selected: String, onSelect: (String) -> Unit) {
         "JOBS"
     )
 
-    LazyRow(
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        items(categories) { category ->
-            val label = when (category) {
-                "All" -> stringResource(R.string.all)
-                "FISH" -> stringResource(R.string.cat_fish_seed)
-                "PRAWNS" -> stringResource(R.string.cat_prawns)
-                "EQUIPMENTS" -> stringResource(R.string.cat_equipments)
-                "VEHICLES" -> stringResource(R.string.cat_vehicles)
-                "FEED" -> stringResource(R.string.cat_feed)
-                "MEDICINE" -> stringResource(R.string.cat_medicine)
-                "SERVICES" -> stringResource(R.string.cat_services)
-                "TANKS" -> stringResource(R.string.cat_tanks)
-                "BUSINESS" -> stringResource(R.string.cat_business)
-                "JOBS" -> stringResource(R.string.cat_jobs)
-                else -> category
-            }
+        LazyRow(
+            modifier = Modifier.weight(1f),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(categories) { category ->
+                val label = when (category) {
+                    "All" -> stringResource(R.string.all)
+                    "FISH" -> stringResource(R.string.cat_fish_seed)
+                    "PRAWNS" -> stringResource(R.string.cat_prawns)
+                    "EQUIPMENTS" -> stringResource(R.string.cat_equipments)
+                    "VEHICLES" -> stringResource(R.string.cat_vehicles)
+                    "FEED" -> stringResource(R.string.cat_feed)
+                    "MEDICINE" -> stringResource(R.string.cat_medicine)
+                    "SERVICES" -> stringResource(R.string.cat_services)
+                    "TANKS" -> stringResource(R.string.cat_tanks)
+                    "BUSINESS" -> stringResource(R.string.cat_business)
+                    "JOBS" -> stringResource(R.string.cat_jobs)
+                    else -> category
+                }
 
-            val selectedColor = when (category) {
-                "FISH" -> Color(0xFF009688)
-                "PRAWNS" -> Color(0xFF3F51B5)
-                "EQUIPMENTS" -> Color(0xFF1976D2)
-                "VEHICLES" -> Color(0xFF1976D2)
-                "FEED" -> Color(0xFFE65100)
-                "MEDICINE" -> Color(0xFFD81B60)
-                "SERVICES" -> Color(0xFFF57C00)
-                "TANKS" -> Color(0xFF388E3C)
-                "BUSINESS" -> Color(0xFFB71C1C)
-                "JOBS" -> Color(0xFF673AB7)
-                else -> AquaBlue
-            }
+                val selectedColor = when (category) {
+                    "FISH" -> Color(0xFF009688)
+                    "PRAWNS" -> Color(0xFF3F51B5)
+                    "EQUIPMENTS" -> Color(0xFF1976D2)
+                    "VEHICLES" -> Color(0xFF1976D2)
+                    "FEED" -> Color(0xFFE65100)
+                    "MEDICINE" -> Color(0xFFD81B60)
+                    "SERVICES" -> Color(0xFFF57C00)
+                    "TANKS" -> Color(0xFF388E3C)
+                    "BUSINESS" -> Color(0xFFB71C1C)
+                    "JOBS" -> Color(0xFF673AB7)
+                    else -> AquaBlue
+                }
 
-            FilterChip(
-                selected = selected == category,
-                onClick = { onSelect(category) },
-                label = { Text(label) },
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = selectedColor, selectedLabelColor = Color.White
+                FilterChip(
+                    selected = selected == category,
+                    onClick = { onSelect(category) },
+                    label = { Text(label) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = selectedColor, selectedLabelColor = Color.White
+                    )
                 )
+            }
+        }
+        
+        IconButton(
+            onClick = onFilterClick,
+            modifier = Modifier.padding(end = 8.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.FilterList,
+                contentDescription = "Filter",
+                tint = AquaBlue
             )
         }
     }

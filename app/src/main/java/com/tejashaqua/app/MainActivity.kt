@@ -595,6 +595,7 @@ class MainActivity : AppCompatActivity() {
                                     currentScreen =
                                         if (authViewModel.authState.value is AuthState.Success) "profile" else "login"
                                 }
+                                "filters" -> currentScreen = "dashboard"
                                 "select_location" -> {
                                     currentScreen =
                                         if (locationPickerSource == "listing") "edit_listing" else "dashboard"
@@ -849,6 +850,7 @@ class MainActivity : AppCompatActivity() {
                                 onItemClick = { data ->
                                     navigateToDetailedPage(data, "dashboard")
                                 },
+                                onFilterClick = { currentScreen = "filters" },
                                 onChatListClick = { data ->
                                     val sellerId = data["sellerId"]?.toString() ?: ""
                                     val buyerId = data["buyerId"]?.toString() ?: ""
@@ -981,6 +983,12 @@ class MainActivity : AppCompatActivity() {
                                 listState = chatListState
                             )
 
+                            "filters" -> com.tejashaqua.app.ui.screens.FiltersScreen(
+                                onBackClick = { currentScreen = "dashboard" },
+                                onApplyFilters = { currentScreen = "dashboard" },
+                                viewModel = marketplaceViewModel
+                            )
+
                             "select_location" -> SelectLocationScreen(onBackClick = {
                                 currentScreen =
                                     if (locationPickerSource == "listing") "edit_listing" else "dashboard"
@@ -1048,6 +1056,7 @@ class MainActivity : AppCompatActivity() {
                                             if (isEditMode) "my_listings" else "select_category"
                                     },
                                     onPostClick = { data ->
+                                        marketplaceViewModel.forceClearCacheAndReload()
                                         marketplaceViewModel.loadListings(
                                             lat = deviceLatLng?.latitude,
                                             lng = deviceLatLng?.longitude,
@@ -1059,6 +1068,7 @@ class MainActivity : AppCompatActivity() {
                                         navigateToDetailedPage(data, "dashboard")
                                     },
                                     onDeleteClick = { 
+                                        marketplaceViewModel.forceClearCacheAndReload()
                                         marketplaceViewModel.loadListings(
                                             lat = deviceLatLng?.latitude,
                                             lng = deviceLatLng?.longitude,

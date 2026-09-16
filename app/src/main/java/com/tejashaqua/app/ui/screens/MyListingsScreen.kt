@@ -64,6 +64,7 @@ fun MyListingsScreen(
 
     val listingsRaw by marketplaceViewModel.myListings.collectAsState()
     val isLoading by marketplaceViewModel.isLoadingMyListings.collectAsState()
+    val postState by listingViewModel.postState.collectAsState()
     val keyboardController = LocalSoftwareKeyboardController.current
     
     var showDeleteDialog by remember { mutableStateOf(false) }
@@ -228,6 +229,8 @@ fun MyListingsScreen(
             
             if (isLoading) {
                 LoadingOverlay(stringResource(R.string.loading_listings))
+            } else if (postState is com.tejashaqua.app.ui.viewmodel.ListingViewModel.PostState.Loading) {
+                LoadingOverlay("Deleting post…")
             }
         }
     }

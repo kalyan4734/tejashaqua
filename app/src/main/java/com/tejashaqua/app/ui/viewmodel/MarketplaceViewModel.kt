@@ -31,6 +31,15 @@ class MarketplaceViewModel(application: Application) : AndroidViewModel(applicat
     private val _searchText = MutableStateFlow("")
     val searchText: StateFlow<String> = _searchText
 
+    private val _radiusKm = MutableStateFlow(0) // 0 means no limit
+    val radiusKm: StateFlow<Int> = _radiusKm
+
+    private val _priceRange = MutableStateFlow<Pair<Double?, Double?>>(null to null)
+    val priceRange: StateFlow<Pair<Double?, Double?>> = _priceRange
+
+    private val _sortBy = MutableStateFlow<String?>(null) // null uses intelligent default
+    val sortBy: StateFlow<String?> = _sortBy
+
     // My Listings State
     private val _myListings = MutableStateFlow<List<Map<String, Any>>>(emptyList())
     val myListings: StateFlow<List<Map<String, Any>>> = _myListings
@@ -91,6 +100,25 @@ class MarketplaceViewModel(application: Application) : AndroidViewModel(applicat
             currentPage = 0
             _loadingCategory.value = category
         }
+    }
+
+    fun setFilters(radius: Int, priceRange: Pair<Double?, Double?>, sortBy: String) {
+        _radiusKm.value = radius
+        _priceRange.value = priceRange
+        _sortBy.value = sortBy
+        _listings.value = emptyList()
+        _isLastPage.value = false
+        currentPage = 0
+    }
+
+    fun clearFilters() {
+        _selectedCategory.value = "All"
+        _radiusKm.value = 0
+        _priceRange.value = null to null
+        _sortBy.value = null
+        _listings.value = emptyList()
+        _isLastPage.value = false
+        currentPage = 0
     }
 
     fun loadListings(
@@ -155,6 +183,10 @@ class MarketplaceViewModel(application: Application) : AndroidViewModel(applicat
             "lng" to lng,
             "locationName" to locationName,
             "category" to category,
+            "radius" to _radiusKm.value,
+            "minPrice" to _priceRange.value.first,
+            "maxPrice" to _priceRange.value.second,
+            "sortBy" to _sortBy.value,
             "page" to if (isFirstPage) 0 else currentPage,
             "pageSize" to 10
         )
@@ -200,6 +232,10 @@ class MarketplaceViewModel(application: Application) : AndroidViewModel(applicat
             isFirstPage = true,
             forceRefresh = true
         )
+    }
+
+    fun forceClearCacheAndReload() {
+        lastParams = null
     }
 
     fun startMyListingsListener(userId: String) {

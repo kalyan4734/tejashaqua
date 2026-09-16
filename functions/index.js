@@ -146,39 +146,37 @@ exports.resendOtp = onCall({
 exports.getListingsByLocation = onCall({
     enforceAppCheck: false
 }, async (request) => {
-    const { lat, lng, locationName, category, page = 0, pageSize = 10 } = request.data;
+    const { lat, lng, locationName, category, radius, minPrice, maxPrice, sortBy, page = 0, pageSize = 10 } = request.data;
 
     try {
-        let query = admin.firestore().collection("listings");
-
-        const snapshot = await query.get();
+        const snapshot = await admin.firestore().collection("listings").get();
         let listings = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-        // Filter by category using the same logic as the app
+        // 1. Filter by category
         if (category && category !== "All") {
             listings = listings.filter(l => {
                 const lCat = (l.category || "").toUpperCase();
-                const lServiceType = (l.serviceType || "").trim();
-                const lBusSubCat = (l.businessSubCategory || "").trim();
+                const lServiceType = (l.serviceType || "").trim().toLowerCase();
+                const lBusSubCat = (l.businessSubCategory || "").trim().toLowerCase();
+                const catUpper = category.toUpperCase();
 
-                switch (category.toUpperCase()) {
+                switch (catUpper) {
                     case "VEHICLES":
                         return lCat === "VEHICLES" || lCat === "VEHICLE" || (lCat === "SERVICES" &&
-                            (lServiceType.toLowerCase().includes("vehicle") || lServiceType.includes("వెహికల్") ||
-                             lServiceType.toLowerCase().includes("bore well") || lServiceType.includes("బోర్ వెల్") ||
-                             lServiceType.toLowerCase().includes("earth mover") || lServiceType.includes("ఎర్త్ మూవర్")));
+                            (lServiceType.includes("vehicle") || lServiceType.includes("వెహికల్") ||
+                             lServiceType.includes("bore well") || lServiceType.includes("బోర్ వెల్") ||
+                             lServiceType.includes("earth mover") || lServiceType.includes("ఎర్త్ మూవర్")));
                     case "FEED":
-                        return lCat === "FEED" || (lCat === "BUSINESS" && (lBusSubCat.toLowerCase() === "feed" || lBusSubCat === "మేత"));
+                        return lCat === "FEED" || (lCat === "BUSINESS" && (lBusSubCat === "feed" || lBusSubCat === "మేత"));
                     case "MEDICINE":
-                        return lCat === "MEDICINE" || (lCat === "BUSINESS" && (lBusSubCat.toLowerCase() === "medicine" || lBusSubCat === "మెడిసిన్" || lBusSubCat === "మందులు"));
+                        return lCat === "MEDICINE" || (lCat === "BUSINESS" && (lBusSubCat === "medicine" || lBusSubCat === "మెడిసిన్" || lBusSubCat === "మందులు"));
                     case "BUSINESS":
                         return (lCat === "BUSINESS" || lCat === "BIZ") &&
-                               (lBusSubCat.toLowerCase() !== "feed" && lBusSubCat !== "మేత" &&
-                                lBusSubCat.toLowerCase() !== "medicine" && lBusSubCat !== "మెడిసిన్" && lBusSubCat !== "మందులు");
+                               !(lBusSubCat === "feed" || lBusSubCat === "మేత" || lBusSubCat === "medicine" || lBusSubCat === "మెడిసిన్" || lBusSubCat === "మందులు");
                     case "SERVICES":
                         return lCat === "SERVICES" &&
-                            !(lServiceType.toLowerCase().includes("vehicle") || lServiceType.includes("వెహికల్") ||
-                              lServiceType.toLowerCase().includes("bore well") || lServiceType.includes("బోర్ వెల్") ||
+                            !(lServiceType.includes("vehicle") || lServiceType.includes("వెహికల్") ||
+                              lServiceType.includes("bore well") || lServiceType.includes("బోర్ వెల్") ||
                               lServiceType.toLowerCase().includes("earth mover") || lServiceType.includes("ఎర్త్ మూవర్"));
                     case "PRAWNS":
                         return lCat === "PRAWNS" || lCat === "PRAWN" || lCat === "HATCHERY";
@@ -187,69 +185,101 @@ exports.getListingsByLocation = onCall({
                     case "TANKS":
                         return lCat === "TANKS" || lCat === "TANK" || lCat === "POND" || lCat === "LAND";
                     default:
-                        return lCat === category.toUpperCase();
+                        return lCat === catUpper;
                 }
+            });
+        }
+
+        // 2. Filter by Price Range
+        if (minPrice !== undefined && minPrice !== null) {
+            listings = listings.filter(l => {
+                const p = parseFloat(String(l.price || l.rateValue || l.ratePerTon || l.salary || l.estPricePerAcre || 0).replace(/,/g, ""));
+                return !isNaN(p) && p >= minPrice;
+            });
+        }
+        if (maxPrice !== undefined && maxPrice !== null) {
+            listings = listings.filter(l => {
+                const p = parseFloat(String(l.price || l.rateValue || l.ratePerTon || l.salary || l.estPricePerAcre || 0).replace(/,/g, ""));
+                return !isNaN(p) && p <= maxPrice;
             });
         }
 
         const normalizedUserLocation = (locationName || "").toLowerCase().trim();
 
+        // 3. Distance and Distance Filtering
         if (lat && lng) {
-            // Distance-based sorting
             listings.forEach(listing => {
                 const lLat = listing.lat;
                 const lLng = listing.lng;
                 const lLoc = (listing.location || "").toLowerCase();
 
-                // Check if coordinates exist and are not exactly 0 (invalid for India)
-                const hasCoords = typeof lLat === 'number' && typeof lLng === 'number' && lLat !== 0;
-
-                if (hasCoords) {
-                    const dLat = lLat - lat;
-                    const dLng = lLng - lng;
+                if (typeof lLat === "number" && typeof lLng === "number" && lLat !== 0) {
+                    const dLat = (lLat - lat) * 111.32;
+                    const dLng = (lLng - lng) * 111.32 * Math.cos(lat * Math.PI / 180);
                     listing.distance = Math.sqrt(dLat * dLat + dLng * dLng);
                 } else {
-                    // Fallback distance for posts without coordinates (approx 500km)
-                    listing.distance = 5.0;
+                    listing.distance = 9999;
                 }
 
-                // PRIORITY: If the village/city name matches exactly, move it to the front
-                // This handles very close villages like Chataparru/Sriparru where distance is tiny
                 if (normalizedUserLocation && lLoc.includes(normalizedUserLocation)) {
-                    listing.distance = listing.distance * 0.001; // Drastic reduction to top
+                    listing.distance = listing.distance * 0.01;
                 }
             });
 
-            // Sort by distance first, then by timestamp (latest first) for items at same distance
-            listings.sort((a, b) => {
-                if (Math.abs(a.distance - b.distance) < 0.0001) {
-                    return (b.timestamp || 0) - (a.timestamp || 0);
-                }
-                return a.distance - b.distance;
-            });
-        } else {
-            // Fallback: Latest first sorting
-            listings.sort((a, b) => {
-                // If locationName is provided, prioritize matching strings even without lat/lng
-                if (normalizedUserLocation) {
-                    const aMatch = (a.location || "").toLowerCase().includes(normalizedUserLocation);
-                    const bMatch = (b.location || "").toLowerCase().includes(normalizedUserLocation);
-                    if (aMatch && !bMatch) return -1;
-                    if (!aMatch && bMatch) return 1;
-                }
-                return (b.timestamp || 0) - (a.timestamp || 0);
-            });
+            if (radius) {
+                listings = listings.filter(l => l.distance <= radius || (normalizedUserLocation && (l.location || "").toLowerCase().includes(normalizedUserLocation)));
+            }
         }
 
-        // Pagination
+        // 4. Sorting
+        switch (sortBy) {
+            case "Price: Low to High":
+                listings.sort((a, b) => {
+                    const pa = parseFloat(String(a.price || a.rateValue || a.ratePerTon || a.salary || a.estPricePerAcre || 0).replace(/,/g, ""));
+                    const pb = parseFloat(String(b.price || b.rateValue || b.ratePerTon || b.salary || b.estPricePerAcre || 0).replace(/,/g, ""));
+                    return pa - pb;
+                });
+                break;
+            case "Price: High to Low":
+                listings.sort((a, b) => {
+                    const pa = parseFloat(String(a.price || a.rateValue || a.ratePerTon || a.salary || a.estPricePerAcre || 0).replace(/,/g, ""));
+                    const pb = parseFloat(String(b.price || b.rateValue || b.ratePerTon || b.salary || b.estPricePerAcre || 0).replace(/,/g, ""));
+                    return pb - pa;
+                });
+                break;
+            case "Nearest First":
+                if (lat && lng) {
+                    listings.sort((a, b) => (a.distance || 9999) - (b.distance || 9999));
+                } else {
+                    listings.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+                }
+                break;
+            case "Most Viewed":
+                listings.sort((a, b) => (b.viewCount || 0) - (a.viewCount || 0));
+                break;
+            case "Newest First":
+            default:
+                // Default: Sort by distance if available, then by time
+                if (lat && lng && (!sortBy || sortBy === "Newest First")) {
+                    listings.sort((a, b) => {
+                        if (Math.abs((a.distance || 9999) - (b.distance || 9999)) < 0.1) {
+                            return (b.timestamp || 0) - (a.timestamp || 0);
+                        }
+                        return (a.distance || 9999) - (b.distance || 9999);
+                    });
+                } else {
+                    listings.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+                }
+                break;
+        }
+
         const start = page * pageSize;
-        const paginatedListings = listings.slice(start, start + pageSize);
-        const isLastPage = start + pageSize >= listings.length;
+        const paginated = listings.slice(start, start + pageSize);
 
         return {
             success: true,
-            listings: paginatedListings,
-            isLastPage: isLastPage,
+            listings: paginated,
+            isLastPage: start + pageSize >= listings.length,
             totalCount: listings.length
         };
     } catch (error) {
@@ -639,7 +669,10 @@ exports.sendAdminNotification = onCall({
 /**
  * Scheduled task that runs every minute to send pending notifications.
  */
-exports.sendScheduledNotifications = onSchedule("every 1 minutes", async (event) => {
+exports.sendScheduledNotifications = onSchedule({
+    schedule: "* * * * *",
+    timeZone: "Asia/Kolkata"
+}, async (event) => {
     const db = admin.firestore();
     const now = admin.firestore.Timestamp.now();
 

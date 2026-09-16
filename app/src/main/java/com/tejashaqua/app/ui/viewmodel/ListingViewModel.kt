@@ -184,6 +184,7 @@ class ListingViewModel(application: Application) : AndroidViewModel(application)
 
     fun deleteListing(listingId: String, onComplete: () -> Unit = {}) {
         viewModelScope.launch {
+            _postState.value = PostState.Loading
             try {
                 val doc = db.collection("listings").document(listingId).get().await()
                 if (doc.exists()) {
@@ -216,9 +217,11 @@ class ListingViewModel(application: Application) : AndroidViewModel(application)
                     }
                     db.collection("listings").document(listingId).delete().await()
                 }
+                _postState.value = PostState.Idle
                 onComplete()
             } catch (e: Exception) {
                 android.util.Log.e("ListingVM", "Error deleting listing: $listingId", e)
+                _postState.value = PostState.Idle
                 onComplete() // Still callback so UI can proceed
             }
         }
